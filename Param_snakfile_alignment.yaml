@@ -1,0 +1,163 @@
+# Yaml file for single-cell pipeline
+steps: ["Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE","Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Cerebro"] #"Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE", "Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Adding_BCR","Cerebro"
+
+############################################ GE ############################################
+#### Alignment_countTable_GE ####
+Alignment_countTable_GE:
+  ### Project
+  sample.name.ge : ["0732M_GE"]
+  input.dir.ge : '/home/m_aglave/Bureau/SCRNASEQ/DATASETS/IGR/191212_A00461_0092_AHH5H3DRXX/P30_FXDA/'
+  output.dir.ge : '/home/m_aglave/Bureau/'
+  ### Analysis parameters
+  sctech : '10xv2' # '10xv2' '10xv3' # common parameter for GE and ADT
+  kindex.ge : '/home/m_aglave/Bureau/INDEX/Homo_sapiens/GRCH38_r99_cDNA_linc_mir.kidx'
+  tr2g.file.ge : '/home/m_aglave/Bureau/INDEX/Homo_sapiens/GRCH38_r99_cDNA_linc_mir_tr2gs.txt'
+  reference.txt: 'Ensembl reference transcriptome v99 corresponding to the mus musculus GRCm38 build'
+# #### Droplets_QC_GE ####
+# Droplets_QC_GE:
+#   ### Project
+#   # sample.name.ge : ["0732M_GE", "761JMG_GE"]
+#   # input.dir.ge : ["/home/m_aglave/Bureau/0732M_GE/KALLISTOBUS/","/home/m_aglave/Bureau/761JMG_GE/KALLISTOBUS/"]
+#   # output.dir.ge : ["/home/m_aglave/Bureau/0732M_GE/","/home/m_aglave/Bureau/761JMG_GE/"]
+#   species : "homo_sapiens"
+#   author.name : "marine"
+#   author.mail : "moi"
+#   ### Analysis Parameters
+#   # Emptydrops
+#   emptydrops.fdr : NULL
+#   droplets.limit : NULL
+#   emptydrops.retain : NULL
+#   # Translate ENSG into Gene Symbol
+#   translation : TRUE
+#   # QC cell
+#   pcmito.min : 0
+#   pcmito.max : 0.20
+#   pcribo.min : 0
+#   pcribo.max : 1
+#   min.features : 200
+#   min.counts : 1000
+#   # QC gene
+#   min.cells : 5
+#   ### Databases
+#   # QC
+#   mt.genes.file : "/home/m_aglave/Bureau/scRNAseq_10X_R4/resources/GENELISTS/homo_sapiens_mito_symbols_20191001.rds"
+#   crb.genes.file : NULL
+#   str.genes.file : NULL
+#   # Translation into gene Symbols
+#   translation.file : NULL
+# #### Filtering_GE ####
+# Filtering_GE:
+#   ### Project
+#   # sample.name.ge : ["0732M_GE", "761JMG_GE"]
+#   # input.rda.ge :
+#   # output.dir.ge :
+#   author.name : "marine"
+#   author.mail : "moi"
+#   ### Analysis Parameters
+#   # QC cell
+#   pcmito.min : 0
+#   pcmito.max : 0.1
+#   pcribo.min : 0
+#   pcribo.max : 1
+#   min.features : 250
+#   min.counts : 2000
+#   # QC gene
+#   min.cells : 6
+#   # Doublets
+#   min.clust.size : NULL
+#   doublets.filter.method : "all"
+#   ### Databases
+#   # QC
+#   cc.seurat.file : NULL
+#   cc.cyclone.file : "/home/m_aglave/Bureau/scRNAseq_10X_R4/resources/GENELISTS/homo_sapiens_cyclone_pairs_symbols_20191001.rds"
+#
+#### Norm_DimRed_GE ####
+# Norm_DimRed_Eval_GE:
+#   ### Project
+#   sample.name.ge : ["0732M_GE"]
+#   input.rda.ge : ["/home/m_aglave/Bureau/0732M_GE/F200_C1000_M0-0.2_R0-1_G5/DOUBLETSFILTER_all/0732M_GE_FILTERED_NON-NORMALIZED.rda"]
+#   output.dir.ge : ["/home/m_aglave/Bureau/0732M_GE/F200_C1000_M0-0.2_R0-1_G5/DOUBLETSFILTER_all"]
+#   author.name : "moi_aussi"
+#   author.mail : "mail_aussi"
+#   eval.markers : NULL
+#   ### Analysis Parameters
+#   # Normalization and dimension reduction
+#   features.n : 2000
+#   norm.method :
+#   dimred.method : "pca"
+#   vtr : NULL
+#   vtr.scale : NULL
+#   dims.max : 40
+
+Clust_Markers_Annot_GE:
+  # sample.name.ge : ["0732M_GE"]
+  # input.rda.ge : ["/home/m_aglave/Bureau/0732M_GE/F250_C2000_M0-0.1_R0-1_G6/DOUBLETSFILTER_all/SCTransform/pca/0732M_GE_SCTransform_pca.rda"]
+  # output.dir.ge : ["/home/m_aglave/Bureau/0732M_GE/F250_C2000_M0-0.1_R0-1_G6/DOUBLETSFILTER_all/SCTransform/pca"]
+  # author.name :
+  # author.mail :
+  # markfile : "NULL"
+  ## Analysis Parameters
+  # # Clustering
+  keep.dims : 25
+  keep.res : 0.5
+  # # Annotation
+  # cfr.minscore : 0.20
+  # sr.minscore : NULL
+
+# Cerebro:
+  # input.rda :
+  # ### Analysis Parameters
+  # Cerebro
+  # version : "v1.3"
+  # groups: NULL
+  # remove.other.reductions: TRUE
+  # remove.other.idents : "TRUE"
+  # remove.mt.genes: "FALSE"
+  # remove.crb.genes: FALSE
+  # remove.str.genes: NULL
+  # only_pos_DE: "NULL"
+  # ### Databases
+  # # Cerebro
+  # gmt.file : "/home/m_aglave/Bureau/scRNAseq_10X_R4/resources/DATABASE/MSIGDB/7.1/msigdb_v7.1_GMTs/msigdb.v7.1.symbols.gmt"
+
+############################################ ADT ############################################
+#### Alignment_countTable_ADT ####
+Alignment_countTable_ADT:
+  ### Project
+  sample.name.adt : ["0732M_ADT"] #SAMPLENAME
+  input.dir.adt : '/home/m_aglave/Bureau/SCRNASEQ/DATASETS/IGR/191212_A00461_0092_AHH5H3DRXX/P30_FXDA/'
+  output.dir.adt : '/home/m_aglave/Bureau/'
+  ### Analysis parameters
+  sctech : '10xv2'
+  kindex.adt : '/home/m_aglave/Bureau/SCRNASEQ/RESOURCES/INDEX/ADT_FX/kallisto_index/P30_FXDA_CITEseq_kallisto_index'
+  tr2g.file.adt : '/home/m_aglave/Bureau/SCRNASEQ/RESOURCES/INDEX/ADT_FX/kallisto_index/P30_FXDA_CITEseq_tr2gs.txt'
+
+Adding_ADT:
+  # input.rda.ge:
+  # input.dir.adt:
+  gene.names: "CD3G,CD4,CTLA4,IL2RA,PDCD1,DPP4,MS4A1,CD24,SDC1,CR2,CD38,CD19"
+  # author.name:
+  # author.mail:
+
+############################################ TCR ############################################
+#### Alignment_annotations_TCR_BCR ####
+Alignment_annotations_TCR_BCR:
+  ### Project
+  sample.name.tcr_bcr : ["0732M_TCR"]
+  input.dir.tcr_bcr : '/home/m_aglave/Bureau/SCRNASEQ/DATASETS/IGR/191212_A00461_0092_AHH5H3DRXX/P30_FXDA/'
+  output.dir.tcr_bcr : '/home/m_aglave/Bureau/'
+  ### Analysis parameters
+  crindex.tcr_bcr : '/home/m_aglave/Bureau/SCRNASEQ/RESOURCES/TCR_references/refdata-cellranger-vdj-GRCh38-alts-ensembl-3.1.0'
+
+# Adding_TCR:
+  # input.rda :
+  # vdj.input.file.tcr:
+  # author.name:
+  # author.mail:
+
+# Adding_BCR:
+  # input.rda :
+  # output.dir :
+  # vdj.input.file.bcr:
+  # author.name:
+  # author.mail:

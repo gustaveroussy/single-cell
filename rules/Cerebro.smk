@@ -1,0 +1,61 @@
+"""
+##########################################################################
+This rule make the translation of seurat file into cerebro file in single-cell RNA-seq.
+##########################################################################
+"""
+
+"""
+This function allows to determine the input .rda file.
+"""
+def cerebro_input(wildcards):
+    return wildcards.cerebro_input_rda_no_extention + ".rda"
+
+"""
+This function allows to determine the singularity binding parameters.
+"""
+def cerebro_params_sing(wildcards):
+    rda_crb_folder = os.path.dirname(wildcards.cerebro_input_rda_no_extention)
+    concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + rda_crb_folder + ":" + os.path.normpath("/WORKDIR/" + rda_crb_folder)
+    if CEREBRO_GMT_FILE != "NULL":
+        gmt_folder = os.path.dirname(CEREBRO_GMT_FILE)
+        concat = concat + " -B " + gmt_folder + ":" + os.path.normpath("/WORKDIR/" + gmt_folder)
+    return concat
+
+"""
+This rule launches the R script to translate seurat file into cerebro file.
+"""
+rule cerebro:
+    input:
+        cerebro_rda_file = cerebro_input
+    output:
+        cerebro_crb_file = expand("{{cerebro_input_rda_no_extention}}{cerebro_complement}", cerebro_complement = CEREBRO_COMPLEMENT_CRB)
+    params:
+        sing_bind = cerebro_params_sing,
+        pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
+        input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
+        SING_CEREBRO_GMT_FILE = os.path.normpath("/WORKDIR/" + CEREBRO_GMT_FILE) if CEREBRO_GMT_FILE != "NULL" else "NULL"
+    conda:
+        CONDA_ENV_SING
+    threads:
+        4
+    shell:
+        """
+        singularity exec {params.sing_bind} \
+        {SINGULARITY_ENV_CEREBRO} \
+        Rscript {params.pipeline_folder}/scripts/pipeline_CEREBRO.R \
+        --input.rda.ge {params.input_rda} \
+        --author.name {CMA_AUTHOR_NAME} \
+        --author.mail {CMA_AUTHOR_MAIL} \
+        --nthreads {threads} \
+        --pipeline.path {params.pipeline_folder} \
+        --version {CEREBRO_VERSION} \
+        --groups {CEREBRO_GROUPS} \
+        --remove.other.reductions {CEREBRO_REMOVE_OTHER_RED} \
+        --remove.other.idents {CEREBRO_REMOVE_OTHER_IDENT} \
+        --remove.mt.genes {CEREBRO_REMOVE_MT} \
+        --remove.crb.genes {CEREBRO_REMOVE_CRB} \
+        --remove.str.genes {CEREBRO_REMOVE_STR} \
+        --only_pos_DE {CEREBRO_ONLY_POS_DE} \
+        --remove.custom.DE {CEREBRO_REMOVE_CUSTOM_DE} \
+        --gmt.file {params.SING_CEREBRO_GMT_FILE}
+        """
