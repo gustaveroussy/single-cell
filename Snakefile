@@ -90,7 +90,7 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
     #check samples names
     ERROR_SAMPLE_NAME_TCR_BCR=[]
     for sample_name_tcr_bcr in ALIGN_SAMPLE_NAME_TCR_BCR:
-        if sample_name_tcr_bcr[len(sample_name_tcr_bcr)-4:] != ("_TCR" or "_BCR"):
+        if sample_name_tcr_bcr[len(sample_name_tcr_bcr)-4:] not in ["_TCR","_BCR"]:
             ERROR_SAMPLE_NAME_TCR_BCR.append(sample_name_tcr_bcr)
     if ERROR_SAMPLE_NAME_TCR_BCR != []: # si pas vide
         sys.stderr.write("Error: samples:\n")
@@ -253,11 +253,6 @@ if "Filtering_GE" in STEPS:
     #name of the doublets identification method
     FILERING_DOUBLET_FILTER_METHOD_NAME = "all" if FILERING_DOUBLET_FILTER_METHOD == "NULL" else FILERING_DOUBLET_FILTER_METHOD
 
-# sys.stderr.write("Filtering <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
-# for i in FILERING_OUTPUT_DIR_GE:
-#     sys.stderr.write(i)
-#     sys.stderr.write("\n")
-
 if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     ### Sample/Project
     if ('Norm_DimRed_Eval_GE' in config) and ('sample.name.ge' in config['Norm_DimRed_Eval_GE']) and ('input.rda.ge' in config['Norm_DimRed_Eval_GE']) :
@@ -320,11 +315,6 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_RES_MIN,NDRE_RES_MAX+0.1,NDRE_RES_STEPS)]
     ASSAY = "RNA" if NDRE_DIMRED_METHOD == "LogNormalize" else "SCT"
 
-sys.stderr.write("NormDimRed <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
-for i in NDRE_OUTPUT_DIR_GE:
-    sys.stderr.write(i)
-    sys.stderr.write("\n")
-
 if "Clust_Markers_Annot_GE" in STEPS:
     ### Sample/Project
     if ('Clust_Markers_Annot_GE' in config) and ('sample.name.ge' in config['Clust_Markers_Annot_GE']) and ('input.rda.ge' in config['Clust_Markers_Annot_GE']) :
@@ -381,11 +371,6 @@ if "Clust_Markers_Annot_GE" in STEPS:
         CMA_COMPLEMENT.append(compl)
     #Names
     CMA_CLUST_FOLDER = "dims" + str(CMA_KEEP_DIM) + "_res" + str(CMA_KEEP_RES)
-
-sys.stderr.write("CMA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
-for i in CMA_OUTPUT_DIR_GE:
-    sys.stderr.write(i)
-    sys.stderr.write("\n")
 
 if "Droplets_QC_GE" in STEPS or "Filtering_GE" in STEPS or "Norm_DimRed_Eval_GE" in STEPS or "Clust_Markers_Annot_GE" in STEPS or "Adding_ADT" in STEPS:
     SINGULARITY_ENV = PIPELINE_FOLDER + "/envs/singularity/single_cell_ubuntu20_R4_newcerebro.simg"
@@ -468,10 +453,10 @@ if "Adding_BCR" in STEPS:
         sys.exit("Error: No input.rda in configfile!\n")
     if 'Adding_BCR' in config and 'vdj.input.file.bcr' in config['Adding_BCR'] :
         ADD_BCR_INPUT_CSV_BCR = config['Adding_BCR']['vdj.input.file.bcr']
-    elif "Alignment_annotations_BCR_BCR" in STEPS:
+    elif "Alignment_annotations_TCR_BCR" in STEPS:
         sys.stderr.write("Warning: No vdj.input.file.bcr find in Adding_BCR section of configfile; vdj.input.file.bcr will be determine from Alignment_annotations_BCR_BCR step for Adding_BCR step!\n")
-        ALIGN_SAMPLE_NAME_BCR = [sample for sample in ALIGN_SAMPLE_NAME_BCR_BCR if bool(re.match(".+_BCR", sample))]
-        ADD_BCR_INPUT_CSV_BCR = [ os.path.normpath(ALIGN_OUTPUT_DIR_BCR_BCR + "/" + x + "/" + x + "_CellRanger/outs/filtered_contig_annotations.csv") for x in ALIGN_SAMPLE_NAME_BCR]
+        ALIGN_SAMPLE_NAME_BCR = [sample for sample in ALIGN_SAMPLE_NAME_TCR_BCR if bool(re.match(".+_BCR", sample))]
+        ADD_BCR_INPUT_CSV_BCR = [ os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + x + "/" + x + "_CellRanger/outs/filtered_contig_annotations.csv") for x in ALIGN_SAMPLE_NAME_BCR]
     else:
         sys.exit("Error: No vdj.input.file.bcr in configfile!\n")
     ### Analysis Parameters
@@ -542,7 +527,6 @@ if "Cerebro" in STEPS:
     else:
         sys.exit("Error: Unknown version of cerebro in configfile!\n")
 
-# print(ADD_TCR_OUTPUT)
 
 onstart:
     sys.stderr.write("\n############################################################# \n")

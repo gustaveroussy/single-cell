@@ -1,5 +1,5 @@
 # Yaml file for single-cell pipeline
-steps: ["Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE","Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Cerebro"] #"Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE", "Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Adding_BCR","Cerebro"
+steps: ["Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE","Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Adding_BCR","Cerebro"] #"Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE", "Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Adding_BCR","Cerebro"
 
 ############################################ GE ############################################
 #### Alignment_countTable_GE ####
@@ -139,11 +139,11 @@ Adding_ADT:
   # author.name:
   # author.mail:
 
-############################################ TCR ############################################
+############################################ TCR/BCR ############################################
 #### Alignment_annotations_TCR_BCR ####
 Alignment_annotations_TCR_BCR:
   ### Project
-  sample.name.tcr_bcr : ["0732M_TCR"]
+  sample.name.tcr_bcr : ["0732M_TCR", "0732M_BCR"]
   input.dir.tcr_bcr : '/home/m_aglave/Bureau/SCRNASEQ/DATASETS/IGR/191212_A00461_0092_AHH5H3DRXX/P30_FXDA/'
   output.dir.tcr_bcr : '/home/m_aglave/Bureau/'
   ### Analysis parameters

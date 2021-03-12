@@ -82,18 +82,10 @@ def get_targets(STEPS):
         expand(os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/clustree_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "/louvain_resolution/{sample_name_ge}_" + ASSAY + "_res{res}.png"), zip, output_norm_dimred_dir_ge=NDRE_OUTPUT_DIR_GE*len(POSSIBLE_DIM), sample_name_ge=NDRE_SAMPLE_NAME_GE*len(POSSIBLE_DIM), res=POSSIBLE_RES*len(NDRE_SAMPLE_NAME_GE)),
         expand(os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/clustree_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "/uMAPs/{sample_name_ge}_uMAPs_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "{dims}_ALLres.png"), zip, output_norm_dimred_dir_ge=NDRE_OUTPUT_DIR_GE*len(POSSIBLE_DIM), sample_name_ge=NDRE_SAMPLE_NAME_GE*len(POSSIBLE_DIM), dims=POSSIBLE_DIM*len(NDRE_SAMPLE_NAME_GE))
         ]
-        # sys.stderr.write("ALL NRDE <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
-        # for i in range(len(targets["Norm_DimRed_Eval_GE"])):
-        #     sys.stderr.write(str(targets["Norm_DimRed_Eval_GE"][i]))
-        # sys.stderr.write("ALL NRDE <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
     if "Clust_Markers_Annot_GE" in STEPS:
         targets["Clust_Markers_Annot_GE"]=[
         expand(os.path.normpath("{output_clust_markers_annot_dir_ge}" + "/" + CMA_CLUST_FOLDER + "/" + "{sample_name_ge}" + "{complement}" + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda"), zip, output_clust_markers_annot_dir_ge = CMA_OUTPUT_DIR_GE, sample_name_ge = CMA_SAMPLE_NAME_GE, complement = CMA_COMPLEMENT)
         ]
-        # sys.stderr.write("ALL CMA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
-        # for i in range(len(targets["Clust_Markers_Annot_GE"])):
-        #     sys.stderr.write(str(targets["Clust_Markers_Annot_GE"][i]))
-        # sys.stderr.write("ALL CMA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
     if "Adding_ADT" in STEPS:
         targets["Adding_ADT"]=[
         expand("{add_adt_output}_ADT.rda", add_adt_output = ADD_ADT_OUTPUT)
