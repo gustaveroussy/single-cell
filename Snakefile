@@ -9,8 +9,8 @@ import numpy
 
 __author__ = "Marine AGLAVE"
 
-#configfile: "config.yaml"
-#configfile: "/home/m_aglave/Bureau/scRNAseq_10X_R4/Param_snakfile_alignment.yaml" # --configfile
+#configfile: "config.yaml" # --configfile
+#using: snakemake -j5 --configfile /home/m_aglave/Bureau/scRNAseq_10X/Param_snakfile_alignment.yaml --use-conda --printshellcmds -s ./Snakefile
 CONDA_ENV_SING = "/home/m_aglave/Bureau/scRNAseq_10X_true/envs/conda/singularity.yml"
 ### parameters ###################################################################################################################################
 
