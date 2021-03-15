@@ -1,0 +1,6 @@
+__default__:
+  partition : "shortq"
+  name : "{rule}"
+  mem : 20G
+  cpus-per-task : 4
+  conda-prefix: "/mnt/beegfs/userdata/m_aglave/pipeline/scRNAseq_10X/envs/conda/"

@@ -91,25 +91,25 @@ rule alignment_annotations_tcr_bcr:
         html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/web_summary.html"),
 	    MandM = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/Materials_and_Methods.txt")
     params:
-        sample_folder = directory(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}"))
+        sample_folder = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}")
     threads:
         8
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
         """
-        # /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/sourceme.bash
+        source /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/sourceme.bash
         # /home/m_aglave/Softwares/cellranger-3.1.0/sourceme.bash
         cd {params}
         rm -r {wildcards.sample_name_tcr_bcr}_CellRanger
-        /home/m_aglave/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj \
+        # /home/m_aglave/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj
+        /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj \
                  --id={wildcards.sample_name_tcr_bcr}_CellRanger \
                  --reference={CRINDEX_TCR_BCR} \
                  --fastqs={ALIGN_INPUT_DIR_TCR_BCR} \
                  --sample={wildcards.sample_name_tcr_bcr} \
                  --localmem=10 \
-                 --localcores={threads} #&& \
-        conda list
+                 --localcores={threads}
         FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
         FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")
         CELLRANGER_V=`/home/m_aglave/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj --version | grep "cellranger vdj (" | sed -e "s/cellranger vdj (//g" | sed -e "s/)//g"`

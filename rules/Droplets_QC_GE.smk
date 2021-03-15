@@ -62,8 +62,6 @@ rule QC_droplets_ge:
         SING_QC_RB_FILE = os.path.normpath("/WORKDIR/" + QC_RB_FILE) if QC_RB_FILE != "NULL" else "NULL",
         SING_QC_ST_FILE = os.path.normpath("/WORKDIR/" + QC_ST_FILE) if QC_ST_FILE != "NULL" else "NULL",
         SING_QC_TRANSLATION_FILE = os.path.normpath("/WORKDIR", QC_TRANSLATION_FILE) if QC_TRANSLATION_FILE != "NULL" else "NULL"
-    conda:
-        CONDA_ENV_SING
     threads:
         4
     shell:

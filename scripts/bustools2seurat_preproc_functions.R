@@ -947,7 +947,7 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
       #s# Seurat::Idents(object = miniobj) <- miniobj$seurat_clusters <- miniobj@meta.data %>% select(paste0(assay, "_snn_res.", stringr::str_replace(my.res, pattern = ",", replacement = ".")))
 
       miniobj <- Seurat::RunUMAP(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction, seed.use = my.seed, reduction.name = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'))
-      png(paste0(umaps.clustree.dir, '/', sample.name,'_uMAP_', reduction, my.dims, "_res", my.res*10, '.png'), width = 1100, height = 1000)
+      png(paste0(umaps.clustree.dir, '/', sample.name,'_uMAP_', reduction, my.dims, "_res", my.res, '.png'), width = 1100, height = 1000)
       resdim.plot <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = miniobj, reduction = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'), pt.size = solo.pt.size) + ggplot2::ggtitle(paste0(toupper(reduction), " dims =  ", my.dims, " ; resolution = ", my.res)) + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
       print(resdim.plot)
       dev.off()

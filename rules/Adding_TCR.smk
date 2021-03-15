@@ -8,9 +8,9 @@ This rule add tcr information to expression gene analysis in single-cell RNA-seq
 This function allows to determine the input .rda file and csv file from cellranger vdj.
 """
 def add_tcr_input(wildcards):
-    rda_file = dic_ADD_TCR_INFO[wildcards.add_tcr_output]['ADD_TCR_INPUT_RDA'] + "/"
-    csv_folder = dic_ADD_TCR_INFO[wildcards.add_tcr_output]['ADD_TCR_INPUT_CSV_TCR'] + "/"
-    return [rda_file,csv_folder]
+    rda_file = dic_ADD_TCR_INFO[wildcards.add_tcr_output]['ADD_TCR_INPUT_RDA']
+    csv_file = dic_ADD_TCR_INFO[wildcards.add_tcr_output]['ADD_TCR_INPUT_CSV_TCR']
+    return [rda_file,csv_file]
 
 """
 This function allows to determine the singularity binding parameters.

@@ -11,13 +11,16 @@ __author__ = "Marine AGLAVE"
 
 #configfile: "config.yaml" # --configfile
 #using: snakemake -j5 --configfile /home/m_aglave/Bureau/scRNAseq_10X/Param_snakfile_alignment.yaml --use-conda --printshellcmds -s ./Snakefile
-CONDA_ENV_SING = "/home/m_aglave/Bureau/scRNAseq_10X_true/envs/conda/singularity.yml"
+
+
+
 ### parameters ###################################################################################################################################
 
 #### Pipeline ####
 STEPS = config['steps']
 PIPELINE_FOLDER = workflow.snakefile
 PIPELINE_FOLDER = PIPELINE_FOLDER.replace("/Snakefile", "")
+CONDA_ENV_SING =  PIPELINE_FOLDER + "/envs/conda/singularity.yml"
 
 if "Alignment_countTable_GE" in STEPS:
     ### Sample/Project
@@ -112,7 +115,7 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS:
     else:
         SCTECH = '10xv3' # '10xv2' '10xv3'
     if SCTECH == '10xv3' :
-        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/3M-february-2018.txt' # '737K-august-2016.txt' '3M-february-2018.txt'
+        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/3M-february-2018.txt.gz' # '737K-august-2016.txt' '3M-february-2018.txt.gz'
     elif SCTECH == '10xv2' :
         WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/737K-august-2016.txt'
     else :
@@ -120,7 +123,7 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS:
 
 if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
     # Fastq-screen Index
-    FASTQSCREEN_INDEX = "/home/m_aglave/Bureau/fastqscreen/FastQ_Screen_Genomes/fastq_screen.conf"
+    FASTQSCREEN_INDEX = "/mnt/beegfs/database/bioinfo/single-cell/INDEX/FASTQ_SCREEN/0.14.0/fastq_screen.conf"
     # Cutadapt parameters
     ADAPTERSEQ='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'
     MINBASEQ=28
@@ -225,7 +228,6 @@ if "Filtering_GE" in STEPS:
     # QC gene
     FILERING_MIN_CELLS = config['Filtering_GE']['min.cells'] if ('Filtering_GE' in config and 'min.cells' in config['Filtering_GE'] and config['Filtering_GE']['min.cells'] != None) else "5"
     # Doublets
-    FILERING_MIN_CLUST_SIZE = config['Filtering_GE']['min.clust.size'] if ('Filtering_GE' in config and 'min.clust.size' in config['Filtering_GE'] and config['Filtering_GE']['min.clust.size'] != None) else "NULL"
     FILERING_DOUBLET_FILTER_METHOD= config['Filtering_GE']['doublets.filter.method'] if ('Filtering_GE' in config and 'doublets.filter.method' in config['Filtering_GE'] and config['Filtering_GE']['doublets.filter.method'] != None) else "NULL"
     ### Databases
     # QC

@@ -44,10 +44,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
             output_folder = os.path.normpath("/WORKDIR/" + "{output_filtering_dir_ge}") + "/",
             SING_FILERING_CC_SEURAT_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_SEURAT_FILE) if FILERING_CC_SEURAT_FILE != "NULL" else "NULL",
-            SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL",
-
-        conda:
-            CONDA_ENV_SING
+            SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL"
         threads:
             4
         shell:
@@ -68,7 +65,6 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             --min.features {FILERING_MIN_FEATURES} \
             --min.counts {FILERING_MIN_COUNTS} \
             --min.cells {FILERING_MIN_CELLS} \
-            --min.clust.size {FILERING_MIN_CLUST_SIZE} \
             --doublets.filter.method {FILERING_DOUBLET_FILTER_METHOD} \
             --cc.seurat.file {params.SING_FILERING_CC_SEURAT_FILE} \
             --cc.cyclone.file {params.SING_FILERING_CC_CYCLONE_FILE}
@@ -92,10 +88,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
             output_folder = os.path.normpath("/WORKDIR/" + "{output_filtering_dir_ge}") + "/",
             SING_FILERING_CC_SEURAT_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_SEURAT_FILE) if FILERING_CC_SEURAT_FILE != "NULL" else "NULL",
-            SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL",
-
-        conda:
-            CONDA_ENV_SING
+            SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL"
         threads:
             4
         shell:
@@ -116,7 +109,6 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             --min.features {FILERING_MIN_FEATURES} \
             --min.counts {FILERING_MIN_COUNTS} \
             --min.cells {FILERING_MIN_CELLS} \
-            --min.clust.size {FILERING_MIN_CLUST_SIZE} \
             --doublets.filter.method {FILERING_DOUBLET_FILTER_METHOD} \
             --cc.seurat.file {params.SING_FILERING_CC_SEURAT_FILE} \
             --cc.cyclone.file {params.SING_FILERING_CC_CYCLONE_FILE}

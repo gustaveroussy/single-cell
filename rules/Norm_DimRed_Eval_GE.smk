@@ -39,8 +39,6 @@ rule norm_dimred_ge:
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         output_folder = os.path.normpath("/WORKDIR/" + "{output_norm_dimred_dir_ge}") + "/"
-    conda:
-        CONDA_ENV_SING
     threads:
         4
     shell:
