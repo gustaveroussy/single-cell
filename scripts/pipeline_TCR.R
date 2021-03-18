@@ -252,8 +252,8 @@ sobj@misc$technical_info$scRepertoire <- utils::packageVersion('scRepertoire')
 sobj@misc$technical_info$alakazam <- utils::packageVersion('alakazam')
 
 ### Materials and Methods
-if(file.exists(paste0(dirname(vdj.input.file.tcr), "/../../Materials_and_Methods.txt"))){
-  tmp <- readr::read_tsv(paste0(dirname(vdj.input.file.tcr), "/../../Materials_and_Methods.txt"), col_names = FALSE)$X1
+if(file.exists(paste0(dirname(vdj.input.file.tcr), "/Materials_and_Methods.txt"))){
+  tmp <- readr::read_tsv(paste0(dirname(vdj.input.file.tcr), "/Materials_and_Methods.txt"), col_names = FALSE)$X1
   tmp2 <- ""
   for (i in 1:length(tmp)) tmp2=paste(tmp2,tmp[i], sep="")
   sobj@misc$parameters$Materials_and_Methods$TCR <- tmp2

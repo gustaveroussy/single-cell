@@ -53,7 +53,7 @@ def get_targets(STEPS):
         #alignment_annotations_
         expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/filtered_contig_annotations.csv"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
         expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/web_summary.html"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/Materials_and_Methods.txt"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR)
+        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/Materials_and_Methods.txt"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR)
         ]
     if "Droplets_QC_GE" in STEPS:
         targets["Droplets_QC_GE"]=[

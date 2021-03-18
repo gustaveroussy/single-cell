@@ -2940,32 +2940,38 @@ find_ref <- function(MandM = NULL, pipeline.path=NULL){
       if ((grepl(df_ref$package_name[i], MandM[j], ignore.case = TRUE)) && (! df_ref$package_name[i] %in% df_res$package_name)) df_res <- rbind(df_res, df_ref[i,])
     }
   }
+  res=paste0(df_res$package_name, " : ", df_res$reference)
+  return(res)
 }
 
 #Write Material and Method into texte file
 write_MandM <- function(sobj=NULL, output.dir=NULL){
   MandM = c("Materials and Methods","")
   for (pipeline_part in names(sobj@misc$parameters$Materials_and_Methods)){
-    if(pipeline_part == "part0_Alignment") pipeline_name <- c("","QC reads, Pseudo-mapping and quantification")
-    if(pipeline_part == "part1_Droplets_QC") pipeline_name <- c("","QC data on each sample")
-    if(pipeline_part == "part2_Filtering") pipeline_name <- NULL
-    if(pipeline_part == "part3_Norm_DimRed_Eval") pipeline_name <- c("","Individual analysis")
-    if(pipeline_part == "part4_Clust_Markers_Annot") pipeline_name <- NULL
-    if(pipeline_part == "ADT") pipeline_name <- c("","Cell surface proteins (CITE-seq ADT)")
-    if(pipeline_part == "TCR") pipeline_name <- c("","Single-cell immune profiling (TCR)")
-    if(pipeline_part == "BCR") pipeline_name <- c("","Single-cell immune profiling (Ig)")
-    if(pipeline_part == "TCR/BCR") pipeline_name <- c("","Single-cell immune profiling (TCR/Ig)")
-    if(pipeline_part == "Cerebro") pipeline_name <- c("","Cerebro")
+    if(pipeline_part != "packages_references"){
+      if(pipeline_part == "part0_Alignment") pipeline_name <- c("","QC reads, Pseudo-mapping and quantification")
+      if(pipeline_part == "part1_Droplets_QC") pipeline_name <- c("","QC data on each sample")
+      if(pipeline_part == "part2_Filtering") pipeline_name <- NULL
+      if(pipeline_part == "part3_Norm_DimRed_Eval") pipeline_name <- c("","Individual analysis")
+      if(pipeline_part == "part4_Clust_Markers_Annot") pipeline_name <- NULL
+      if(pipeline_part == "ADT") pipeline_name <- c("","Cell surface proteins (CITE-seq ADT)")
+      if(pipeline_part == "TCR") pipeline_name <- c("","Single-cell immune profiling (TCR)")
+      if(pipeline_part == "BCR") pipeline_name <- c("","Single-cell immune profiling (Ig)")
+      if(pipeline_part == "TCR/BCR") pipeline_name <- c("","Single-cell immune profiling (TCR/Ig)")
+      if(pipeline_part == "Cerebro") pipeline_name <- c("","Cerebro")
+      
+      ### TO DO: Add the same if for integrated and grouped analysis ###
+      if(pipeline_part == "Integration_analysis") pipeline_name <- c("","Integration analysis")
+      if(pipeline_part == "Grouped_analysis") pipeline_name <- c("","Grouped analysis")
     
-    ### TO DO: Add the same if for integrated and grouped analysis ###
-    if(pipeline_part == "Integration_analysis") pipeline_name <- c("","Integration analysis")
-    if(pipeline_part == "Grouped_analysis") pipeline_name <- c("","Grouped analysis")
-    
-    MandM = c(MandM,pipeline_name,sobj@misc$parameters$Materials_and_Methods[[pipeline_part]])
+      MandM = c(MandM,pipeline_name,sobj@misc$parameters$Materials_and_Methods[[pipeline_part]])
+    }
   }
+  #add packages reference publications
+  if("packages_references" %in% names(sobj@misc$parameters$Materials_and_Methods)) MandM = c(MandM,"","References of tools",sobj@misc$parameters$Materials_and_Methods$packages_references)
+  #save
   file<-file(paste0(output.dir,"/Materials_and_Methods.txt"))
-  writeLines(
-  print(MandM), file)
+  writeLines(MandM, file)
   close(file)
 }
 
