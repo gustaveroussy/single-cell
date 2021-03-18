@@ -147,7 +147,7 @@ rule build_count_matrix_ge:
         genes_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.genes.txt"),
 	    MandM = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/Materials_and_Methods.txt")
     params:
-        os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_ge}/KALLISTOBUS")
+        os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS")
     threads:
         1
     conda:

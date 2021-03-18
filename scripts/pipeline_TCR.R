@@ -62,7 +62,7 @@ if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params
 ## Normalization and dimension reduction
 dimred.method <- sobj@misc$params$reductions$method
 ## Clustering
-GE_file <- sub('.rda', '', input.rda)
+GE_file <- sub("\\.rda$", "", input.rda)
 dimred.method <- sobj@misc$params$reductions$method
 ident.name <- sobj@misc$params$clustering$ident
 RNA.reduction <- sobj@misc$params$clustering$umap
@@ -100,20 +100,24 @@ library(dplyr)
 set.seed(sobj@misc$params$seed)
 
 ## GLOBAL ANALYSIS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+cat("\nGlobal Analysis >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
 global_output <- paste0(output_path_TCR, "Global_analysis")
-dir.create(path = global_output, recursive = TRUE, showWarnings = TRUE)
+dir.create(path = global_output, recursive = TRUE, showWarnings = FALSE)
 
 ## Loading input data and Combining contigs
+cat("\nLoading input data and Combining contigs...\n")
 cr_res <- load.sc.tcr.bcr(sobj=sobj, vdj.input.file = vdj.input.file.tcr)
 tcr.combined <- scRepertoire::combineTCR(df = list(cr_res), samples = sample.name, ID = "TCR", cells = "T-AB")
 
 ## Quantification analysis
+cat("\nQuantification analysis...\n")
 QC.tcr.bcr(cr_res=cr_res, out.dir=global_output, type="TCR")
 
 ## Quantification of unique contig analysis
 Quantif.unique.g(combined = tcr.combined, list_type_clT = list_type_clT, out.dir = global_output, caption=caption, sample.name=sample.name)
 
 ## Abundance analysis
+cat("\nAbundance analysis...\n")
 ### Plots
 for(x in list_type_clT) assign(paste0("plot_abundanceContig_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::abundanceContig(tcr.combined, cloneCall = x, scale = F) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.6, face="bold"))) + Seurat::NoLegend()))
 ### Save
@@ -123,6 +127,7 @@ png(paste0(global_output,'/abundanceContig.png'), width = 800, height = 300)
 dev.off()
 
 ## Contigs Length analysis
+cat("\nContigs Length analysis...\n")
 for(x in list_type_contig){
   ### This should give multimodal plot
   assign(paste0("plot_lengthContig_",x,"_comb"), scRepertoire::lengthContig(tcr.combined, cloneCall=x, chains = "combined") + Seurat::NoLegend())
@@ -136,19 +141,23 @@ png(paste0(global_output,'/lengthContig.png'), width = 800, height = 800)
 dev.off()
 
 ## Clonal Homeostasis analysis
+cat("\nClonal Homeostasis analysis...\n")
 Homeo.g(combined = tcr.combined, list_type_clT = list_type_clT, out.dir = global_output, caption=caption, sample.name=sample.name)
 
 ## Clonal Proportions analysis
+cat("\nClonal Proportions analysis...\n")
 Prop.g(combined = tcr.combined, list_type_clT = list_type_clT, out.dir = global_output, caption=caption, sample.name=sample.name)
 
 ## Diversity analysis
+cat("\nDiversity analysis...\n")
 Div.g(combined = tcr.combined, list_type_clT = list_type_clT, out.dir = global_output, caption=caption, sample.name=sample.name)
 
 ## Combine TCR data with seurat object
+cat("\nCombine TCR data with seurat object...\n")
 ### Corresponding barcode
 tcr.combined[[1]]$barcode <- gsub(pattern = paste0(sample.name, "_TCR_"), replacement = '', tcr.combined[[1]]$barcode)
 ### Combination
-sobj <- scRepertoire::combineSeurat(df = tcr.combined, seurat = sobj, cloneCall="aa")
+sobj <- scRepertoire::combineExpression(df = tcr.combined, sc = sobj, cloneCall="aa")
 
 ### Spliting CTstrict (into separate columns for TRA-V/J/C, TRB-V/J/C and corresponding sequences, with 2 possible clonotypes) and save as metadata
 ### and Adding length of TR sequence to meta.data
@@ -171,31 +180,36 @@ png(paste0(global_output,'/cloneType.png'), width =1400, height = 3000)
 dev.off()
 
 ## Frequency analysis
+cat("\nFrequency analysis...\n")
 sobj <- Freq.g(sobj=sobj, out.dir = global_output, sample.name=sample.name, reduction=RNA.reduction, freq_col="Frequency")
 
 ## Physicochemical properties of the CDR3
+cat("\nPhysicochemical properties of the CDR3 analysis...\n")
 Physicochemical_properties.g(sobj=sobj, list_type_clT = list_type_clT, out.dir = global_output, sample.name=sample.name, type='TCR')
 
 
 
 
 ## CLUSTERS LEVEL ANALYSIS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+cat("\nClusters Level Analysis >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
 clusters_output <- paste0(output_path_TCR, "Clusters_analysis")
-dir.create(path = clusters_output, recursive = TRUE, showWarnings = TRUE)
+dir.create(path = clusters_output, recursive = TRUE, showWarnings = FALSE)
 
 ## Filter cells that have no value for the x concerned + conversion to a list by clusters
 ## Need to filter, otherwise the functions count the 'NA' as a sequence.
 for(x in list_type_clT){
   if(x=="gene+nt") y="strict" else y=x
   filtred_sobj = sobj[,!is.na(sobj@meta.data[paste0("CT", y)])]
-  assign(paste0("filtred_metadata_", sub("\\+","_",x)), scRepertoire::seurat2List(filtred_sobj))
+  assign(paste0("filtred_metadata_", sub("\\+","_",x)), scRepertoire::expression2List(sc=filtred_sobj, group=ident.name))
 }
 rm(filtred_sobj)
 
 ## Quantification of unique contig analysis
+cat("\nQuantification analysis...\n")
 sobj <- Quantif.unique.c(sobj = sobj, ident.name=ident.name, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Abundance analysis
+cat("\nAbundance analysis...\n")
 ### Plots
 for(x in list_type_clT) assign(paste0("plot_cluster_abundanceContig_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::abundanceContig(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, scale = F) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.6, face="bold"))) ))
 ### Save
@@ -205,21 +219,27 @@ png(paste0(clusters_output,'/abundanceContig.png'), width = 2000, height = 600)
 dev.off()
 
 ## Clonal Homeostasis analysis
+cat("\nClonal Homeostasis analysis...\n")
 sobj <- Homeo.c(sobj = sobj, ident.name=ident.name, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Clonal Proportions analysis
+cat("\nClonal Proportions analysis...\n")
 sobj <- Prop.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Diversity analysis
+cat("\nDiversity analysis...\n")
 sobj <- Div.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Frequency analysis
+cat("\nFrequency analysis...\n")
 Freq.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, ident.name=ident.name, reduction=, freq_col="Frequency", filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Clonal Overlap analysis (si plus de 1)
+cat("\nClonal Overlap analysis...\n")
 if(length(levels(Seurat::Idents(sobj)))!=1) Overlap.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Physico-chemical properties of the CDR3
+cat("\nPhysico-chemical properties of the CDR3 analysis...\n")
 Physicochemical_properties.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, ident.name=ident.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt, type='TCR')
 
 #renamme TCR columns with 'TCR_' prefix
@@ -240,7 +260,9 @@ if(file.exists(paste0(dirname(vdj.input.file.tcr), "/../../Materials_and_Methods
 } else sobj@misc$parameters$Materials_and_Methods$TCR <- NULL
 sobj@misc$parameters$Materials_and_Methods$TCR <- paste0(sobj@misc$parameters$Materials_and_Methods$TCR, " The annotation was merged with corresponding cell barcode of 5’ gene expression. The scRepertoire package (",sobj@misc$technical_info$scRepertoire,") was used to process annotation to assign clonotype based on TCR chains. scRepertoire allows to study contig quantification, contig abundance, contig length, clonal space homeostasis, clonal proportion, clonal overlap beetween clusters and diversity. Physicochemical properties of the CDR3, based on amino-acid sequences, was determined by the alakazam R package (",sobj@misc$technical_info$alakazam,").")
 sobj@misc$parameters$Materials_and_Methods$packages_references <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
+write_MandM(sobj=sobj, output.dir=output.dir)
 
 ### Saving GE_ADT_TCR object
+cat("\nSaving object...\n")
 GE_TCR_file <- paste0(output.dir, basename(GE_file), '_TCR')
 save(sobj, file = paste0(GE_TCR_file, '.rda'), compress = "bzip2")

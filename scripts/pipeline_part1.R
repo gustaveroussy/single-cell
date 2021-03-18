@@ -188,7 +188,7 @@ sobj@misc$params$sample.name.GE <- sample.name.GE
 sobj@misc$params$species <- species
 sobj@misc$params$author.name <- author.name
 sobj@misc$params$author.mail <- author.mail
-sobj@misc$params$analysis_type == "Individual analysis"
+sobj@misc$params$analysis_type <- "Individual analysis"
 
 ### Computing basic metrics : percentage of counts in the top features + mito + ribo + stress + nb features + nb counts
 sobj <- QC.metrics(sobj = sobj, assay = assay, mt.genes.file = mt.genes.file, crb.genes.file = crb.genes.file, str.genes.file = str.genes.file, pcmito.range = pcmito.range, pcribo.range = pcribo.range, min.features = min.features, min.counts = min.counts, BPPARAM = cl)

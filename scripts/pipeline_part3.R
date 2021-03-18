@@ -53,7 +53,7 @@ pipeline.path <- args$options$pipeline.path
 features.n <- if (!is.null(args$options$features.n)) as.numeric(args$options$features.n)
 norm.method <- args$options$norm.method
 dimred.method <- args$options$dimred.method
-vtr <- unlist(stringr::str_split(args$options$vtr, ","))
+vtr <- sort(unlist(stringr::str_split(args$options$vtr, ",")))
 vtr.scale <- args$options$vtr.scale
 dims.max <- if (!is.null(args$options$dims.max)) as.numeric(args$options$dims.max)
 dims.min <- if (!is.null(args$options$dims.min)) as.numeric(args$options$dims.min)
@@ -108,8 +108,10 @@ if (is.null(res.steps)) res.steps <- 0.1
 assay <- 'RNA'
 
 #### Check optional parameters ####
+if (!(norm.method %in% c('SCTransform','LogNormalize'))) stop("Normalization method unknown! (LogNormalize or SCTransform)")
+if (!(dimred.method %in% c('pca','scbfa','bpca','mds'))) stop("Dimension Reduction method unknown! (pca, scbfa, bpca or mds)")
 normalization.vtr <- if (norm.method == 'SCTransform') vtr else NULL
-reduction.vtr <- if (dimred.method %in% c('scbfa', 'bpca', 'mds')) vtr else NULL
+reduction.vtr <- if (dimred.method %in% c('scbfa','bpca','mds')) vtr else NULL
 if (!(norm.method == 'SCTransform' || dimred.method %in% c('scbfa', 'bpca', 'mds')) && !is.null(vtr)) stop("vtr can be used only with SCtransform, scbfa, bpca or mds methods!")
 if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) message(paste0("Warning: vtr were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
 
@@ -132,9 +134,6 @@ print("###########################################")
 
 ### Creating parallel instance
 cl <- create.parallel.instance(nthreads = nthreads)
-print(packageVersion("foreach"))
-print(packageVersion("BiocParallel"))
-print(packageVersion("doParallel"))
 
 ### Normalization and dimension reduction
 cat("\nNormalization...\n")
@@ -144,7 +143,7 @@ cat("\nDimensions reduction...\n")
 sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = dims.max, vtr = reduction.vtr, vtr.scale = vtr.scale)
 
 ### Building reduced normalized output dir
-norm_vtr = paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL, collapse = '_')
+norm_vtr = paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL), collapse = '_')
 dimred_vtr = paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr[1])) paste(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
 norm.dim.red.dir = paste0(output.dir.ge, norm_vtr, '/', dimred_vtr)
 dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
@@ -152,14 +151,14 @@ dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
 ### Materials and Methods
 MM_tmp <- if(dimred.method == 'pca') 'PCA' else if(dimred.method == 'scbfa') 'scbfa'
 if(!is.null(vtr)){
-vtr <- stringr::str_replace(vtr, "sizeFactor", "the number of detected transcripts")
-vtr <- stringr::str_replace(vtr, "nFeature_RNA", "the number of detected genes")
-vtr <- stringr::str_replace(vtr, "percent_mt", "the proportion of mitochondrial transcripts")
-vtr <- stringr::str_replace(vtr, "percent_rb", "the proportion of ribosomal transcripts")
-vtr <- stringr::str_replace(vtr, "percent_st", "the proportion of mechanical stress response transcripts")
-vtr <- stringr::str_replace(vtr, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
-vtr <- stringr::str_replace(vtr, "Seurat.Phase", "the cell cycle phase determined by Seurat")
-MM_tmp2 <- if(norm.method == 'SCTransform' && dimred.method == 'pca') paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") else if(norm.method == 'LogNormalize' && dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.")
+  vtr <- stringr::str_replace(vtr, "sizeFactor", "the number of detected transcripts")
+  vtr <- stringr::str_replace(vtr, "nFeature_RNA", "the number of detected genes")
+  vtr <- stringr::str_replace(vtr, "percent_mt", "the proportion of mitochondrial transcripts")
+  vtr <- stringr::str_replace(vtr, "percent_rb", "the proportion of ribosomal transcripts")
+  vtr <- stringr::str_replace(vtr, "percent_st", "the proportion of mechanical stress response transcripts")
+  vtr <- stringr::str_replace(vtr, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
+  vtr <- stringr::str_replace(vtr, "Seurat.Phase", "the cell cycle phase determined by Seurat")
+  MM_tmp2 <- if(norm.method == 'SCTransform' && dimred.method == 'pca') paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") else if(norm.method == 'LogNormalize' && dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
 }
 sobj@misc$parameters$Materials_and_Methods$part3_Norm_DimRed_Eval <- paste0("Seurat (",sobj@misc$technical_info$Seurat,") was applied for further data processing. ",
 if(norm.method == 'SCTransform' && dimred.method == 'pca') { paste0("The SCTransform normalization method (Hafemeister C, Satija R. Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression. Genome Biol. 2019;20 10.1186/s13059-019-1874-1.) was used to normalize, scale, select ",features.n," Highly Variable Genes", if(!is.null(vtr)) MM_tmp2,". Person residuals from this regression were used for dimension reduction by Principal Component Analysis (PCA).") },

@@ -43,7 +43,7 @@ rule norm_dimred_ge:
         4
     shell:
         """
-        singularity exec {params.sing_bind} \
+        singularity exec --no-home {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part3.R \
         --input.rda.ge {params.input_rda} \

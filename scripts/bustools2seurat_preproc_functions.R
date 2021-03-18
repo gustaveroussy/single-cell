@@ -619,6 +619,7 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
   if (!reduction.method %in% all.methods) stop(paste0('Unknown reduction method ! Expecting any of : ', paste(all.methods, collapse = ', ')))
   if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
   if(is.null(red.name)) red.name <- paste0(assay, '_', reduction.method)
+  if(!is.null(vtr)) vtr <- sort(vtr)
 
   ## Save command
   sobj@misc$pipeline_commands = c(sobj@misc$pipeline_commands, paste0("dimensions.reduction(sobj = sobj, reduction.method = ", reduction.method, ", assay = ", assay, ", max.dims = ", max.dims, ", vtr = ", if(is.null(vtr)) "NULL" else paste0("c(", paste(vtr, collapse = ","),")"), ", vtr.scale =", vtr.scale, ")"))
@@ -933,27 +934,20 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
     message(paste0("Dimensions 1 to ", my.dims))
     suppressMessages(miniobj <- Seurat::FindNeighbors(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction))
 
-    # print(resvec)
     resloop = list()
-    # resloop <- foreach::foreach(my.res = resvec, .inorder = TRUE, .errorhandling = "stop", .noexport = objects(), export = c('miniobj', 'assay', 'my.seed', 'reduction', 'my.dims', 'resvec', 'umaps.clustree.dir', 'sample.name', 'solo.pt.size'), .packages = c("Seurat", "ggplot2")) %do% {
     resloop <- foreach::foreach(my.res = resvec, .inorder = FALSE, .errorhandling = "stop", .noexport = objects()) %do% {
       # for (my.res in resvec) {
 
-      # print(resvec)
-      message(paste0("Testing resolution ", my.res, " ..."))
+      message(paste0("Testing resolution ", format(my.res, digits=2, nsmall=1, decimal.mark="."), " ..."))
 
       miniobj <- Seurat::FindClusters(object = miniobj, assay = assay, random.seed = my.seed, resolution = my.res, graph.name = paste0(assay, '_snn'))
-      #s# require(dplyr)
-      #s# Seurat::Idents(object = miniobj) <- miniobj$seurat_clusters <- miniobj@meta.data %>% select(paste0(assay, "_snn_res.", stringr::str_replace(my.res, pattern = ",", replacement = ".")))
-
       miniobj <- Seurat::RunUMAP(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction, seed.use = my.seed, reduction.name = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'))
-      png(paste0(umaps.clustree.dir, '/', sample.name,'_uMAP_', reduction, my.dims, "_res", my.res, '.png'), width = 1100, height = 1000)
-      resdim.plot <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = miniobj, reduction = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'), pt.size = solo.pt.size) + ggplot2::ggtitle(paste0(toupper(reduction), " dims =  ", my.dims, " ; resolution = ", my.res)) + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
+      png(paste0(umaps.clustree.dir, '/', sample.name,'_uMAP_', reduction, my.dims, "_res", format(my.res, digits=2, nsmall=1, decimal.mark="."), '.png'), width = 1100, height = 1000)
+      resdim.plot <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = miniobj, reduction = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'), pt.size = solo.pt.size) + ggplot2::ggtitle(paste0(toupper(reduction), " dims =  ", my.dims, " ; resolution = ", format(my.res, digits=2, nsmall=1, decimal.mark="."))) + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
       print(resdim.plot)
       dev.off()
 
       return(list(resplot = resdim.plot, clusters = miniobj$seurat_clusters))
-      # resloop = c(resloop, list(resplot = resdim.plot, clusters = miniobj$seurat_clusters))
     }
 
     ## Decomposing resloop
@@ -961,9 +955,8 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
     resclust <- as.data.frame(unlist(resloop, recursive = FALSE)[seq.int(2, length(resloop)*2, 2)])
     resclust <- cbind(resclust, resclust)
     rm(resloop)
-    colnames(resclust) <- c(paste0(paste0("seurat_clusters_LE_", reduction, my.dims, "_res", stringr::str_replace(resvec, pattern = ",", replacement = "."))), paste0(paste0("seurat_clusters_LE_res", stringr::str_replace(resvec, pattern = ",", replacement = "."), "_", reduction, my.dims)))
+    colnames(resclust) <- c(paste0(paste0("seurat_clusters_LE_", reduction, my.dims, "_res", format(resvec, digits=2, nsmall=1, decimal.mark="."))), paste0(paste0("seurat_clusters_LE_res", format(resvec, digits=2, nsmall=1, decimal.mark="."), "_", reduction, my.dims)))
     miniobj@meta.data <- cbind(miniobj@meta.data, resclust)
-    # rm(resclust)
 
     grid.xy <- grid.scalers(length(resplots))
     png(paste0(umaps.clustree.dir, '/', sample.name, '_uMAPs_', reduction, my.dims, '_ALLres.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
@@ -990,9 +983,9 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
 
   for (my.res in resvec) {
     if (length(dimsvec) > 1) {
-      cres <- clustree::clustree(miniobj, prefix = paste0("seurat_clusters_LE_res", my.res, "_", reduction))
-      png(paste0(res.clustree.dir, '/', sample.name, '_', assay, '_res', my.res, '.png'), width = 800, height = 1000)
-      print(cres + ggplot2::ggtitle(paste0(sample.name, ", res = ", my.res)))
+      cres <- clustree::clustree(miniobj, prefix = paste0("seurat_clusters_LE_res", format(my.res, digits=2, nsmall=1, decimal.mark="."), "_", reduction))
+      png(paste0(res.clustree.dir, '/', sample.name, '_', assay, '_res', format(my.res, digits=2, nsmall=1, decimal.mark="."), '.png'), width = 800, height = 1000)
+      print(cres + ggplot2::ggtitle(paste0(sample.name, ", res = ", format(my.res, digits=2, nsmall=1, decimal.mark="."))))
       dev.off()
     }
   }
@@ -1274,8 +1267,8 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
       fmark <- fmark[order(fmark$cluster, fmark$p_val_adj),]
 
       if(slot == 'data') {
-        mytop <- fmark %>% group_by(cluster) %>% top_n(n = topn, wt = avg_logFC)
-        avg_name <- 'avg_logFC'
+        mytop <- fmark %>% group_by(cluster) %>% top_n(n = topn, wt = avg_log2FC)
+        avg_name <- 'avg_log2FC'
       } else if(slot == 'scale.data') {
         mytop <- fmark %>% group_by(cluster) %>% top_n(n = topn, wt = avg_diff)
         avg_name <- 'avg_diff'
@@ -1315,7 +1308,7 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
       for(k in unique(fmark$cluster)) {
         mytop.k <- mytop[mytop$cluster == k,]
         if (nrow(mytop.k) > 0) {
-          fm.list <- sapply(seq_len(nrow(mytop.k)), function(g) { Seurat::VlnPlot(sobj, assay = assay, features = mytop.k$gene[g]) + Seurat::NoLegend() + ggplot2::ggtitle(paste0(mytop.k$gene[g], ' ; ', avg_name, ' = ', format(mytop.k[[avg_name]][g], digits= 3), ' ; adj.p = ', format(mytop.k$p_val_adj[g], digits = 2, scientific = TRUE))) }, simplify = FALSE)
+          fm.list <- sapply(seq_len(nrow(mytop.k)), function(g) { Seurat::VlnPlot(sobj, assay = assay, features = mytop.k$gene[g]) + Seurat::NoLegend() + ggplot2::ggtitle(mytop.k$gene[g], subtitle = paste0(avg_name, ' = ', format(mytop.k[[avg_name]][g], digits= 3), ' ; adj.p = ', format(mytop.k$p_val_adj[g], digits = 2, scientific = TRUE))) }, simplify = FALSE)
           png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_cluster', k, '_vln.png'), width = 1800, height = 1000)
           print(patchwork::wrap_plots(fm.list) + patchwork::plot_layout(ncol = 5))
           dev.off()
@@ -2394,7 +2387,7 @@ load.sc.tcr.bcr <- function(x=1, sobj=NULL, vdj.input.file, sample.name=NULL){
   return(df)
 }
 
-## Basic QC metrics for TCR
+## Basic QC metrics for TCR/BCR
 QC.tcr.bcr <- function(cr_res=NULL, out.dir=global_output, type = 'TCR'){
   require(patchwork)
   require(ggplot2)
@@ -2489,10 +2482,10 @@ Div.g <-function(combined = NULL, list_type_clT = c("gene+nt","gene","nt","aa"),
   require(dplyr)
   for(x in list_type_clT) {
     ### Tables
-    scR_res = scRepertoire::clonalDiversity(combined, cloneCall = x, colorBy = "samples", exportTable = TRUE) %>% select("Shannon", "Inv.Simpson", "Chao", "ACE") %>% round(2)
+    scR_res = scRepertoire::clonalDiversity(combined, cloneCall = x, group = "samples", exportTable = TRUE) %>% select("Shannon", "Inv.Simpson", "Chao", "ACE") %>% round(2)
     assign(paste0("table_cldiv_",sub("\\+","_",x)),data.frame(lapply(scR_res, as.character), row.names = rownames(scR_res)))
     ### Plots
-    assign(paste0("plot_cldiv_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalDiversity(combined, cloneCall = x, colorBy = "samples") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold"))) ))
+    assign(paste0("plot_cldiv_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalDiversity(combined, cloneCall = x, group = "samples") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold"))) ))
   }
   ### Save
   png(paste0(out.dir,'/cldiv.png'), width = 2100, height = 800)
@@ -2590,10 +2583,10 @@ Freq.g <- function(sobj=NULL, out.dir = NULL, sample.name=NULL, reduction=NULL, 
   top20_freq = sobj@meta.data %>% select(.data[[freq_col]],CTaa,highlight_aa_all) %>% distinct() %>% arrange(desc(.data[[freq_col]])) %>% na.omit() %>% top_n(n = 20, wt = .data[[freq_col]])
   top20_freq = top20_freq[1:20,]
   rownames(top20_freq)=top20_freq$highlight_aa_all
-  sobj$highlight_aa_top20_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight, sobj$highlight_aa_all, NA)
   sobj$highlight_aa_top10_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[1:10], sobj$highlight_aa_all, NA)
   sobj$highlight_aa_top11to20_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[11:length(top20_freq$highlight)], sobj$highlight_aa_all, NA)
-
+  sobj$highlight_aa_top20_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[1:length(top20_freq$highlight)], sobj$highlight_aa_all, NA)
+  
   #UMAP of top 10 frequencies
   png(paste0(out.dir,'/Frequency_top_10_umap',sample.name,'.png'), width = 800, height = (400+350))
   print(patchwork::wrap_elements( (Seurat::DimPlot(sobj, reduction = reduction, group.by = "highlight_aa_top10_freq")  + Seurat::DarkTheme()) / gridExtra::tableGrob(top20_freq[1:10,c(freq_col,"CTaa")], theme = gridExtra::ttheme_default(base_size = 10)) +
@@ -2759,12 +2752,12 @@ Div.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), ou
   require(dplyr)
   for(x in list_type_clT){
     ### Tables
-    tmp = scRepertoire::clonalDiversity(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, colorBy = "cluster", exportTable = TRUE)
+    tmp = scRepertoire::clonalDiversity(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, group = "cluster", exportTable = TRUE)
     tmp[tmp=='NaN']=NA
     assign( paste0("clust_cldiv_",sub("\\+","_",x)), data.frame(lapply(( tmp %>% mutate_all(function(x){ as.numeric(as.character(x)) }) %>% round(2) %>% select("Shannon","Inv.Simpson","Chao","ACE") ), as.character), row.names = paste0("Cluster ", tmp$cluster)))
     # sobj@misc$scRepertoire$clonalDiversity[[paste0("clust_cldiv_",sub("\\+","_",x))]]=get(paste0("clust_cldiv_",sub("\\+","_",x)))
     ### Plots
-    assign(paste0("plot_clust_cldiv_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalDiversity(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, colorBy = "cluster") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
+    assign(paste0("plot_clust_cldiv_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalDiversity(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, group = "cluster") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
   }
   ### Save
   png(paste0(out.dir,'/clust_cldiv', sample.name, '.png'), width =2000, height = 800)
@@ -2948,3 +2941,31 @@ find_ref <- function(MandM = NULL, pipeline.path=NULL){
     }
   }
 }
+
+#Write Material and Method into texte file
+write_MandM <- function(sobj=NULL, output.dir=NULL){
+  MandM = c("Materials and Methods","")
+  for (pipeline_part in names(sobj@misc$parameters$Materials_and_Methods)){
+    if(pipeline_part == "part0_Alignment") pipeline_name <- c("","QC reads, Pseudo-mapping and quantification")
+    if(pipeline_part == "part1_Droplets_QC") pipeline_name <- c("","QC data on each sample")
+    if(pipeline_part == "part2_Filtering") pipeline_name <- NULL
+    if(pipeline_part == "part3_Norm_DimRed_Eval") pipeline_name <- c("","Individual analysis")
+    if(pipeline_part == "part4_Clust_Markers_Annot") pipeline_name <- NULL
+    if(pipeline_part == "ADT") pipeline_name <- c("","Cell surface proteins (CITE-seq ADT)")
+    if(pipeline_part == "TCR") pipeline_name <- c("","Single-cell immune profiling (TCR)")
+    if(pipeline_part == "BCR") pipeline_name <- c("","Single-cell immune profiling (Ig)")
+    if(pipeline_part == "TCR/BCR") pipeline_name <- c("","Single-cell immune profiling (TCR/Ig)")
+    if(pipeline_part == "Cerebro") pipeline_name <- c("","Cerebro")
+    
+    ### TO DO: Add the same if for integrated and grouped analysis ###
+    if(pipeline_part == "Integration_analysis") pipeline_name <- c("","Integration analysis")
+    if(pipeline_part == "Grouped_analysis") pipeline_name <- c("","Grouped analysis")
+    
+    MandM = c(MandM,pipeline_name,sobj@misc$parameters$Materials_and_Methods[[pipeline_part]])
+  }
+  file<-file(paste0(output.dir,"/Materials_and_Methods.txt"))
+  writeLines(
+  print(MandM), file)
+  close(file)
+}
+

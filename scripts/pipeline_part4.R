@@ -179,6 +179,7 @@ sobj@misc$parameters$Materials_and_Methods$part4_Clust_Markers_Annot <- paste0(
 "Marker genes for Louvain clusters were identified through a «one versus others» differential anaylisis using the Wilcoxon test through the FindAllMarkers() function from Seurat, considering only genes with a minimum log fold-change of 0.5 in at least 75% of cells from one of the groups compared, and FDR-adjusted p-values <0.05 (Benjaminin-Hochberg method)."
 )
 sobj@misc$parameters$Materials_and_Methods$packages_references <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
+write_MandM(sobj=sobj, output.dir=output.dir)
 
 ### Saving final object
 cat("\nSaving object...\n")

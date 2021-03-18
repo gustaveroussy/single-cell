@@ -77,7 +77,7 @@ dimred.method <- sobj@misc$params$reductions$method
 norm.method_GE <- sobj@misc$params$normalization$normalization.method
 assay <- if(norm.method_GE == "SCTransform") 'SCT' else 'RNA'
 ## Clustering
-GE_file <- sub('.rda', '', input.rda.ge)
+GE_file <- sub("\\.rda$", "", input.rda.ge)
 RNA.reduction <- sobj@misc$params$clustering$umap
 sample.name.ADT <- sub("_GE", "_ADT", sobj@misc$params$sample.name.GE)
 ## ADT
@@ -116,6 +116,7 @@ set.seed(sobj@misc$params$seed)
 cl <- create.parallel.instance(nthreads = nthreads)
 
 ### Loading raw count matrix
+cat("\nLoading raw count matrix of ADT...\n")
 dir.create(path = output_path_ADT, recursive = TRUE, showWarnings = TRUE)
 sobjADT <- load.sc.data(data.path = input.dir.adt, sample.name = sample.name.ADT, assay = 'ADT', droplets.limit = NULL, emptydrops.fdr = NULL, BPPARAM = cl, my.seed = sobj@misc$params$seed, out.dir = output_path_ADT, draw_plots = FALSE)
 
@@ -125,6 +126,7 @@ if(length(rownames(sobjADT)) != length(ADT_min.cutoff)) stop(paste0("The number 
 if(length(rownames(sobjADT)) != length(ADT_max.cutoff)) stop(paste0("The number of ADT_max.cutoff is not the same as the proteins in the ADT count table: ", length(ADT_max.cutoff), " quantiles (", paste0(ADT_max.cutoff, collapse=","),") and ",length(rownames(sobjADT))," proteins (",paste0(rownames(sobjADT), collapse=","),")."))
 
 ### Synching ADT to GE cells
+cat("\nSynching ADT to GE cells...\n")
 sobjADT <- sobjADT[, colnames(sobjADT) %in% colnames(sobj)]
 #sobj <- sobj[, colnames(sobj) %in% colnames(sobjADT)]
 if (!all(sort(colnames(sobj@assays$RNA@counts)) == sort(colnames(sobjADT@assays$ADT@counts)))){
@@ -141,6 +143,7 @@ if (!all(sort(colnames(sobj@assays$RNA@counts)) == sort(colnames(sobjADT@assays$
 }
 
 ### Merging
+cat("\nMerging ADT to GE...\n")
 sobj[['ADT']] <- Seurat::CreateAssayObject(sobjADT@assays[['ADT']]@counts)
 sobj@assays[['ADT']]@misc <- sobjADT@misc
 sobj@misc$pipeline_commands <- c(sobj@misc$pipeline_commands, sobjADT@misc$pipeline_commands)
@@ -152,9 +155,11 @@ sobj@misc$parameters$Materials_and_Methods$ADT <- sobjADT@misc$parameters$Materi
 rm(sobjADT)
 
 ### Normalization
+cat("\nNormalization ADT expressions...\n")
 sobj <- Seurat::NormalizeData(sobj, assay = 'ADT', normalization.method = norm.method_ADT)
 
 ### Computing correlations
+cat("\nComputing correlations...\n")
 cor.df <- data.frame(RNA_feature = gene.names, ADT_feature = rownames(sobj@assays[['ADT']]@counts), stringsAsFactors = FALSE)
 suppressWarnings(cor.unfiltered <- feature.cor(sobj = sobj, assay1 = assay, assay2 = 'ADT', assay1.features = gene.names, assay2.features = rownames(sobj@assays[['ADT']]@counts), slot = slot, cor.method = cor.method, zero.filter = FALSE, gene.names = gene.names))
 suppressWarnings(cor.filtered <- feature.cor(sobj = sobj, assay1 = assay, assay2 = 'ADT', assay1.features = gene.names, assay2.features = rownames(sobj@assays[['ADT']]@counts), slot = slot, cor.method = cor.method, zero.filter = TRUE, gene.names = gene.names))
@@ -162,7 +167,8 @@ cor.df <- cbind(cor.df, cor.unfiltered, cor.filtered)
 sobj@assays[['ADT']]@misc$cor <- cor.df
 rm(cor.df,cor.unfiltered,cor.filtered)
 
-### Co-plot gene expression AND ADT protein level
+### Co-plot gene expression and ADT protein level
+cat("\nCo-plot gene expression and ADT protein level...\n")
 #### withtout customized cutoff
 RNA_data_plot <- feature_plots(sobj, assay = assay, features = gene.names, slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(gene.names)), max.cutoff = rep("q95",length(gene.names)))
 ADT_data_plot <- feature_plots(sobj, assay = 'ADT', features = rownames(sobj@assays[['ADT']]@counts), slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(rownames(sobj@assays[['ADT']]@counts))), max.cutoff = rep("q95",length(rownames(sobj@assays[['ADT']]@counts))))
@@ -170,6 +176,7 @@ png(paste0(output_path_ADT,'/ADT_dimplot.png'), width = 1200, height = 600 * len
 wrap_elements(RNA_data_plot) + wrap_elements(ADT_data_plot)
 dev.off()
 #### with customized cutoff
+cat("\nCo-plot gene expression and ADT protein level with customized cutoff...\n")
 RNA_data_plot <- feature_plots(sobj, assay = assay, features = gene.names, slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(gene.names)), max.cutoff = rep("q95",length(gene.names)))
 ADT_data_plot <- feature_plots(sobj, assay = 'ADT', features = rownames(sobj@assays[['ADT']]@counts), slot = slot, reduction = RNA.reduction, min.cutoff = ADT_min.cutoff, max.cutoff = ADT_max.cutoff)
 png(paste0(output_path_ADT,'/ADT_dimplot_legend_cutoff.png'), width = 1200, height = 600 * length(gene.names))
@@ -204,7 +211,9 @@ sobj@misc$params$ADT$cutoff_max = ADT_max.cutoff
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$ADT <- paste0(sobj@misc$parameters$Materials_and_Methods$ADT," Only cell barcodes corresponding to the cell barcodes of gene expression were kept. Counting table was log-normalize (NormalizeData() function from Seurat with normalization.method parameters setting to '", norm.method_ADT,"') and ", cor.method," correlation scores beetween protein levels and gene expression levels was computed and ploted on UMAP.")
 sobj@misc$parameters$Materials_and_Methods$packages_references <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
+write_MandM(sobj=sobj, output.dir=output.dir)
 
-### Saving GE_ADT_TCR object
+### Saving GE_ADT object
+cat("\nSaving object...\n")
 GE_ADT_file <- paste0(output.dir, basename(GE_file), '_ADT')
 save(sobj, file = paste0(GE_ADT_file, '.rda'), compress = "bzip2")

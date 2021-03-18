@@ -115,7 +115,7 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS:
     else:
         SCTECH = '10xv3' # '10xv2' '10xv3'
     if SCTECH == '10xv3' :
-        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/3M-february-2018.txt.gz' # '737K-august-2016.txt' '3M-february-2018.txt.gz'
+        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/3M-february-2018.txt' # '737K-august-2016.txt' '3M-february-2018.txt'
     elif SCTECH == '10xv2' :
         WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/737K-august-2016.txt'
     else :
@@ -315,7 +315,7 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     NDRE_DIMRED_VTR = NDRE_DIMRED_METHOD if (NDRE_DIMRED_METHOD == "pca" or NDRE_VTR == "NULL") else (NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR.split(","))))))
     POSSIBLE_DIM = ["%.0f" % number for number in numpy.arange(NDRE_DIM_MIN,NDRE_DIM_MAX+1,NDRE_DIM_STEPS)]
     POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_RES_MIN,NDRE_RES_MAX+0.1,NDRE_RES_STEPS)]
-    ASSAY = "RNA" if NDRE_DIMRED_METHOD == "LogNormalize" else "SCT"
+    ASSAY = "RNA" if NDRE_NORM_METHOD == "LogNormalize" else "SCT"
 
 if "Clust_Markers_Annot_GE" in STEPS:
     ### Sample/Project
@@ -375,7 +375,7 @@ if "Clust_Markers_Annot_GE" in STEPS:
     CMA_CLUST_FOLDER = "dims" + str(CMA_KEEP_DIM) + "_res" + str(CMA_KEEP_RES)
 
 if "Droplets_QC_GE" in STEPS or "Filtering_GE" in STEPS or "Norm_DimRed_Eval_GE" in STEPS or "Clust_Markers_Annot_GE" in STEPS or "Adding_ADT" in STEPS:
-    SINGULARITY_ENV = PIPELINE_FOLDER + "/envs/singularity/single_cell_ubuntu20_R4_newcerebro.simg"
+    SINGULARITY_ENV = PIPELINE_FOLDER + "/envs/singularity/single_cell.simg"
 
 if "Adding_ADT" in STEPS:
     ### Sample/Project
@@ -473,7 +473,7 @@ if "Adding_BCR" in STEPS:
         dic_ADD_BCR_INFO[ADD_BCR_OUTPUT[i]]['ADD_BCR_INPUT_RDA'] = ADD_BCR_INPUT_RDA[i]
         dic_ADD_BCR_INFO[ADD_BCR_OUTPUT[i]]['ADD_BCR_INPUT_CSV_BCR'] = ADD_BCR_INPUT_CSV_BCR[i]
 
-if "Adding_TCR" in STEPS or "Adding_BCR" in STEPS:
+if "Alignment_annotations_TCR_BCR" in STEPS or "Adding_TCR" in STEPS or "Adding_BCR" in STEPS:
     SINGULARITY_ENV_TCR_BCR = PIPELINE_FOLDER + "/envs/singularity/single_cell_TCR_BCR.simg"
 
 if "Cerebro" in STEPS:
@@ -522,10 +522,9 @@ if "Cerebro" in STEPS:
     CEREBRO_INPUT_RDA_NO_EXTENTION = [os.path.splitext(x)[0] for x in CEREBRO_INPUT_RDA]
     #Singularity environnement
     if CEREBRO_VERSION == "v1.2":
-        # SINGULARITY_ENV_CEREBRO = PIPELINE_FOLDER + "/envs/singularity/single_cell_ubuntu20_R4.simg"
-        SINGULARITY_ENV_CEREBRO = PIPELINE_FOLDER + "/envs/singularity/single_cell_ubuntu20_R4.simg"
+        SINGULARITY_ENV_CEREBRO = PIPELINE_FOLDER + "/envs/singularity/single_cell_oldcerebro.simg"
     elif CEREBRO_VERSION == "v1.3":
-        SINGULARITY_ENV_CEREBRO = PIPELINE_FOLDER + "/envs/singularity/single_cell_ubuntu20_R4_newcerebro.simg"
+        SINGULARITY_ENV_CEREBRO = PIPELINE_FOLDER + "/envs/singularity/single_cell.simg"
     else:
         sys.exit("Error: Unknown version of cerebro in configfile!\n")
 

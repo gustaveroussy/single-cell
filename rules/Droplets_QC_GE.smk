@@ -66,7 +66,7 @@ rule QC_droplets_ge:
         4
     shell:
         """
-        singularity exec {params.sing_bind} \
+        singularity exec --no-home {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript /WORKDIR/{params.pipeline_folder}/scripts/pipeline_part1.R \
         --input.dir.ge {params.input_folder} \

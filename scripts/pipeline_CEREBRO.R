@@ -89,7 +89,7 @@ if (is.null(nthreads)) nthreads <- 4
 # Normalization and dimension reduction
 dimred.method <- sobj@misc$params$reductions$method
 ## Clustering
-GE_file <- sub('.rda', '', input.rda.ge)
+GE_file <- sub("\\.rda$", "", input.rda.ge)
 keep.dims <- sobj@misc$params$clustering$max.dim
 keep.res <- sobj@misc$params$clustering$resolution
 ident.name <- sobj@misc$params$clustering$ident
@@ -136,6 +136,8 @@ print("###########################################")
 sobj@misc$params$analysis_type = "Individual analysis"
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$Cerebro <- paste0("Cerebro (",utils::packageVersion('cerebroApp'),"), cell report browser, is an AppShiny which allows users to interactively visualize various parts of single cell transcriptomics analysis without requiring bioinformatics expertise. This package is also used to identify most expressed genes, and to compute pathway enrichment on marker genes (based on the Enrichr API) and Gene Set Enrichment Analysis (uses the Gene Set Variation Analysis method in combination with additional statistics as published by Diaz-Mejia et. al.(Diaz-Mejia JJ, Meng EC, Pico AR et al. Evaluation of methods to assign cell type labels to cell clusters from single-cell RNA-sequencing data [version 3; peer review: 2 approved, 1 approved with reservations]. F1000Research 2019, 8(ISCB Comm J):296 (https://doi.org/10.12688/f1000research.18490.3))) from the MSigDB (H collection: hallmark gene sets).")
+write_MandM(sobj=sobj, output.dir=dirname(input.rda.ge))
+
 ### Building cerebro binary
 cat("\nBuilding cerebro object...\n")
 if (version == "v1.2"){

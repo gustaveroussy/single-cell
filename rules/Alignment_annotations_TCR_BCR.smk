@@ -74,6 +74,16 @@ rule multiqc_tcr_bcr:
         "mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC/multiqc && multiqc -n {wildcards.sample_name_tcr_bcr}'_RAW' -i {wildcards.sample_name_tcr_bcr}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC/multiqc {input}"
 
 """
+This function allows to determine the singularity binding parameters.
+"""
+def alignment_annotations_tcr_bcr_params_sing(wildcards):
+    input_folder = os.path.dirname(PATH_ALL_FILES_TCR_BCR_FQ_GZ[0])
+    output_folder = os.path.dirname(ALIGN_OUTPUT_DIR_TCR_BCR + "/wildcards.sample_name_tcr_bcr")
+    ref_folder = CRINDEX_TCR_BCR
+    concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + input_folder + ":" + os.path.normpath("/WORKDIR/" + input_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder) + " -B " + ref_folder + ":" + os.path.normpath("/WORKDIR/" + ref_folder) 
+    return concat
+
+"""
 This rule makes the alignment and annotation by cellranger.
 The function alignment_annotations_inputs_tcr_bcr allows to get all fastq input files for one specific sample (wildcards).
 """
@@ -91,6 +101,7 @@ rule alignment_annotations_tcr_bcr:
         html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/web_summary.html"),
 	    MandM = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/Materials_and_Methods.txt")
     params:
+        sing_bind = alignment_annotations_tcr_bcr_params_sing,
         sample_folder = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}")
     threads:
         8
@@ -98,21 +109,20 @@ rule alignment_annotations_tcr_bcr:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
         """
-        source /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/sourceme.bash
-        # /home/m_aglave/Softwares/cellranger-3.1.0/sourceme.bash
-        cd {params}
-        rm -r {wildcards.sample_name_tcr_bcr}_CellRanger
-        # /home/m_aglave/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj
-        /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj \
+        #source /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/sourceme.bash
+        rm -r {params.sample_folder}/{wildcards.sample_name_tcr_bcr}_CellRanger
+        echo 'cd /WORKDIR/{params.sample_folder} && \
+        /Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj \
                  --id={wildcards.sample_name_tcr_bcr}_CellRanger \
-                 --reference={CRINDEX_TCR_BCR} \
-                 --fastqs={ALIGN_INPUT_DIR_TCR_BCR} \
+                 --reference=/WORKDIR/{CRINDEX_TCR_BCR} \
+                 --fastqs=/WORKDIR/{ALIGN_INPUT_DIR_TCR_BCR} \
                  --sample={wildcards.sample_name_tcr_bcr} \
                  --localmem=10 \
-                 --localcores={threads}
+                 --localcores={threads}' | singularity exec --no-home {params.sing_bind} {SINGULARITY_ENV_TCR_BCR} bash
         FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
         FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")
-        CELLRANGER_V=`/home/m_aglave/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj --version | grep "cellranger vdj (" | sed -e "s/cellranger vdj (//g" | sed -e "s/)//g"`
+        #CELLRANGER_V=`/home/m_aglave/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj --version | grep "cellranger vdj (" | sed -e "s/cellranger vdj (//g" | sed -e "s/)//g"`
+        CELLRANGER_V="3.1.0"
         echo "Raw BCL-files were demultiplexed and converted to Fastq format using bcl2fastq (version 2.20.0.422 from Illumina). 
 Reads quality control was performed using fastqc (version $FASTQC_V) and assignment to the expected genome species evaluated with fastq-screen (version $FASTQSCREEN_V).
 CellRanger (version $CELLRANGER_V from 10X Genomics) was used to generate single-cell V(D)J sequences and annotations." > {output.MandM}

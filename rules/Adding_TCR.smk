@@ -47,7 +47,7 @@ rule add_tcr_ge:
         4
     shell:
         """
-        singularity exec {params.sing_bind} \
+        singularity exec --no-home {params.sing_bind} \
         {SINGULARITY_ENV_TCR_BCR} \
         Rscript {params.pipeline_folder}/scripts/pipeline_TCR.R \
         --input.rda {params.input_rda} \
