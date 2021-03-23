@@ -257,8 +257,8 @@ if(file.exists(paste0(dirname(vdj.input.file.bcr), "/../../Materials_and_Methods
   for (i in 1:length(tmp)) tmp2=paste(tmp2,tmp[i], sep="")
   sobj@misc$parameters$Materials_and_Methods$TCR <- tmp2
 } else sobj@misc$parameters$Materials_and_Methods$BCR <- NULL
-sobj@misc$parameters$Materials_and_Methods$BCR <- paste0(sobj@misc$parameters$Materials_and_Methods$TCR, " The annotation was merged with corresponding cell barcode of 5’ gene expression. The scRepertoire package (",sobj@misc$technical_info$scRepertoire,") was used to process annotation to assign clonotype based on Ig chains. scRepertoire allows to study contig quantification, contig abundance, contig length, clonal space homeostasis, clonal proportion, clonal overlap beetween clusters and diversity. Physicochemical properties of the CDR3, based on amino-acid sequences, was determined by the alakazam R package (",sobj@misc$technical_info$alakazam,").")
-sobj@misc$parameters$Materials_and_Methods$packages_references <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
+sobj@misc$parameters$Materials_and_Methods$BCR <- paste0(sobj@misc$parameters$Materials_and_Methods$TCR, " The annotation was merged with corresponding cell barcode of 5’ gene expression. The scRepertoire package (version ",sobj@misc$technical_info$scRepertoire,") was used to process annotation to assign clonotype based on Ig chains. scRepertoire allows to study contig quantification, contig abundance, contig length, clonal space homeostasis, clonal proportion, clonal overlap beetween clusters and diversity. Physicochemical properties of the CDR3, based on amino-acid sequences, was determined by the alakazam R package (version ",sobj@misc$technical_info$alakazam,").")
+sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 write_MandM(sobj=sobj, output.dir=output.dir)
 
 ### Saving GE_ADT_BCR object

@@ -12,13 +12,13 @@ def get_targets(STEPS):
         expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC/multiqc/{sample_name_ge}_RAW_data.zip"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
         #alignment
         # expand(os.path.join(OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/output.bus"), zip, sample_name_ge=SAMPLE_NAME_GE),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/transcripts.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/matrix.ec"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
+        # expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/transcripts.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
+        # expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/matrix.ec"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
         expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/run_info.json"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
+        #correct_UMIs
+        # expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_corrected.bus"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
         #sort
         # expand(os.path.join(OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_sorted.bus"), zip, sample_name_ge=SAMPLE_NAME_GE),
-        #correct_UMIs
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_corrected.bus"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
         #build_count_matrix
         expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.mtx"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
         expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.barcodes.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
@@ -32,13 +32,13 @@ def get_targets(STEPS):
         expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC/multiqc/{sample_name_adt}_RAW_data.zip"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
         #alignment
         # expand(os.path.join(OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/output.bus"), zip, sample_name_adt=SAMPLE_NAME_ADT),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/transcripts.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/matrix.ec"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
+        # expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/transcripts.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
+        # expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/matrix.ec"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
         expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/run_info.json"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
+        #correct_UMIs
+        # expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
         #sort
         # expand(os.path.join(OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_sorted.bus"), zip, sample_name_adt=SAMPLE_NAME_ADT),
-        #correct_UMIs
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
         #build_count_matrix
         expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.mtx"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
         expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.barcodes.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),

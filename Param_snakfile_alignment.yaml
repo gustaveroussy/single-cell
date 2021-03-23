@@ -1,5 +1,5 @@
 # Yaml file for single-cell pipeline
-steps: ["Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR","Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE","Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Cerebro"] #"Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE", "Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Adding_BCR","Cerebro"
+steps: ["Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR", "Droplets_QC_GE"] #,"Filtering_GE","Norm_DimRed_Eval_GE","Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Cerebro"] #"Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE", "Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Adding_BCR","Cerebro"
 
 ############################################ GE ############################################
 #### Alignment_countTable_GE ####
@@ -89,7 +89,7 @@ Alignment_countTable_GE:
 #   vtr.scale : NULL
 #   dims.max : 40
 
-Clust_Markers_Annot_GE:
+#Clust_Markers_Annot_GE:
   # sample.name.ge : ["0732M_GE"]
   # input.rda.ge : ["/home/m_aglave/Bureau/0732M_GE/F250_C2000_M0-0.1_R0-1_G6/DOUBLETSFILTER_all/SCTransform/pca/0732M_GE_SCTransform_pca.rda"]
   # output.dir.ge : ["/home/m_aglave/Bureau/0732M_GE/F250_C2000_M0-0.1_R0-1_G6/DOUBLETSFILTER_all/SCTransform/pca"]
@@ -98,8 +98,8 @@ Clust_Markers_Annot_GE:
   # markfile : "NULL"
   ## Analysis Parameters
   # # Clustering
-  keep.dims : 25
-  keep.res : 0.5
+#  keep.dims : 25
+#  keep.res : 0.5
   # # Annotation
   # cfr.minscore : 0.20
   # sr.minscore : NULL

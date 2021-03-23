@@ -210,7 +210,7 @@ sobj@misc$params$ADT$cutoff_max = ADT_max.cutoff
 
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$ADT <- paste0(sobj@misc$parameters$Materials_and_Methods$ADT," Only cell barcodes corresponding to the cell barcodes of gene expression were kept. Counting table was log-normalize (NormalizeData() function from Seurat with normalization.method parameters setting to '", norm.method_ADT,"') and ", cor.method," correlation scores beetween protein levels and gene expression levels was computed and ploted on UMAP.")
-sobj@misc$parameters$Materials_and_Methods$packages_references <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
+sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 write_MandM(sobj=sobj, output.dir=output.dir)
 
 ### Saving GE_ADT object

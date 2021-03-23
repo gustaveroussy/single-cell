@@ -60,7 +60,7 @@ create.parallel.instance <- function(nthreads = 1) {
 # 4) Remove empty droplets
 # 5) Plotting saturation and Kneeplot
 # 6) Creation of the Seurat object
-load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, filter.replicates = TRUE, translation = FALSE, translation.file = NULL, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE) {
+load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, translation = FALSE, translation.file = NULL, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE) {
   if (file.exists(data.path) && !is.null(sample.name)) {
     message("Loading data ...")
 
@@ -92,25 +92,6 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     message('Droplets matrix dimensions :')
     droplets.nb <- ncol(scmat)
     print(dim(scmat))
-
-    ## Filtering duplicated cell barcodes (keeping the most populated entry)
-    if (filter.replicates) {
-      dup.bc <- unique(colnames(scmat)[duplicated(colnames(scmat))])
-
-      if(length(dup.bc) > 0) {
-        message(paste0("Found ", length(dup.bc), ' (', sprintf("%.2f", length(dup.bc) / ncol(scmat) * 100), "%) replicated cell barcodes ! Filtering ..."))
-
-        require(dplyr)
-        dedup.tbl <- tibble(barcode = colnames(scmat), ori.index = 1:ncol(scmat), count = DelayedArray::colSums(scmat)) %>% group_by(barcode) %>% dplyr::slice(which.max(count))
-        scmat <- scmat[, dedup.tbl$ori.index]
-        rm(dedup.tbl)
-
-        message('Droplets matrix dimensions (deduplicated) :')
-        droplets.nb <- ncol(scmat)
-        print(dim(scmat))
-
-      } else  message('No replicated barcode found.')
-    }
 
     message('Total UMIs :')
     umi.total.nb <- sum(scmat)
@@ -249,14 +230,13 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     sobj@misc$params$sobj_creation$droplets.limit <- droplets.limit
     sobj@misc$params$sobj_creation$emptydrops.fdr <- emptydrops.fdr
     sobj@misc$params$sobj_creation$emptydrops.retain <- emptydrops.retain
-    sobj@misc$params$sobj_creation$filter.replicates <- filter.replicates
     sobj@misc$params$sobj_creation$translation <- translation
     sobj@misc$params$sobj_creation$translation.file <- translation.file
     sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
     sobj@misc$params$seed <- my.seed
     
     ## Save command
-    sobj@misc$pipeline_commands <- paste0("load.sc.data(data.path = ", data.path, ", sample.name = ", sample.name, ", assay = ", assay, ", droplets.limit = ", droplets.limit, ", emptydrops.fdr = ", emptydrops.fdr, ", emptydrops.retain = ", emptydrops.retain, ", return.matrix = ", return.matrix, ", filter.replicates = ", filter.replicates, ", translation = ", translation, ",  translation.file = ", translation.file, ", BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = ", out.dir, ")")
+    sobj@misc$pipeline_commands <- paste0("load.sc.data(data.path = ", data.path, ", sample.name = ", sample.name, ", assay = ", assay, ", droplets.limit = ", droplets.limit, ", emptydrops.fdr = ", emptydrops.fdr, ", emptydrops.retain = ", emptydrops.retain, ", return.matrix = ", return.matrix, ", translation = ", translation, ",  translation.file = ", translation.file, ", BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = ", out.dir, ")")
     
     ## Save packages versions
     if(file.exists(paste0(data.path, "/run_info.json"))) sobj@misc$technical_info$kallisto <- json_data$kallisto_version
@@ -991,10 +971,7 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
   }
   rm(miniobj)
   gc(verbose = FALSE)
-  
-  ## Save packages versions
-  sobj@misc$technical_info$clustree <- utils::packageVersion('clustree')
-  sobj@misc$technical_info$patchwork <- utils::packageVersion('patchwork')
+
 }
 
 
@@ -1908,16 +1885,16 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   if (!is.null(sobj@assays$RNA@misc$params$ctrl.genes)) sobj@misc$parameters$ctrl.genes <- list(names = paste0(sobj@assays$RNA@misc$params$ctrl.genes, collapse = ", "),
                                                                                                 min.counts = sobj@assays$RNA@misc$params$ctrl.min.counts)
   if (!is.null(sobj@misc$params$analysis_type) && sobj@misc$params$analysis_type == "Individual analysis"){
-    sobj@misc$parameters$QC <- list(filter.droplets_percentage.mito.min = sobj@misc$params$QC$pcmito.range[1],
-                                    filter.droplets_percentage.mito.max = sobj@misc$params$QC$pcmito.range[2],
-                                    filter.droplets_percentage.ribo.min = sobj@misc$params$QC$pcribo.range[1],
-                                    filter.droplets_percentage.ribo.max = sobj@misc$params$QC$pcribo.range[2],
-                                    filter.droplets_features.min = sobj@misc$params$QC$min.features,
-                                    filter.droplets_transcript.min = sobj@misc$params$QC$min.counts,
-                                    filter.genes_cell.min = sobj@misc$params$QC$min.cells,
-                                    cyclone.cell.cycle.genes = sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes,
-                                    seurat.cell.cycle.genes = sobj@misc$params$QC$cell.cycle$seurat.cell.cycle.genes,
+    sobj@misc$parameters$QC <- list(filter.droplets_percentage.mito.min = paste0(sobj@misc$params$QC$pcmito.range[1]*100, " %"),
+                                    filter.droplets_percentage.mito.max = paste0(sobj@misc$params$QC$pcmito.range[2]*100, " %"),
+                                    filter.droplets_percentage.ribo.min = paste0(sobj@misc$params$QC$pcribo.range[1]*100, " %"),
+                                    filter.droplets_percentage.ribo.max = paste0(sobj@misc$params$QC$pcribo.range[2]*100, " %"),
+                                    filter.droplets_features.min = paste0(sobj@misc$params$QC$min.features, " genes"),
+                                    filter.droplets_transcript.min = paste0(sobj@misc$params$QC$min.counts, " UMIs"),
+                                    filter.genes_cell.min = paste0(sobj@misc$params$QC$min.cells, " cells"),
                                     filter.doublets_method = if (sobj@misc$params$doublets$method_filtering == "all") "scDblFinder, scds" else sobj@misc$params$doublets$method_filtering)
+    sobj@misc$gene_lists$cyclone.cell.cycle.genes <- paste0(sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes, collapse = ", ")
+    sobj@misc$gene_lists$seurat.cell.cycle.genes <- paste0(sobj@misc$params$QC$cell.cycle$seurat.cell.cycle.genes, collapse = ", ")
   }
   if (!is.null(sobj@assays[[assay]]@misc$params$normalization)){
     sobj@misc$parameters$normalization <- c(list(method = sobj@assays[[assay]]@misc$params$normalization$normalization.method),
@@ -1945,9 +1922,11 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
                                                   min.pct = sobj@misc$params$find.markers.quick$min.pct,
                                                   logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
                                                   adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max )
-  sobj@misc$parameters$custom_markers <- list( logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
-                                               adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max,
-                                               only_positive_logFC = only_pos_DE )
+  if(!remove.custom.DE && length(names_misc_DE)>0){
+    sobj@misc$parameters$custom_markers <- list( logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
+                                                 adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max,
+                                                 only_positive_logFC = only_pos_DE )
+  }
   sobj@misc$parameters$cerebro <- list( clusters.colnames = clusters.colnames,
                                         remove.other.reductions = remove.other.reductions,
                                         remove.other.idents = remove.other.idents,
@@ -1955,10 +1934,9 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
                                         remove.crb.genes = remove.crb.genes,
                                         remove.str.genes = remove.str.genes,
                                         gmt.file = gmt.file )
-  sobj@misc$technical_info <- list(R = sobj@misc$params$sobj_creation$Rsession)
+  sobj@misc$technical_info$R <- sobj@misc$params$sobj_creation$Rsession
   sobj@misc$technical_info$cerebroApp <- utils::packageVersion('cerebroApp')
-  #sobj@misc$technical_info <- list('R' = utils::capture.output(devtools::session_info()))
-  
+
   ## Conversion in cerebro objet
   cat("\nConversion in cerebro objet...\n")
   file = paste(c(file, if(remove.mt.genes) 'noMT' else NULL, if(remove.crb.genes) 'noRB' else NULL, if(remove.str.genes) 'noSTR' else NULL, if(!is.null(clusters.colnames)) paste0('clusterIs_', clusters.colnames) else NULL), collapse = '_')
@@ -2162,16 +2140,16 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   if (!is.null(sobj@assays$RNA@misc$params$ctrl.genes)) sobj@misc$parameters$ctrl.genes <- list(names = paste0(sobj@assays$RNA@misc$params$ctrl.genes, collapse = ", "),
                                                                                                 min.counts = sobj@assays$RNA@misc$params$ctrl.min.counts)
   if (!is.null(sobj@misc$params$analysis_type) && sobj@misc$params$analysis_type == "Individual analysis"){
-    sobj@misc$parameters$QC <- list(filter.droplets_percentage.mito.min = sobj@misc$params$QC$pcmito.range[1],
-                                    filter.droplets_percentage.mito.max = sobj@misc$params$QC$pcmito.range[2],
-                                    filter.droplets_percentage.ribo.min = sobj@misc$params$QC$pcribo.range[1],
-                                    filter.droplets_percentage.ribo.max = sobj@misc$params$QC$pcribo.range[2],
-                                    filter.droplets_features.min = sobj@misc$params$QC$min.features,
-                                    filter.droplets_transcript.min = sobj@misc$params$QC$min.counts,
-                                    filter.genes_cell.min = sobj@misc$params$QC$min.cells,
-                                    cyclone.cell.cycle.genes = sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes,
-                                    seurat.cell.cycle.genes = sobj@misc$params$QC$cell.cycle$seurat.cell.cycle.genes,
+    sobj@misc$parameters$QC <- list(filter.droplets_percentage.mito.min = paste0(sobj@misc$params$QC$pcmito.range[1]*100, " %"),
+                                    filter.droplets_percentage.mito.max = paste0(sobj@misc$params$QC$pcmito.range[2]*100, " %"),
+                                    filter.droplets_percentage.ribo.min = paste0(sobj@misc$params$QC$pcribo.range[1]*100, " %"),
+                                    filter.droplets_percentage.ribo.max = paste0(sobj@misc$params$QC$pcribo.range[2]*100, " %"),
+                                    filter.droplets_features.min = paste0(sobj@misc$params$QC$min.features, " genes"),
+                                    filter.droplets_transcript.min = paste0(sobj@misc$params$QC$min.counts, " UMIs"),
+                                    filter.genes_cell.min = paste0(sobj@misc$params$QC$min.cells, " cells"),
                                     filter.doublets_method = if (sobj@misc$params$doublets$method_filtering == "all") "scDblFinder, scds" else sobj@misc$params$doublets$method_filtering)
+    sobj@misc$gene_lists$cyclone.cell.cycle.genes <- sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes
+    sobj@misc$gene_lists$seurat.cell.cycle.genes <- sobj@misc$params$QC$cell.cycle$seurat.cell.cycle.genes
   }
   if (!is.null(sobj@assays[[assay]]@misc$params$normalization)){
     sobj@misc$parameters$normalization <- c(list(method = sobj@assays[[assay]]@misc$params$normalization$normalization.method),
@@ -2199,9 +2177,11 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
                                                   min.pct = sobj@misc$params$find.markers.quick$min.pct,
                                                   logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
                                                   adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max )
-  sobj@misc$parameters$custom_markers <- list( logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
-                                               adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max,
-                                               only_positive_logFC = only_pos_DE )
+  if(!remove.custom.DE && length(names_misc_DE)>0){
+    sobj@misc$parameters$custom_markers <- list( logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
+                                                 adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max,
+                                                 only_positive_logFC = only_pos_DE )
+  }
   sobj@misc$parameters$cerebro <- list( groups = paste0(groups, collapse = ", "),
                                         remove.other.reductions = remove.other.reductions,
                                         remove.other.idents = remove.other.idents,
@@ -2209,10 +2189,11 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
                                         remove.crb.genes = remove.crb.genes,
                                         remove.str.genes = remove.str.genes,
                                         gmt.file = gmt.file )
-  sobj@misc$technical_info <- list(R = sobj@misc$params$sobj_creation$Rsession)
+  sobj@misc$technical_info$R <- sobj@misc$params$sobj_creation$Rsession
   sobj@misc$technical_info$cerebroApp <- utils::packageVersion('cerebroApp')
-  #sobj@misc$technical_info <- list('R' = utils::capture.output(devtools::session_info()))
-  
+  if (!is.null(sobj@misc$parameters$Materials_and_Methods$packages_references)) sobj@misc$parameters$Materials_and_Methods$References_packages <- sobj@misc$parameters$Materials_and_Methods$packages_references
+  sobj@misc$parameters$Materials_and_Methods$packages_references <- NULL
+
   ## Restriction to the provided reduction, if requested
   if(!remove.other.reductions) {
     cat("\nRemoving other reductions ...\n")

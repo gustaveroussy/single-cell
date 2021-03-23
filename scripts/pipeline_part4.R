@@ -85,7 +85,7 @@ if (is.null(nthreads)) nthreads <- 4
 assay <- Seurat::DefaultAssay(sobj)
 norm.method <- sobj@assays[[assay]]@misc$params$normalization$normalization.method
 dimred.method <- sobj@assays[[assay]]@misc$params$reductions$method
-norm_vtr <- paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL, collapse = '_')
+norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL), collapse = '_')
 dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr[1])) paste(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
 # Annotation
 if (is.null(cfr.minscore)) cfr.minscore <- 0.35
@@ -175,11 +175,11 @@ if(!is.null(markers)) sobj <- markers.umap.plot(sobj = sobj, markers = markers, 
 
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$part4_Clust_Markers_Annot <- paste0(
-"An automatic annotation of cell types was perfom by SingleR (",sobj@misc$technical_info$SingleR,") (with fine-tuning step) and ClustifyR (",sobj@misc$technical_info$clustifyr,"), using packages built-in references. It labels clusters (or cells) from a dataset based on similarity (Spearman correlation score) to a reference dataset with known labels. The labels with a correlation score greater than ",sr.minscore," for SingleR or greater than ",cfr.minscore," for ClustifyR were kept.",
+"An automatic annotation of cell types was perfom by SingleR (version ",sobj@misc$technical_info$SingleR,") (with fine-tuning step) and ClustifyR (version ",sobj@misc$technical_info$clustifyr,"), using packages built-in references. It labels clusters (or cells) from a dataset based on similarity (Spearman correlation score) to a reference dataset with known labels. The labels with a correlation score greater than ",sr.minscore," for SingleR or greater than ",cfr.minscore," for ClustifyR were kept.",
 "Marker genes for Louvain clusters were identified through a «one versus others» differential anaylisis using the Wilcoxon test through the FindAllMarkers() function from Seurat, considering only genes with a minimum log fold-change of 0.5 in at least 75% of cells from one of the groups compared, and FDR-adjusted p-values <0.05 (Benjaminin-Hochberg method)."
 )
-sobj@misc$parameters$Materials_and_Methods$packages_references <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
-write_MandM(sobj=sobj, output.dir=output.dir)
+sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
+write_MandM(sobj=sobj, output.dir=clust.dir)
 
 ### Saving final object
 cat("\nSaving object...\n")

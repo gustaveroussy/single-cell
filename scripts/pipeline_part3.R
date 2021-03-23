@@ -15,7 +15,7 @@ option_list <- list(
   make_option("--features.n", help="Number of High Variable Genes to consider"),
   make_option("--norm.method", help="Name of normalization method (LogNormalize or SCTransform)"),
   make_option("--dimred.method", help="Name of dimension reduction method (scbfa or bpca or pca or ica or mds)"),
-  make_option("--vtr", help="Liste of biases to regress (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
+  make_option("--vtr", help="List of biases to regress (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
   make_option("--vtr.scale", help="TRUE to center biaises to regress (for scbfa and bpca only)"),
   make_option("--dims.max", help="Number max of dimensions to compute (depends on sample complexity and number of cells)"),
   make_option("--dims.min", help="Number min of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
@@ -148,6 +148,10 @@ dimred_vtr = paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, d
 norm.dim.red.dir = paste0(output.dir.ge, norm_vtr, '/', dimred_vtr)
 dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
 
+## Save packages versions
+sobj@misc$technical_info$clustree <- utils::packageVersion('clustree')
+sobj@misc$technical_info$patchwork <- utils::packageVersion('patchwork')
+
 ### Materials and Methods
 MM_tmp <- if(dimred.method == 'pca') 'PCA' else if(dimred.method == 'scbfa') 'scbfa'
 if(!is.null(vtr)){
@@ -158,14 +162,18 @@ if(!is.null(vtr)){
   vtr <- stringr::str_replace(vtr, "percent_st", "the proportion of mechanical stress response transcripts")
   vtr <- stringr::str_replace(vtr, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
   vtr <- stringr::str_replace(vtr, "Seurat.Phase", "the cell cycle phase determined by Seurat")
-  MM_tmp2 <- if(norm.method == 'SCTransform' && dimred.method == 'pca') paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") else if(norm.method == 'LogNormalize' && dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
-}
-sobj@misc$parameters$Materials_and_Methods$part3_Norm_DimRed_Eval <- paste0("Seurat (",sobj@misc$technical_info$Seurat,") was applied for further data processing. ",
+  if(norm.method == 'SCTransform' && dimred.method == 'pca') {
+    MM_tmp2 <- paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") 
+  }else if(norm.method == 'LogNormalize' && dimred.method == 'scbfa') {
+    MM_tmp2 <- paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.")
+  }else MM_tmp2 <- NULL
+}else MM_tmp2 <- NULL
+sobj@misc$parameters$Materials_and_Methods$part3_Norm_DimRed_Eval <- paste0("Seurat (version ",sobj@misc$technical_info$Seurat,") was applied for further data processing. ",
 if(norm.method == 'SCTransform' && dimred.method == 'pca') { paste0("The SCTransform normalization method (Hafemeister C, Satija R. Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression. Genome Biol. 2019;20 10.1186/s13059-019-1874-1.) was used to normalize, scale, select ",features.n," Highly Variable Genes", if(!is.null(vtr)) MM_tmp2,". Person residuals from this regression were used for dimension reduction by Principal Component Analysis (PCA).") },
-if(norm.method == 'LogNormalize' && dimred.method == 'scbfa') { paste0("As the scBFA dimension reduction method (",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and identified ",features.n," HVG (highly variable genes) using the FindVariableFeatures() method from Seurat applied on data transformed by its LogNormalize method. ", MM_tmp2)},
-"The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."
+if(norm.method == 'LogNormalize' && dimred.method == 'scbfa') { paste0("As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and identified ",features.n," HVG (highly variable genes) using the FindVariableFeatures() method from Seurat applied on data transformed by its LogNormalize method. ", MM_tmp2)},
+"The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."
 )
-sobj@misc$parameters$Materials_and_Methods$packages_references <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
+sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 
 ### Saving reduced normalized object
 cat("\nSaving object...\n")
