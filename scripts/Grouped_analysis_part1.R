@@ -127,7 +127,7 @@ if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr 
 
 ## Sourcing functions
 source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
-source(paste0(pipeline.path, "/scripts/Grouped_analysis_part1_function_added.R"))
+# source(paste0(pipeline.path, "/scripts/Grouped_analysis_part1_function_added.R"))
 
 ## RUN
 ######
@@ -139,7 +139,7 @@ print(paste0("sample.name.grp: ",sample.name.grp))
 print("#########################")
 
 data.path <- paste0(output.dir.grp,'/GROUPED_ANALYSIS/NO_INTEGRATED/',sample.name.grp ,'/')
-dir.create(data.path, recursive = TRUE)
+dir.create(data.path, recursive = TRUE, showWarnings = FALSE)
 
 ### Creating parallel instance
 cl <- create.parallel.instance(nthreads = nthreads)
@@ -148,17 +148,10 @@ cl <- create.parallel.instance(nthreads = nthreads)
 sobj.list <- sapply(seq_along(input.list.rda), function(x) {
   message(paste0("Loading '", input.list.rda[x], "' ..."))
   load(input.list.rda[x])
-  ## Cleaning reductions and graphs
+  ## Cleaning assays, reductions and graphs
   sobj@reductions <- list()
   sobj@graphs <- list()
   if(!Keep.Norm) sobj@assays = sobj@assays["RNA"]
-  # sobj@assays$SCT <- NULL
-  # sobj@assays$ADT <- NULL
-  # DefaultAssay(sobj) <- "RNA"
-  # assay <- "RNA"
-  # features.n=5000
-  # sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr = normalization.vtr)
-  # assay <- "SCT"
   return(sobj)
 })
 names(sobj.list) <- vapply(sobj.list, Seurat::Project, 'a')
@@ -237,6 +230,7 @@ if(Keep.Norm){
   ## Get HVG (because merge delete HVG slot)
   Seurat::VariableFeatures(sobj[[assay]]) <- rownames(sobj[[assay]]@scale.data)
   sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = norm.method, assay.ori = "RNA", assay.out = assay, features.used = NA)
+  sobj@misc$params$normalization$normalization.method <- norm.method
   sobj@assays[[assay]]@misc$scaling$vtr <- NA
 }else{
   ## Normalisation
@@ -307,9 +301,9 @@ save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(sample.name.grp, norm_vt
 
 ### Correlating reduction dimensions with biases and markers expression
 cat("\nCorrelation of dimensions...\n")
-dimensions.eval(sobj = sobj, reduction = paste0(assay, "_", dimred.method), eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
+#dimensions.eval(sobj = sobj, reduction = paste0(assay, "_", dimred.method), eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
 gc()
 
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)
 cat("\nEvaluation of multiple clustering parameters...\n")
-clustering.eval.mt(sobj = sobj, reduction = paste0(assay, "_", dimred.method), dimsvec = seq.int(dims.min, dims.max, dims.steps), resvec = seq(res.min,res.max,res.steps), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)
+#clustering.eval.mt(sobj = sobj, reduction = paste0(assay, "_", dimred.method), dimsvec = seq.int(dims.min, dims.max, dims.steps), resvec = seq(res.min,res.max,res.steps), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)

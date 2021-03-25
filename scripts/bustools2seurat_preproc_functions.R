@@ -789,7 +789,7 @@ decontx.process <- function(sobj, assay = 'RNA', idents = NULL, ...) {
 ### 2) Increase max transfer size using :
 ### options(future.globals.maxSize=2*1024^3)
 ### 3) Re-run dimensions.eval()
-dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = 'spearman', meta.names = c('sizeFactors', 'nFeature_RNA', 'percent_mt', 'MTscore', 'percent_rb', 'RBscore', 'percent_st', 'STscore', "Cyclone.S.Score", "Cyclone.G1.Score", "Cyclone.G2M.Score", "Cyclone.SmG2M.Score"), eval.markers = c('GAPDH'), slot = 'data', max.dims = 100L, out.dir = NULL, nthreads = 1) {
+dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = 'spearman', meta.names = c('nCount_RNA', 'nFeature_RNA', 'percent_mt', 'MTscore', 'percent_rb', 'RBscore', 'percent_st', 'STscore', "Cyclone.S.Score", "Cyclone.G1.Score", "Cyclone.G2M.Score", "Cyclone.SmG2M.Score"), eval.markers = c('GAPDH'), slot = 'data', max.dims = 100L, out.dir = NULL, nthreads = 1) {
   if (is.null(out.dir)) stop('No output dir provided !')
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
@@ -800,28 +800,33 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
   sample.name <- Seurat::Project(sobj)
   ndims <- min(max.dims, ncol(sobj@reductions[[reduction]]@cell.embeddings))
   if (!dir.exists(out.dir)) dir.create(out.dir, showWarnings = FALSE, recursive = TRUE)
-
+  if(slot == 'scale.data' && length(eval.markers) > 0 && (assay == "integrated")) stop("scale.data matrix can't be recomputed after integration by seurat")
+  if(slot == 'scale.data' && length(eval.markers) > 0 && (!is.null(sobj@misc$params$integration$method)) && sobj@misc$params$integration$method == 'Liger') stop("scale.data matrix can't be recomputed after integration by Liger")
+  if(slot == 'scale.data' && length(eval.markers) > 0 && (!is.null(sobj@misc$params$group$Keep.Norm)) && sobj@misc$params$group$Keep.Norm == 'TRUE') stop("scale.data matrix can't be recomputed after grouping data if normalization is kept.")
+  
   ## Regenerate full scaled matrix if eval.markers are available
   if (!is.null(eval.markers)) {
     eval.markers <- sort(eval.markers[eval.markers %in% rownames(sobj@assays[[assay]]@data)])
     if ((slot == 'scale.data') && (length(eval.markers) > 0)) {
-
-      scale.vtr <- NULL
-      if(!is.na(sobj@reductions[[reduction]]@misc$vtr)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$vtr)
-      if("harmony" %in% names(sobj@reductions[[reduction]]@misc)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$harmony$vtr)
-
-      if (length(scale.vtr) > 0) future::plan("multiprocess", workers = nthreads, gc = TRUE)
-      if (assay == 'SCT') {
-        sobj <- Seurat::ScaleData(object = sobj,
-                                  vars.to.regress = scale.vtr,
-                                  do.scale = FALSE, scale.max = Inf, block.size = 750)
+      ## Scaling if necessary
+      if (sum(dim(sobj@assays[[assay]]@scale.data)) < 3) {
+        scale.vtr <- NULL
+        if(!is.na(sobj@reductions[[reduction]]@misc$vtr)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$vtr)
+        if("harmony" %in% names(sobj@reductions[[reduction]]@misc)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$harmony$vtr)
+  
+        if (length(scale.vtr) > 0) future::plan("multiprocess", workers = nthreads, gc = TRUE)
+        if (assay == 'SCT') {
+          sobj <- Seurat::ScaleData(object = sobj,
+                                    vars.to.regress = scale.vtr,
+                                    do.scale = FALSE, scale.max = Inf, block.size = 750)
+        }
+        else {
+          sobj <- Seurat::ScaleData(object = sobj,
+                                    vars.to.regress = scale.vtr,
+                                    do.scale = TRUE, scale.max = 10, block.size = 1000)
+        }
+        if (length(scale.vtr) > 0) future:::ClusterRegistry("stop")
       }
-      else {
-        sobj <- Seurat::ScaleData(object = sobj,
-                                  vars.to.regress = scale.vtr,
-                                  do.scale = TRUE, scale.max = 10, block.size = 1000)
-      }
-      if (length(scale.vtr) > 0) future:::ClusterRegistry("stop")
     }
   }
 

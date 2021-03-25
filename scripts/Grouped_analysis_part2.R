@@ -93,8 +93,8 @@ species <- sobj@misc$params$species
 if (is.null(nthreads)) nthreads <- 4
 ### Analysis Parameters
 # Normalization and dimension reduction
-assay <- if(sobj@misc$params$normalization$normalization.method == 'SCTransform') 'SCT' else 'RNA'
-norm.method <- sobj@assays[[assay]]@misc$params$normalization$normalization.method
+norm.method <- sobj@misc$params$normalization$normalization.method
+assay <- if(norm.method == 'SCTransform') 'SCT' else 'RNA'
 norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL), collapse = '_')
 dimred.method <- sobj@assays[[assay]]@misc$params$reductions$method
 red.name <- paste0(assay, "_", dimred.method)

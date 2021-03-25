@@ -237,11 +237,11 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
       #Scaling
       Seurat::DefaultAssay(sobj.list[[x]]) <- assay
       if(assay == 'SCT') {
-        sobj <- Seurat::ScaleData(object = sobj.list[[x]], features = rownames(sobj.list[[x]]@assays[[assay]]@counts),
+        sobj <- Seurat::ScaleData(object = sobj.list[[x]],
                                   vars.to.regress = scale.vtr.all,
                                   do.scale = FALSE, scale.max = Inf, block.size = 750)
       } else {
-        sobj <- Seurat::ScaleData(object = sobj.list[[x]], features = rownames(sobj.list[[x]]@assays[[assay]]@counts),
+        sobj <- Seurat::ScaleData(object = sobj.list[[x]],
                                   vars.to.regress = scale.vtr.all,
                                   do.scale = if(integration.method == 'Liger') FALSE else TRUE, scale.max = 10, block.size = 1000)
       }
@@ -269,7 +269,6 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     assay <- "integrated"
     # Cleaning
     rm(sobj.list, sobj.features, sobj.anchors)
-    sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
     gc()
     ## Dimensions reduction
     red.name <- paste(c("integrated", dimred.method, integration.method), collapse = '_')
@@ -347,11 +346,11 @@ if (integration.method == 'Harmony'){
     #Scaling
     Seurat::DefaultAssay(sobj) <- assay
     if(assay == 'SCT') {
-      sobj <- Seurat::ScaleData(object = sobj, features = rownames(sobj@assays[[assay]]@counts),
+      sobj <- Seurat::ScaleData(object = sobj,
                                 vars.to.regress = scale.vtr.all,
                                 do.scale = FALSE, scale.max = Inf, block.size = 750)
     } else {
-      sobj <- Seurat::ScaleData(object = sobj, features = rownames(sobj@assays[[assay]]@counts),
+      sobj <- Seurat::ScaleData(object = sobj,
                                 vars.to.regress = scale.vtr.all,
                                 do.scale = TRUE, scale.max = 10, block.size = 1000)
     }
@@ -361,6 +360,9 @@ if (integration.method == 'Harmony'){
   png(paste0(norm.dim.red.dir, '/harmony_convergence_plot.png'), width = 1000, height = 1000)
   sobj <- harmony::RunHarmony(sobj, batch.vtr, reduction = paste(c(assay, dimred.method), collapse = '_'), assay.use = assay, plot_convergence = TRUE, reduction.save = red.name) #, do_pca=FALSE ??
   dev.off()
+  ##Clean
+  sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
+  gc()
   #Params
   sobj@misc$technical_info$Harmony <- utils::packageVersion('harmony')
   sobj@reductions[[red.name]]@misc$vtr = NA
