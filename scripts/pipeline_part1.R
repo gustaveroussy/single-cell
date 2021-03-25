@@ -87,62 +87,72 @@ translation.file <- args$options$translation.file
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
-  for(i in names(yaml_options)) if(i %in% c("emptydrops.fdr", "droplets.limit", "min.features", "min.counts", "features.n")) assign(i, as.numeric(yaml_options[[i]]))else assign(i, yaml_options[[i]])
-  rm(yaml_options)
+  for(i in names(yaml_options)) {
+    #convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
+    if ((length(yaml_options[[i]]) == 0) || (length(yaml_options[[i]]) == 1 && toupper(yaml_options[[i]]) == "NULL")) { yaml_options[[i]] <- NULL
+    } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "FALSE")) { yaml_options[[i]] <- FALSE
+    } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "TRUE")) { yaml_options[[i]] <- TRUE
+    }
+    print(i)
+    print(length(yaml_options[[i]]))
+    #assign values
+    if(i %in% c("emptydrops.fdr", "droplets.limit", "min.features", "min.counts", "features.n")) assign(i, as.numeric(yaml_options[[i]])) else assign(i, yaml_options[[i]])
+  }
+  rm(yaml_options, i)
 }
 ### Clean
 rm(option_list,parser,args)
 
 #### Get path if snakemake/singularity/local ####
-if(is.null(pipeline.path) || pipeline.path == "NULL") stop("--pipeline.path parameter must be set!")
+if(is.null(pipeline.path)) stop("--pipeline.path parameter must be set!")
 
 #### Get Missing Paramaters ####
 ### Project
-if (is.null(species) || species == "NULL") species <- "homo_sapiens"
+if (is.null(species)) species <- "homo_sapiens"
 ### Computational Parameters
-if (is.null(nthreads) || nthreads == "NULL") nthreads <- 1
+if (is.null(nthreads)) nthreads <- 1
 ### Analysis Parameters
 # Emptydrops
-if (is.null(emptydrops.fdr) || emptydrops.fdr == "NULL") emptydrops.fdr <- 1E-03
-if (is.null(droplets.limit) || droplets.limit == "NULL") droplets.limit <- 1E+05
+if (is.null(emptydrops.fdr)) emptydrops.fdr <- 1E-03
+if (is.null(droplets.limit)) droplets.limit <- 1E+05
 # Translate ENSG into Gene Symbol
-if (is.null(translation) || translation == "NULL") translation <- TRUE
+if (is.null(translation)) translation <- TRUE
 # QC cell
-if (is.null(pcmito.min) || pcmito.min == "NULL") pcmito.min <- 0
-if (is.null(pcmito.max) || pcmito.max == "NULL") pcmito.max <- 0.2
+if (is.null(pcmito.min)) pcmito.min <- 0
+if (is.null(pcmito.max)) pcmito.max <- 0.2
 pcmito.range <- c(pcmito.min, pcmito.max)
-if (is.null(pcribo.min) || pcribo.min == "NULL") pcribo.min <- 0
-if (is.null(pcribo.max) || pcribo.max == "NULL") pcribo.max <- 1
+if (is.null(pcribo.min)) pcribo.min <- 0
+if (is.null(pcribo.max)) pcribo.max <- 1
 pcribo.range <- c(pcribo.min, pcribo.max)
-if (is.null(min.features) || min.features == "NULL") min.features <- 200
-if (is.null(min.counts) || min.counts == "NULL") min.counts <- 1000
+if (is.null(min.features)) min.features <- 200
+if (is.null(min.counts)) min.counts <- 1000
 # QC gene
-if (is.null(min.cells) || min.cells == "NULL") min.cells <- 5
+if (is.null(min.cells)) min.cells <- 5
 ### Databases
 if (species == "homo_sapiens") {
   # QC
-  if (is.null(mt.genes.file) || mt.genes.file == "NULL") mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_mito_symbols_20191001.rds")
-  if (is.null(crb.genes.file) || crb.genes.file == "NULL") crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_cribo_symbols_20191015.rds")
-  if (is.null(str.genes.file) || str.genes.file == "NULL") str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_stress_symbols_20200224.rds")
+  if (is.null(mt.genes.file)) mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_mito_symbols_20191001.rds")
+  if (is.null(crb.genes.file)) crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_cribo_symbols_20191015.rds")
+  if (is.null(str.genes.file)) str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_stress_symbols_20200224.rds")
   # Translation into gene Symbols
-  if (is.null(translation.file) || translation.file == "NULL") translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Homo_sapiens.GRCh38.txt")
+  if (is.null(translation.file)) translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Homo_sapiens.GRCh38.txt")
 }
 if (species == "mus_musculus") {
   # QC
-  if (is.null(mt.genes.file) || mt.genes.file == "NULL") mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_mito_symbols_20191015.rds")
-  if (is.null(crb.genes.file) || crb.genes.file == "NULL") crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_cribo_symbols_20191015.rds")
-  if (is.null(str.genes.file) || str.genes.file == "NULL") str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_stress_symbols_20200224.rds")
+  if (is.null(mt.genes.file)) mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_mito_symbols_20191015.rds")
+  if (is.null(crb.genes.file)) crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_cribo_symbols_20191015.rds")
+  if (is.null(str.genes.file)) str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_stress_symbols_20200224.rds")
   # Translation into gene Symbols
-  if (is.null(translation.file) || translation.file == "NULL") translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Mus_musculus.GRCm38.txt")
+  if (is.null(translation.file)) translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Mus_musculus.GRCm38.txt")
 }
 
 if (species == "rattus_norvegicus") {
   # QC
-  if (is.null(mt.genes.file) || mt.genes.file == "NULL") mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_mito_symbols_20200315.rds")
-  if (is.null(crb.genes.file) || crb.genes.file == "NULL") crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_cribo_symbols_20200315.rds")
-  if (is.null(str.genes.file) || str.genes.file == "NULL") str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_stress_symbols_20200315.rds")
+  if (is.null(mt.genes.file)) mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_mito_symbols_20200315.rds")
+  if (is.null(crb.genes.file)) crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_cribo_symbols_20200315.rds")
+  if (is.null(str.genes.file)) str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_stress_symbols_20200315.rds")
   # Translation into gene Symbols
-  if (is.null(translation.file) || translation.file == "NULL") translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Rattus_norvegicus.Rnor_6.0.txt")
+  if (is.null(translation.file)) translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Rattus_norvegicus.Rnor_6.0.txt")
 }
 
 #### Fixed parameters ####

@@ -64,8 +64,17 @@ res.steps <- if (!is.null(args$options$res.steps)) as.numeric(args$options$res.s
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
-  for(i in names(yaml_options)) assign(i, yaml_options[[i]])
-  rm(yaml_options)
+  for(i in names(yaml_options)) {
+    #convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
+    if ((length(yaml_options[[i]]) == 0) || (length(yaml_options[[i]]) == 1 && toupper(yaml_options[[i]]) == "NULL")) { yaml_options[[i]] <- NULL
+    } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "FALSE")) { yaml_options[[i]] <- FALSE
+    } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "TRUE")) { yaml_options[[i]] <- TRUE
+    }
+    #assign values
+    if(i %in% c("nthreads","features.n","dims.max","dims.min","dims.steps","res.max", "res.min", "res.steps")) assign(i, as.numeric(yaml_options[[i]]))else assign(i, yaml_options[[i]])
+    
+  }
+  rm(yaml_options, i)
 }
 ### Clean
 rm(option_list,parser,args)
@@ -153,7 +162,7 @@ sobj@misc$technical_info$clustree <- utils::packageVersion('clustree')
 sobj@misc$technical_info$patchwork <- utils::packageVersion('patchwork')
 
 ### Materials and Methods
-MM_tmp <- if(dimred.method == 'pca') 'PCA' else if(dimred.method == 'scbfa') 'scbfa'
+MM_tmp <- if(dimred.method == 'pca') 'PCA' else dimred.method
 if(!is.null(vtr)){
   vtr <- stringr::str_replace(vtr, "sizeFactor", "the number of detected transcripts")
   vtr <- stringr::str_replace(vtr, "nFeature_RNA", "the number of detected genes")
@@ -162,15 +171,21 @@ if(!is.null(vtr)){
   vtr <- stringr::str_replace(vtr, "percent_st", "the proportion of mechanical stress response transcripts")
   vtr <- stringr::str_replace(vtr, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
   vtr <- stringr::str_replace(vtr, "Seurat.Phase", "the cell cycle phase determined by Seurat")
-  if(norm.method == 'SCTransform' && dimred.method == 'pca') {
-    MM_tmp2 <- paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") 
-  }else if(norm.method == 'LogNormalize' && dimred.method == 'scbfa') {
-    MM_tmp2 <- paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.")
-  }else MM_tmp2 <- NULL
-}else MM_tmp2 <- NULL
+  
+  MM_tmp2 <- if(norm.method == 'SCTransform') paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") else NULL
+  MM_tmp3 <- if(dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
+}else {
+  MM_tmp2 <- NULL
+  MM_tmp3 <- NULL
+}
 sobj@misc$parameters$Materials_and_Methods$part3_Norm_DimRed_Eval <- paste0("Seurat (version ",sobj@misc$technical_info$Seurat,") was applied for further data processing. ",
-if(norm.method == 'SCTransform' && dimred.method == 'pca') { paste0("The SCTransform normalization method (Hafemeister C, Satija R. Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression. Genome Biol. 2019;20 10.1186/s13059-019-1874-1.) was used to normalize, scale, select ",features.n," Highly Variable Genes", if(!is.null(vtr)) MM_tmp2,". Person residuals from this regression were used for dimension reduction by Principal Component Analysis (PCA).") },
-if(norm.method == 'LogNormalize' && dimred.method == 'scbfa') { paste0("As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and identified ",features.n," HVG (highly variable genes) using the FindVariableFeatures() method from Seurat applied on data transformed by its LogNormalize method. ", MM_tmp2)},
+if(norm.method == 'SCTransform')  paste0("The SCTransform normalization method (Hafemeister C, Satija R. Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression. Genome Biol. 2019;20 10.1186/s13059-019-1874-1.) was used to normalize, scale, select ",features.n," Highly Variable Genes", MM_tmp2,"."),
+if(norm.method == 'LogNormalize')  paste0(features.n," Highly Variable Genes (HVG) were identified using the FindVariableFeatures() method from Seurat applied on data transformed by its LogNormalize method."),
+if(dimred.method == 'pca'){
+  if(norm.method == 'SCTransform') paste0(" Person residuals from this regression were used for dimension reduction by Principal Component Analysis (PCA).")
+  if(norm.method == 'LogNormalize') paste0(" HVG were scaled and and centered, providing person residuals used for dimension reduction by Principal Component Analysis (PCA).")
+},
+if(dimred.method == 'scbfa') paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3),
 "The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."
 )
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)

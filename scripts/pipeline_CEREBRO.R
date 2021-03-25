@@ -53,19 +53,19 @@ gmt.file <- args$options$gmt.file
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
-  for(i in names(yaml_options)) assign(i, yaml_options[[i]])
-  rm(yaml_options)
+  for(i in names(yaml_options)) {
+    #convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
+    if ((length(yaml_options[[i]]) == 0) || (length(yaml_options[[i]]) == 1 && toupper(yaml_options[[i]]) == "NULL")) { yaml_options[[i]] <- NULL
+    } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "FALSE")) { yaml_options[[i]] <- FALSE
+    } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "TRUE")) { yaml_options[[i]] <- TRUE
+    }
+    #assign values
+    if(i %in% c("nthreads")) assign(i, as.numeric(yaml_options[[i]])) else assign(i, yaml_options[[i]])
+  }
+  rm(yaml_options, i)
 }
 ### Clean
 rm(option_list,parser,args)
-###Formate parameters
-for ( obj in ls() ) {
-  if(length(get(obj)) != 0){
-    if (toupper(get(obj) == "NULL")) { assign(obj, NULL)
-    } else if (toupper(get(obj)) == "FALSE") { assign(obj, FALSE)
-    } else if (toupper(get(obj)) == "TRUE") { assign(obj, TRUE) }
-  }
-}
 
 #### Get path if snakemake/singularity/local ####
 if(is.null(pipeline.path)) stop("--pipeline.path parameter must be set!")

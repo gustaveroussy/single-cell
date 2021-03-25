@@ -657,17 +657,16 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
       assay.ori <- Seurat::DefaultAssay(sobj)
       Seurat::DefaultAssay(sobj) <- assay
       if(assay == 'SCT') {
-        sobj <- Seurat::ScaleData(object = sobj, features = rownames(sobj@assays[[assay]]@counts),
+        sobj <- Seurat::ScaleData(object = sobj,
                                   vars.to.regress = scale.vtr.all,
                                   do.scale = FALSE, scale.max = Inf, block.size = 750)
       } else {
-        sobj <- Seurat::ScaleData(object = sobj, features = rownames(sobj@assays[[assay]]@counts),
+        sobj <- Seurat::ScaleData(object = sobj,
                                   vars.to.regress = scale.vtr.all,
                                   do.scale = TRUE, scale.max = 10, block.size = 1000)
       }
       Seurat::DefaultAssay(sobj) <- assay.ori
     }
-    # sobj <- Seurat::ScaleData(object = sobj, assay = assay)
   }
 
   if (reduction.method == 'pca') {
@@ -813,12 +812,12 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
 
       if (length(scale.vtr) > 0) future::plan("multiprocess", workers = nthreads, gc = TRUE)
       if (assay == 'SCT') {
-        sobj <- Seurat::ScaleData(object = sobj, features = rownames(sobj@assays[[assay]]@counts),
+        sobj <- Seurat::ScaleData(object = sobj,
                                   vars.to.regress = scale.vtr,
                                   do.scale = FALSE, scale.max = Inf, block.size = 750)
       }
       else {
-        sobj <- Seurat::ScaleData(object = sobj, features = rownames(sobj@assays[[assay]]@counts),
+        sobj <- Seurat::ScaleData(object = sobj,
                                   vars.to.regress = scale.vtr,
                                   do.scale = TRUE, scale.max = 10, block.size = 1000)
       }
@@ -1220,11 +1219,11 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
     assay.ori <- Seurat::DefaultAssay(sobj)
     Seurat::DefaultAssay(sobj) <- assay
     if(assay == 'SCT') {
-      sobj <- Seurat::ScaleData(object = sobj, features = rownames(sobj@assays[[assay]]@counts),
+      sobj <- Seurat::ScaleData(object = sobj,
                                 vars.to.regress = NULL,
                                 do.scale = FALSE, scale.max = Inf, block.size = 750)
     } else {
-      sobj <- Seurat::ScaleData(object = sobj, features = rownames(sobj@assays[[assay]]@counts),
+      sobj <- Seurat::ScaleData(object = sobj,
                                 vars.to.regress = NULL,
                                 do.scale = TRUE, scale.max = 10, block.size = 1000)
     }
@@ -2929,7 +2928,7 @@ find_ref <- function(MandM = NULL, pipeline.path=NULL){
 write_MandM <- function(sobj=NULL, output.dir=NULL){
   MandM = c("Materials and Methods","")
   for (pipeline_part in names(sobj@misc$parameters$Materials_and_Methods)){
-    if(pipeline_part != "packages_references"){
+    if(pipeline_part != "References_packages"){
       if(pipeline_part == "part0_Alignment") pipeline_name <- c("","QC reads, Pseudo-mapping and quantification")
       if(pipeline_part == "part1_Droplets_QC") pipeline_name <- c("","QC data on each sample")
       if(pipeline_part == "part2_Filtering") pipeline_name <- NULL
@@ -2942,14 +2941,16 @@ write_MandM <- function(sobj=NULL, output.dir=NULL){
       if(pipeline_part == "Cerebro") pipeline_name <- c("","Cerebro")
       
       ### TO DO: Add the same if for integrated and grouped analysis ###
-      if(pipeline_part == "Integration_analysis") pipeline_name <- c("","Integration analysis")
-      if(pipeline_part == "Grouped_analysis") pipeline_name <- c("","Grouped analysis")
+      if(pipeline_part == "Integration_Norm_DimRed_Eval") pipeline_name <- c("","Integration analysis")
+      if(pipeline_part == "Integration_Clust_Markers_Annot") pipeline_name <- NULL
+      if(pipeline_part == "Grouped_analysis_Norm_DimRed_Eval") pipeline_name <- c("","Grouped analysis")
+      if(pipeline_part == "Grouped_analysis_Clust_Markers_Annot") pipeline_name <- NULL
     
       MandM = c(MandM,pipeline_name,sobj@misc$parameters$Materials_and_Methods[[pipeline_part]])
     }
   }
   #add packages reference publications
-  if("packages_references" %in% names(sobj@misc$parameters$Materials_and_Methods)) MandM = c(MandM,"","References of tools",sobj@misc$parameters$Materials_and_Methods$packages_references)
+  if("References_packages" %in% names(sobj@misc$parameters$Materials_and_Methods)) MandM = c(MandM,"","References of tools",sobj@misc$parameters$Materials_and_Methods$References_packages)
   #save
   file<-file(paste0(output.dir,"/Materials_and_Methods.txt"))
   writeLines(MandM, file)

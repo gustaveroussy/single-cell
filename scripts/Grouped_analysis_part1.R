@@ -1,197 +1,164 @@
 ## GROUPED PROTOCOL (no integration)
-
-projectdir <- "/WORKDIR/B21001_CAAL_01/"
-resdir <- "/WORKDIR/ressources/"
-scriptsdir="/WORKDIR/scripts/"
-
-if(TRUE){
-### B21001_CAAL_01
-species <- "mus_musculus" # Only 'homo_sapiens', 'mus_musculus' supported yet.
-min.cells <- 0
-#assay <- 'SCT'
-assay <- 'RNA'
-norm.method <- 'SCTransform' ## 'LogNormalize' or 'SCTransform'
-features.n <- 3000
-normalization.vtr <- c('percent_mt', 'percent_rb', 'nFeature_RNA', 'percent_st') #c('percent_mt', 'percent_rb', 'nFeature_RNA', 'percent_st')
-reduction.vtr <- NULL #c('percent_mt', 'percent_rb', 'nFeature_RNA', 'percent_st')
-dimred.method <- 'pca' ## 'scbfa' or 'bpca' or 'pca' or 'ica' or 'mds'
-vtr.scale <- FALSE
-max.dims <- 50
-resvec <- seq(.1,1.2,.1)
-multi.pt.size <- solo.pt.size <- 2
-nthreads <- 4
-gradient.cols <- c("gold", "blue")
-gmt.file <- paste0(resdir, '/DATABASE/MSIGDB/7.1/msigdb_v7.1_GMTs/msigdb.v7.1.symbols.gmt')
-remove.mt.genes <- FALSE
-remove.rb.genes <- FALSE
-remove.st.genes <- FALSE
-#Keep_Norm <- TRUE #bool (if keep individual normalization (necessary for seurat integration, but for scbfa we can choose))
-Keep_Norm <- FALSE
-project.name <- "B21001_CAAL_01"
-markfile <- paste0(projectdir, 'com/input/20211222_gene_intestine_formatted.xlsx')
-ctrl.genes <- c('GAPDH')
-eval.markers <- NULL
-rda.list <- c(
-  paste0(projectdir,"data_output/1_GE/F200_C1500_M0-0.2_R0-1/DOUBLETSFILTER_both/SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st/pca/pca_33_1.2/1_GE_SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st_pca_33_1.2.rda"),
-  paste0(projectdir,"data_output/3_GE/F200_C1500_M0-0.2_R0-1/DOUBLETSFILTER_both/SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st/pca/pca_33_1.2/3_GE_SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st_pca_33_1.2.rda"),
-  paste0(projectdir,"data_output/4_GE/F200_C1500_M0-0.2_R0-1/DOUBLETSFILTER_both/SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st/pca/pca_25_1.2/4_GE_SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st_pca_25_1.2.rda"),
-  paste0(projectdir,"data_output/921_GE/F200_C1500_M0-0.2_R0-1/DOUBLETSFILTER_both/SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st/pca/pca_27_1.1/921_GE_SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st_pca_27_1.1.rda"),
-  paste0(projectdir,"data_output/922_GE/F200_C1500_M0-0.2_R0-1/DOUBLETSFILTER_both/SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st/pca/pca_31_1/922_GE_SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st_pca_31_1.rda"),
-  paste0(projectdir,"data_output/923_GE/F200_C1500_M0-0.2_R0-1/DOUBLETSFILTER_both/SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st/pca/pca_29_1.2/923_GE_SCTransformnFeature_RNA_percent_mt_percent_rb_percent_st_pca_29_1.2.rda")
+library(optparse)
+option_list <- list(
+  ### Project
+  make_option("--input.list.rda", help="List of .rda file with individual analysis"),
+  make_option("--output.dir.grp", help="Output path"),
+  make_option("--sample.name.grp", help="Name of the samples group (advice: include integration method name)"),
+  make_option("--eval.markers", help="Genes to evaluate to check normalization and dimension reduction"),
+  make_option("--author.name", help="Name of auhtor of the analysis"),
+  make_option("--author.mail", help="Email of auhtor of the analysis"),
+  ### Computational Parameters
+  make_option("--nthreads", help="Number of threads to use"),
+  make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),
+  ### Analysis Parameters
+  # Normalization and dimension reduction
+  make_option("--Keep.Norm", help="If individual normalization mut be kept or not (TRUE/FALSE)."),
+  make_option("--features.n", help="Number of High Variable Genes to consider"),
+  make_option("--norm.method", help="Name of normalization method (LogNormalize or SCTransform)"),
+  make_option("--dimred.method", help="Name of dimension reduction method (scbfa or bpca or pca or ica or mds)"),
+  make_option("--vtr", help="List of biases to regress (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
+  make_option("--vtr.scale", help="TRUE to center biaises to regress (for scbfa and bpca only)"),
+  make_option("--dims.max", help="Number max of dimensions to compute (depends on sample complexity and number of cells)"),
+  make_option("--dims.min", help="Number min of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--dims.steps", help="Steps for dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--res.max", help="Number max of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--res.min", help="Number min of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--res.steps", help="Steps for resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
+  make_option("--yaml", help="Patho to yaml file with all parameters")
 )
-sample.name <- c("1","3","4","921","922","923")
-sample.name.GE <- paste0(sample.name, "_GE")
-sample.name.INT <- 'CAAL_01_GlobalNorm'
-#sample.name.INT <- 'CAAL_01_IndivNorm'
+parser <- OptionParser(usage="Rscript %prog [options]", description = " ", option_list = option_list)
+args <- parse_args(parser, positional_arguments = 0)
+
+#### Formatting Parameters ####
+#convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
+for (i in names(args$options)){
+  if (toupper(args$options[i]) == "NULL") { args$options[i] <- NULL
+  } else if (toupper(args$options[i]) == "FALSE") { args$options[i] <- FALSE
+  } else if (toupper(args$options[i]) == "TRUE") { args$options[i] <- TRUE
+  }
 }
 
-if(FALSE){
-# VARS : P31_LOPO
-### Vars
-species <- 'homo_sapiens'
-min.cells <- 0
-#assay <- 'SCT'
-assay <- 'RNA'
-norm.method <- 'SCTransform' ## 'LogNormalize' or 'SCTransform'
-features.n <- 3000
-normalization.vtr <- c('Cyclone.Phase', 'percent_rb', 'percent_st') ## 'Cyclone.SmG2M.Score'
-reduction.vtr <- NULL #c('percent_mt', 'percent_rb', 'nFeature_RNA', 'percent_st')
-dimred.method <- 'pca' ## 'scbfa' or 'bpca' or 'pca' or 'ica' or 'mds'
-vtr.scale <- FALSE
-max.dims <- 50
-resvec <- seq(.1,1.2,.1)
-multi.pt.size <- solo.pt.size <- 2
-nthreads <- 4
-gradient.cols <- c("gold", "blue")
-gmt.file <- paste0(resdir, '/DATABASE/MSIGDB/7.1/msigdb_v7.1_GMTs/msigdb.v7.1.symbols.gmt')
-remove.mt.genes <- FALSE
-remove.rb.genes <- FALSE
-remove.st.genes <- FALSE
-#Keep_Norm <- TRUE #bool (if keep individual normalization (necessary for seurat integration, but for scbfa we can choose))
-Keep_Norm <- FALSE
-# run.name <- "IGR/200811_A00461_0118_AHTN5CDMXX"
-project.name <- "B20036_YOLO_01"
-markfile <- c(paste0(projectdir, 'com/input/signature_AR_NEPC_from_Beltran_NatMed2016.xlsx'),paste0(projectdir, 'com/input/signature_AR_NEPC_from_porteur_project.xlsx'),paste0(projectdir, 'com/input/signature_AR_NEPC_from_Karthaus_Science2020.xlsx'),paste0(projectdir, 'com/input/20211221_Liste_genes_pour_scRNAseq.xlsx'))
-ctrl.genes <- c('GAPDH')
-eval.markers <- NULL
-rda.list <- c(
-  paste0(projectdir,"data_output/MR009_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_mt/pca/pca_39_1.2/MR009_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_mt_pca_39_1.2.rda"),
-  paste0(projectdir,"data_output/MR009_RI_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_rb/pca/pca_27_1/MR009_RI_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_rb_pca_27_1.rda"),
-  paste0(projectdir,"data_output/MR041_P2_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_mt_percent_rb/pca/pca_17_0.9/MR041_P2_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_mt_percent_rb_pca_17_0.9.rda"),
-  paste0(projectdir,"data_output/MR041R_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_mt_percent_rb/pca/pca_17_0.9/MR041R_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_mt_percent_rb_pca_17_0.9.rda"),
-  paste0(projectdir,"data_output/MR059_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA/pca/pca_19_1.2/MR059_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_pca_19_1.2.rda"),
-  paste0(projectdir,"data_output/MR077_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_mt_percent_rb/pca/pca_21_0.8/MR077_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_mt_percent_rb_pca_21_0.8.rda"),
-  paste0(projectdir,"data_output/MR084_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_rb/pca/pca_29_1.2/MR084_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_rb_pca_29_1.2.rda"),
-  paste0(projectdir,"data_output/MR123_P3_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_mt/pca/pca_21_0.8/MR123_P3_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_mt_pca_21_0.8.rda"),
-  paste0(projectdir,"data_output/MR150_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_rb/pca/pca_21_0.5/MR150_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_rb_pca_21_0.5.rda"),
-  paste0(projectdir,"data_output/MR151R_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_rb/pca/pca_35_0.9/MR151R_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_rb_pca_35_0.9.rda"),
-  paste0(projectdir,"data_output/MR170_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA/pca/pca_23_0.6/MR170_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_pca_23_0.6.rda"),
-  paste0(projectdir,"data_output/MR178R_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_percent_mt/pca/pca_33_0.5/MR178R_P4_graft_GE_SCTransformCyclone.Phase_percent_mt_pca_33_0.5.rda"),
-  paste0(projectdir,"data_output/MR182_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase_nFeature_RNA_percent_mt_percent_rb/pca/pca_31_0.9/MR182_P4_graft_GE_SCTransformCyclone.Phase_nFeature_RNA_percent_mt_percent_rb_pca_31_0.9.rda"),
-  paste0(projectdir,"data_output/MR191_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase/pca/pca_23_0.7/MR191_P4_graft_GE_SCTransformCyclone.Phase_pca_23_0.7.rda"),
-  paste0(projectdir,"data_output/MR283_P4_graft_GE/F200_C1000_M0-0.2_R0-1_retain1000/DOUBLETSFILTER_both/SCTransformCyclone.Phase/pca/pca_27_0.9/MR283_P4_graft_GE_SCTransformCyclone.Phase_pca_27_0.9.rda")
-)
-sample.name <- c("MR009_P4_graft","MR009_RI_P4_graft","MR041_P2_graft","MR041R_P4_graft","MR059_P4_graft","MR077_P4_graft","MR084_P4_graft","MR123_P3_graft","MR150_P4_graft","MR151R_P4_graft","MR170_P4_graft","MR178R_P4_graft","MR182_P4_graft","MR191_P4_graft","MR283_P4_graft")
-sample.name.GE <- paste0(sample.name, "_GE")
-sample.name.INT <- 'YOLO_01_GlobalNorm'
-#sample.name.INT <- 'YOLO_01_IndivNorm'
+#### Get Paramaters ####
+### Project
+input.list.rda <- args$options$input.list.rda
+output.dir.grp <- args$options$output.dir.grp
+sample.name.grp <- args$options$sample.name.grp
+eval.markers <- unlist(stringr::str_split(args$options$eval.markers, ","))
+author.name <- args$options$author.name
+author.mail <- args$options$author.mail
+### Computational Parameters
+nthreads <-  if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
+pipeline.path <- args$options$pipeline.path
+### Analysis Parameters
+# Normalization and dimension reduction
+Keep.Norm <-args$options$Keep.Norm
+features.n <- if (!is.null(args$options$features.n)) as.numeric(args$options$features.n)
+norm.method <- args$options$norm.method
+dimred.method <- args$options$dimred.method
+vtr <- sort(unlist(stringr::str_split(args$options$vtr, ",")))
+vtr.scale <- args$options$vtr.scale
+dims.max <- if (!is.null(args$options$dims.max)) as.numeric(args$options$dims.max)
+dims.min <- if (!is.null(args$options$dims.min)) as.numeric(args$options$dims.min)
+dims.steps <- if (!is.null(args$options$dims.steps)) as.numeric(args$options$dims.steps)
+res.max <- if (!is.null(args$options$res.max)) as.numeric(args$options$res.max)
+res.min <- if (!is.null(args$options$res.min)) as.numeric(args$options$res.min)
+res.steps <- if (!is.null(args$options$res.steps)) as.numeric(args$options$res.steps)
+### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
+if (!is.null(args$options$yaml)){
+  yaml_options <- yaml::yaml.load_file(args$options$yaml)
+  for(i in names(yaml_options)) {
+    #convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
+    if ((length(yaml_options[[i]]) == 0) || (length(yaml_options[[i]]) == 1 && toupper(yaml_options[[i]]) == "NULL")) { yaml_options[[i]] <- NULL
+    } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "FALSE")) { yaml_options[[i]] <- FALSE
+    } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "TRUE")) { yaml_options[[i]] <- TRUE
+    }
+    #assign values
+    if(i %in% c("nthreads","features.n","dims.max","dims.min","dims.steps","res.max", "res.min", "res.steps")) assign(i, as.numeric(yaml_options[[i]]))else assign(i, yaml_options[[i]])
+  }
+  rm(yaml_options, i)
 }
+### Clean
+rm(option_list,parser,args)
 
-## Setting cells annotation bases
-## Gene lists loading
-# rootdir <- "/home/job/WORKSPACE/SINGLECELL/"
-if (species == "homo_sapiens") {
-  species.rdx <- 'hg'
-  mt.genes.file <- paste0(resdir, "GENELISTS/homo_sapiens_mito_symbols_20191001.rds")
-  crb.genes.file <- paste0(resdir, "GENELISTS/homo_sapiens_cribo_symbols_20191015.rds")
-  cc.genes.file <- paste0(resdir, "GENELISTS/homo_sapiens_Seurat_cc.genes_20191031.rds")
-  cc.pairs.file <- paste0(resdir, "GENELISTS/homo_sapiens_cyclone_pairs_symbols_20191001.rds")
-  str.genes.file <- paste0(resdir, "GENELISTS/homo_sapiens_stress_symbols_20200224.rds")
-  singler.setnames <- c("HumanPrimaryCellAtlasData", "NovershternHematopoieticData", "DatabaseImmuneCellExpressionData", "MonacoImmuneData")
-  clustifyr.setnames <- c("pbmc_avg", "hema_microarray_matrix", "gtex_bulk_matrix")
-}
-if (species == "mus_musculus") {
-  species.rdx <- 'mm'
-  mt.genes.file <- paste0(resdir, "GENELISTS/mus_musculus_mito_symbols_20191015.rds")
-  crb.genes.file <- paste0(resdir, "GENELISTS/mus_musculus_cribo_symbols_20191015.rds")
-  cc.genes.file <- paste0(resdir, "GENELISTS/mus_musculus_Seurat_cc.genes_20191031.rds")
-  cc.pairs.file <- paste0(resdir, "GENELISTS/mus_musculus_cyclone_pairs_symbols_20191015.rds")
-  str.genes.file <- paste0(resdir, "GENELISTS/mus_musculus_stress_symbols_20200224.rds")
-  singler.setnames <- c("MouseRNAseqData", "ImmGenData")
-  clustifyr.setnames <- c("ref_MCA", "ref_tabula_muris_drop", "ref_tabula_muris_facs", "ref_moca_main", "ref_immgen", "ref_mouse.rnaseq")
-}
-if (species == "rattus_norvegicus") {
-  species.rdx <- 'rn'
-  mt.genes.file <- paste0(resdir, "GENELISTS/rattus_norvegicus_mito_symbols_20200315.rds")
-  crb.genes.file <- paste0(resdir, "GENELISTS/rattus_norvegicus_cribo_symbols_20200315.rds")
-  cc.genes.file <- paste0(resdir, "GENELISTS/rattus_norvegicus_Seurat_cc.genes_20200315.rds")
-  cc.pairs.file <- paste0(resdir, "GENELISTS/rattus_norvegicus_cyclone_pairs_symbols_20200315.rds")
-  str.genes.file <- paste0(resdir, "GENELISTS/rattus_norvegicus_stress_symbols_20200315.rds")
-  singler.setnames <- c("MouseRNAseqData", "ImmGenData")
-  clustifyr.setnames <- c("ref_MCA", "ref_tabula_muris_drop", "ref_tabula_muris_facs", "ref_moca_main", "ref_immgen", "ref_mouse.rnaseq")
-}
+#### Get path if snakemake/singularity/local ####
+if(is.null(pipeline.path)) stop("--pipeline.path parameter must be set!")
 
-## Sourcing functions
-# source("~/Bureau/scrnaseq_10X_3p_proto/bustools2seurat_preproc_functions.R")
-source("/WORKDIR/scripts/bustools2seurat_preproc_functions.R")
+#### Check non-optional parameters ####
+if (is.null(input.list.rda)) stop("input.list.rda parameter can't be empty!")
+if (is.null(output.dir.grp)) stop("output.dir.grp parameter can't be empty!")
 
+#### Get Missing Paramaters ####
+### Computational Parameters
+if (is.null(nthreads)) nthreads <- 4
+### Analysis Parameters
+# Normalization and dimension reduction
+if (is.null(Keep.Norm)) Keep.Norm <- FALSE
+if (is.null(features.n)) features.n <- 3000
+if (is.null(norm.method) && !Keep.Norm) norm.method <- 'SCTransform'
+if (is.null(dimred.method)) dimred.method <- 'pca'
+if (is.null(vtr)) vtr <- NULL
+if (is.null(vtr.scale)) vtr.scale <- TRUE
+if (vtr.scale && !(dimred.method %in% c('scbfa', 'bpca', 'mds'))) vtr.scale <- FALSE
+if (is.null(dims.max)) dims.max <- 49
+if (is.null(dims.min)) dims.min <- 3
+if (is.null(dims.steps)) dims.steps <- 2
+if (is.null(res.max)) res.max <- 1.2
+if (is.null(res.min)) res.min <- 0.1
+if (is.null(res.steps)) res.steps <- 0.1
+
+#### Fixed parameters ####
+solo.pt.size <- 2
 raw.methods <- c('scbfa', 'bpca')
 all.methods <- c(raw.methods, 'pca', 'mds', 'ica')
 
 ## Cheking parameters
-if(Keep_Norm && norm.method != 'SCTransform') stop('Keeping normalization is only possible for "SCTransform"!')
-if(Keep_Norm && assay !='SCT') stop('Keeping normalization is only possible for assay "SCT"!')
-if(Keep_Norm && !is.null(normalization.vtr)) message('To keep normalization, the normalization.vtr parameter will not be used...')
+if (Keep.Norm && !is.null(norm.method)){
+  warning(paste0("To keep normalization, the norm.method parameter will not be used. Set norm.method to NULL."))
+  norm.method <- NULL
+}
+if (!is.null(norm.method) && !(norm.method %in% c('SCTransform','LogNormalize'))) stop("Normalization method unknown! (LogNormalize or SCTransform)")
+if (!is.null(dimred.method) && !(dimred.method %in% c('pca','scbfa','bpca','mds', 'Liger'))) stop("Dimension Reduction method unknown! (pca, scbfa, bpca, mds or Liger)")
+normalization.vtr <- if (!is.null(norm.method) && norm.method == 'SCTransform') vtr else NULL
+reduction.vtr <- if (!is.null(dimred.method) && dimred.method %in% c('scbfa','bpca','mds')) vtr else NULL
+if (!((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca', 'mds'))) && !is.null(vtr)) stop("vtr can be used only with SCTransform, scbfa, bpca or mds methods!")
+if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
+
+## Sourcing functions
+source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
+source(paste0(pipeline.path, "/scripts/Grouped_analysis_part1_function_added.R"))
 
 ## RUN
 ######
+
 print("#########################")
 print("Grouped_analysis_part1")
-print(paste0("Keep_Norm: ",Keep_Norm))
-print(paste0("sample.name.INT: ",sample.name.INT))
+print(paste0("Keep.Norm: ",Keep.Norm))
+print(paste0("sample.name.grp: ",sample.name.grp))
 print("#########################")
 
-data.path <- paste0(projectdir,'data_output/GROUPED_ANALYSIS/NO_INTEGRATED/',sample.name.INT ,'/')
+data.path <- paste0(output.dir.grp,'/GROUPED_ANALYSIS/NO_INTEGRATED/',sample.name.grp ,'/')
 dir.create(data.path, recursive = TRUE)
 
 ### Creating parallel instance
 cl <- create.parallel.instance(nthreads = nthreads)
-set.seed(1337)
 
 ### Building the list of Seurat objects.
-sobj.list <- sapply(seq_along(rda.list), function(x) {
-  message(paste0("Loading '", rda.list[x], "' ..."))
-  load(rda.list[x])
-  ## Cleaning other assays, reductions and graphs
-  Seurat::DefaultAssay(sobj) <- assay
-  if(!Keep_Norm) sobj@assays = sobj@assays[assay]
+sobj.list <- sapply(seq_along(input.list.rda), function(x) {
+  message(paste0("Loading '", input.list.rda[x], "' ..."))
+  load(input.list.rda[x])
+  ## Cleaning reductions and graphs
   sobj@reductions <- list()
   sobj@graphs <- list()
-  
-  ## Filtering MT genes when requested
-  if (remove.mt.genes) {
-    message("     Removing mt genes from the matrix ...")
-    mt.genes <- readRDS(file = mt.genes.file)
-    sobj <- sobj[!rownames(sobj) %in% mt.genes,]
-  }
-  ## Filtering RB genes when requested
-  if (remove.rb.genes) {
-    message("     Removing rb genes from the matrix ...")
-    rb.genes <- readRDS(file = crb.genes.file)
-    sobj <- sobj[!rownames(sobj) %in% rb.genes,]
-  }
-  ## Filtering ST genes when requested
-  if (remove.st.genes) {
-    message("     Removing st genes from the matrix ...")
-    st.genes <- readRDS(file = str.genes.file)
-    sobj <- sobj[!rownames(sobj) %in% st.genes,]
-  }
-  if(sample.name.GE[x] %in% c("1_GE","3_GE","4_GE")){
-    sobj@meta.data$conditions=rep("RET", length(sobj@meta.data$orig.ident))
-  }else{
-    sobj@meta.data$conditions=rep("WT", length(sobj@meta.data$orig.ident))    
-  }
-  
+  if(!Keep.Norm) sobj@assays = sobj@assays["RNA"]
+  # sobj@assays$SCT <- NULL
+  # sobj@assays$ADT <- NULL
+  # DefaultAssay(sobj) <- "RNA"
+  # assay <- "RNA"
+  # features.n=5000
+  # sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr = normalization.vtr)
+  # assay <- "SCT"
   return(sobj)
 })
 names(sobj.list) <- vapply(sobj.list, Seurat::Project, 'a')
@@ -202,26 +169,41 @@ sobj.cells <- vapply(sobj.list, ncol, 1L)
 if(any(sobj.cells < min.cells)) warning(paste0('Some datasets had less than ', min.cells, ' cells, thus were removed !'))
 sobj.list <- sobj.list[sobj.cells >= min.cells]
 
+## Get species parameter
+species <- sapply(seq_along(sobj.list), function(x) { sobj.list[[x]]@misc$params$species })
+if(length(unique(species)) != 1) stop(paste0("We can't mix several species: ", paste0(species, collapse = ", ")))
+species = species[1]
+
+## Get assay parameter
+if(Keep.Norm) { #keep normalisation
+  n.meth <- sapply(seq_along(sobj.list), function(x) { sobj.list[[x]]@misc$params$normalization$normalization.method })
+  if(length(unique(n.meth)) != 1) stop(paste0("We can't mix several normalisation method if normalization is kept: ",paste0(n.meth, collapse = ", ")))
+  assay <- sobj.list[[1]]@misc$params$normalization$assay.out
+  norm.method <- unique(n.meth)
+}else assay <- 'RNA' # redo normalisation
 
 ### Add prefix for colnames of sample clustering and clean TCR/BCR
 for (i in names(sobj.list)){
   # add prefix for colnames of sample clustering 
   to_rename=grep("_res\\.",colnames(sobj.list[[i]]@meta.data), value = TRUE)
-  sobj.list[[i]]@meta.data[[paste0(i,'_',to_rename)]]=sobj.list[[i]]@meta.data[[to_rename]]
-  sobj.list[[i]]@meta.data[[to_rename]]=NULL
-  
-  # cleaning integrated sobj for TCR and BCR part
+  for (j in to_rename){
+    sobj.list[[i]]@meta.data[[paste0(i,'_',j)]]=sobj.list[[i]]@meta.data[[j]]
+    sobj.list[[i]]@meta.data[[j]]=NULL
+  }
+  # cleaning sobj for TCR and BCR part
   TCR_BCR_col=grep("^TCR|^BCR", colnames(sobj.list[[i]]@meta.data), value = TRUE)
   if(length(TCR_BCR_col) > 0) sobj.list[[i]]@meta.data[TCR_BCR_col] <- NULL
 }
 
-### If Keeping normlization by SCT ## Very long! 1h per sample!
-if(Keep_Norm && norm.method == 'SCTransform' && assay == 'SCT'){
-  # Get scale.data for each sample
+### If Keeping normlization, get scale.data for each sample (with SCT is Very long: average 1h per sample!)
+if(Keep.Norm){
+  cat("\nKeep Normalization...\n")
+  ## Get scale.data for each sample
+  names.sobj.list <- names(sobj.list)
+  message("Get scale.data for each sample:")
   sobj.list <- sapply(seq_along(sobj.list), function(x) {
     ## Scaling if necessary
     if (sum(dim(sobj.list[[x]]@assays[[assay]]@scale.data)) < 3) {
-      message(paste0("Scaling ",Seurat::Project(sobj.list[[x]])))
       #Check vtr
       scale.vtr.all <- NULL
       if(!any(is.na(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr))) {
@@ -229,16 +211,21 @@ if(Keep_Norm && norm.method == 'SCTransform' && assay == 'SCT'){
         message(paste0("Found scaling coveriate(s) '", paste(scale.vtr.all, collapse = "', '"), "' to regress from normalization ..."))
       }
       #Scaling
-      sobj <- Seurat::ScaleData(object = sobj.list[[x]], features = rownames(sobj.list[[x]]@assays[[assay]]@counts),
-                                vars.to.regress = scale.vtr.all, do.scale = FALSE, scale.max = Inf, block.size = 750)
+      if(assay == 'SCT') {
+        sobj <- Seurat::ScaleData(object = sobj.list[[x]],
+                                  vars.to.regress = scale.vtr.all, do.scale = FALSE, scale.max = Inf, block.size = 750)
+      }else{
+        sobj <- Seurat::ScaleData(object = sobj.list[[x]],
+                                  vars.to.regress = scale.vtr.all, do.scale = TRUE, scale.max = 10, block.size = 1000)
+      }
     }
     return(sobj)
   })
+  names(sobj.list) <- names.sobj.list
 }
 
 ### Merge
-sobj <- merge(x = sobj.list[[1]], y = sobj.list[-1], add.cell.ids = names(sobj.list), project = sample.name.INT, merge.data = TRUE)
-Seurat::Project(sobj) <- sample.name.INT
+sobj <- merge(x = sobj.list[[1]], y = sobj.list[[-1]], add.cell.ids = names(sobj.list), project = sample.name.grp, merge.data = TRUE)
 sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
 
 ### Clean
@@ -246,38 +233,83 @@ rm(sobj.list)
 gc()
 
 ### Complete the normalization
-if(Keep_Norm && norm.method == 'SCTransform' && assay =='SCT'){
-  ## Get HVG (because merge delete HVG)
+if(Keep.Norm){
+  ## Get HVG (because merge delete HVG slot)
   Seurat::VariableFeatures(sobj[[assay]]) <- rownames(sobj[[assay]]@scale.data)
-  sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = 'SCTransform', assay.ori = 'SCT', assay.out = 'SCT', features.used = NA)
+  sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = norm.method, assay.ori = "RNA", assay.out = assay, features.used = NA)
   sobj@assays[[assay]]@misc$scaling$vtr <- NA
-  ## Saving normalized object
-  save(sobj, file = paste0(data.path, sample.name.INT, '_SCTKept.rda'), compress = "bzip2")
 }else{
-  ### Saving normalized object
-  save(sobj, file = paste0(data.path, sample.name.INT, '_NON-NORMALIZED.rda'), compress = "bzip2")
   ## Normalisation
+  cat("\nNormalization...\n")
   sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr = normalization.vtr)
   if(tolower(norm.method) == 'sctransform') assay <- 'SCT'
 }
 
 ### Reduction dimension
-sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = max.dims, vtr = reduction.vtr, vtr.scale = vtr.scale)
+cat("\nDimensions reduction...\n")
+sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = dims.max, vtr = reduction.vtr, vtr.scale = vtr.scale)
 
 ### Building reduced normalized output dir
-norm_vtr = paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr)) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL)
-dimred_vtr = paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr)) paste(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
+norm_vtr = paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL)
+dimred_vtr = paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr[1])) paste(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
 norm.dim.red.dir = paste0(data.path, norm_vtr, '/', dimred_vtr)
-dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = TRUE)
+dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
+
+## Save packages versions
+sobj@misc$technical_info$clustree <- utils::packageVersion('clustree')
+sobj@misc$technical_info$patchwork <- utils::packageVersion('patchwork')
+sobj@misc$technical_info$Seurat <- utils::packageVersion('Seurat')
+
+### Materials and Methods
+MM_tmp <- if(dimred.method == 'pca') 'PCA' else dimred.method
+if(!is.null(vtr)){
+  vtr <- stringr::str_replace(vtr, "sizeFactor", "the number of detected transcripts")
+  vtr <- stringr::str_replace(vtr, "nFeature_RNA", "the number of detected genes")
+  vtr <- stringr::str_replace(vtr, "percent_mt", "the proportion of mitochondrial transcripts")
+  vtr <- stringr::str_replace(vtr, "percent_rb", "the proportion of ribosomal transcripts")
+  vtr <- stringr::str_replace(vtr, "percent_st", "the proportion of mechanical stress response transcripts")
+  vtr <- stringr::str_replace(vtr, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
+  vtr <- stringr::str_replace(vtr, "Seurat.Phase", "the cell cycle phase determined by Seurat")
+  
+  MM_tmp2 <- if(norm.method == 'SCTransform') paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") else NULL
+  MM_tmp3 <- if(dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
+}else {
+  MM_tmp2 <- NULL
+  MM_tmp3 <- NULL
+}
+sobj@misc$parameters$Materials_and_Methods$Grouped_analysis_Norm_DimRed_Eval <- paste0("Seurat (version ",sobj@misc$technical_info$Seurat,") was applied for further data processing. ",
+if(Keep.Norm){
+  paste0("Each dataset was normalized independently by ",norm.method,", as described in the Individual Analysis section, then data were merged using the merge() function from Seurat and a common dimension reduction was performed by ",MM_tmp,".")
+}else{
+  paste0("Datasets were merged using the merge() function from Seurat and a common normalization and dimension reduction were performed. ")
+  if(norm.method == 'SCTransform') paste0("The SCTransform normalization method (Hafemeister C, Satija R. Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression. Genome Biol. 2019;20 10.1186/s13059-019-1874-1.) was used to normalize, scale, select ",features.n," Highly Variable Genes", MM_tmp2,".")
+  if(norm.method == 'LogNormalize') paste0(features.n," Highly Variable Genes (HVG) were identified using the FindVariableFeatures() method from Seurat applied on data transformed by its LogNormalize method.")
+  if(dimred.method == 'pca'){
+    if(norm.method == 'SCTransform') paste0(" Person residuals from this regression were used for dimension reduction by Principal Component Analysis (PCA).")
+    if(norm.method == 'LogNormalize') paste0(" HVG were scaled and and centered, providing person residuals used for dimension reduction by Principal Component Analysis (PCA).")
+  }
+},
+if(dimred.method == 'scbfa') paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3),
+"The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."
+)
+sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 
 ### Saving reduced normalized object
-sobj@misc$params$analysis_type=paste0("Grouped analysis; Keep individual normalization: ", Keep_Norm)
-sobj@assays$RNA@misc$params$Rsession <- utils::capture.output(devtools::session_info())
-save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(sample.name.INT, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")
+cat("\nSaving object...\n")
+sobj@misc$params$analysis_type <- paste0("Grouped analysis; Keep individual normalization: ", Keep.Norm)
+sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
+sobj@misc$params$species <- species
+sobj@misc$params$sample.name.grp <- sample.name.grp
+sobj@misc$params$group$Keep.Norm <- Keep.Norm
+if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
+if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(sample.name.grp, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")
 
 ### Correlating reduction dimensions with biases and markers expression
+cat("\nCorrelation of dimensions...\n")
 dimensions.eval(sobj = sobj, reduction = paste0(assay, "_", dimred.method), eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
 gc()
 
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)
-clustering.eval.mt(sobj = sobj, reduction = paste0(assay, "_", dimred.method), dimsvec = seq.int(3, max.dims, 2), resvec = seq(.1,1.2,.1), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)
+cat("\nEvaluation of multiple clustering parameters...\n")
+clustering.eval.mt(sobj = sobj, reduction = paste0(assay, "_", dimred.method), dimsvec = seq.int(dims.min, dims.max, dims.steps), resvec = seq(res.min,res.max,res.steps), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)
