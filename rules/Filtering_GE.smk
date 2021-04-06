@@ -47,6 +47,9 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL"
         threads:
             4
+        resources:
+            mem_mb = (lambda wildcards, attempt: min(6144 + attempt * 1024, 20480)),
+            time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
         shell:
             """
             singularity exec {params.sing_bind} \

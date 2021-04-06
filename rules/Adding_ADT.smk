@@ -59,7 +59,10 @@ rule add_adt_ge:
     conda:
         CONDA_ENV_SING
     threads:
-        4
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
         singularity exec --no-home {params.sing_bind} \

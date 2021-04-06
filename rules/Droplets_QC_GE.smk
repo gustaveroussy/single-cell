@@ -63,7 +63,10 @@ rule QC_droplets_ge:
         SING_QC_ST_FILE = os.path.normpath("/WORKDIR/" + QC_ST_FILE) if QC_ST_FILE != "NULL" else "NULL",
         SING_QC_TRANSLATION_FILE = os.path.normpath("/WORKDIR", QC_TRANSLATION_FILE) if QC_TRANSLATION_FILE != "NULL" else "NULL"
     threads:
-        4
+        2
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 1024, 20480)),
+        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
         singularity exec --no-home {params.sing_bind} \

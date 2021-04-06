@@ -17,7 +17,10 @@ rule fastqc_ge:
         html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqc/{sample_name_ge_R}{lane_R_complement}_fastqc.html"),
         zip_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqc/{sample_name_ge_R}{lane_R_complement}_fastqc.zip")
     threads:
-        8
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -35,7 +38,10 @@ rule fastqscreen_ge:
         #png_file = os.path.join(OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqscreen/{sample_name_ge_R}{lane_R_complement}_screen.png"),
         txt_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqscreen/{sample_name_ge_R}{lane_R_complement}_screen.txt")
     threads:
-        8
+        2
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(2048 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -68,6 +74,9 @@ rule multiqc_ge:
         zip_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC/multiqc/{sample_name_ge}_RAW_data.zip")
     threads:
         1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -95,7 +104,10 @@ rule alignment_ge:
     params:
         kbusdir = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS")
     threads:
-        8
+        4
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(6144 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -113,6 +125,9 @@ rule correct_UMIs_ge:
         CONDA_ENV_QC_ALIGN_GE_ADT
     threads:
         1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     shell:
         "bustools correct -w {WHITELISTNAME} -o {output} {input} && rm {input}"
 
@@ -127,7 +142,10 @@ rule sort_file_ge:
     params:
         tmp_dir=os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/tmp")
     threads:
-        8
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(12288 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -150,6 +168,9 @@ rule build_count_matrix_ge:
         os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS")
     threads:
         1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:

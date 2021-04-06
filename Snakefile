@@ -9,7 +9,7 @@ import numpy
 
 __author__ = "Marine AGLAVE"
 
-#configfile: "config.yaml" # --configfile
+
 #using: snakemake -j5 --configfile /home/m_aglave/Bureau/scRNAseq_10X/Param_snakfile_alignment.yaml --use-conda --printshellcmds -s ./Snakefile
 
 
@@ -128,7 +128,7 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or 
     ADAPTERSEQ='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'
     MINBASEQ=28
     # Name of conda environment
-    CONDA_ENV_QC_ALIGN_GE_ADT = PIPELINE_FOLDER + "/envs/conda/Conda_QC_Alignment_GE_ADT.yml"
+    CONDA_ENV_QC_ALIGN_GE_ADT = PIPELINE_FOLDER + "/envs/conda/QC_Alignment.yml"
 
 if "Droplets_QC_GE" in STEPS:
     ### Sample/Project

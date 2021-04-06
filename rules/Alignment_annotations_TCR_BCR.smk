@@ -17,7 +17,10 @@ rule fastqc_tcr_bcr:
         html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqc/{sample_name_tcr_bcr_R}{lane_R_complement}_fastqc.html"),
         zip_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqc/{sample_name_tcr_bcr_R}{lane_R_complement}_fastqc.zip")
     threads:
-        8
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -35,7 +38,10 @@ rule fastqscreen_tcr_bcr:
         #png_file = os.path.join(OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqscreen/{sample_name_tcr_bcr_R}{lane_R_complement}_screen.png"),
         txt_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqscreen/{sample_name_tcr_bcr_R}{lane_R_complement}_screen.txt")
     threads:
-        8
+        2
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(2048 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -68,6 +74,9 @@ rule multiqc_tcr_bcr:
         zip_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC/multiqc/{sample_name_tcr_bcr}_RAW_data.zip")
     threads:
         1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -80,7 +89,7 @@ def alignment_annotations_tcr_bcr_params_sing(wildcards):
     input_folder = os.path.dirname(PATH_ALL_FILES_TCR_BCR_FQ_GZ[0])
     output_folder = os.path.dirname(ALIGN_OUTPUT_DIR_TCR_BCR + "/wildcards.sample_name_tcr_bcr")
     ref_folder = CRINDEX_TCR_BCR
-    concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + input_folder + ":" + os.path.normpath("/WORKDIR/" + input_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder) + " -B " + ref_folder + ":" + os.path.normpath("/WORKDIR/" + ref_folder) 
+    concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + input_folder + ":" + os.path.normpath("/WORKDIR/" + input_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder) + " -B " + ref_folder + ":" + os.path.normpath("/WORKDIR/" + ref_folder)
     return concat
 
 """
@@ -104,7 +113,10 @@ rule alignment_annotations_tcr_bcr:
         sing_bind = alignment_annotations_tcr_bcr_params_sing,
         sample_folder = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}")
     threads:
-        8
+        3
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(10*60 + attempt * 60, 24*60))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -121,9 +133,9 @@ rule alignment_annotations_tcr_bcr:
                  --localcores={threads}' | singularity exec --no-home {params.sing_bind} {SINGULARITY_ENV_TCR_BCR} bash
         FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
         FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")
-        #CELLRANGER_V=`/home/m_aglave/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj --version | grep "cellranger vdj (" | sed -e "s/cellranger vdj (//g" | sed -e "s/)//g"`
+        #CELLRANGER_V=`/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj --version | grep "cellranger vdj (" | sed -e "s/cellranger vdj (//g" | sed -e "s/)//g"`
         CELLRANGER_V="3.1.0"
-        echo "Raw BCL-files were demultiplexed and converted to Fastq format using bcl2fastq (version 2.20.0.422 from Illumina). 
+        echo "Raw BCL-files were demultiplexed and converted to Fastq format using bcl2fastq (version 2.20.0.422 from Illumina).
 Reads quality control was performed using fastqc (version $FASTQC_V) and assignment to the expected genome species evaluated with fastq-screen (version $FASTQSCREEN_V).
 CellRanger (version $CELLRANGER_V from 10X Genomics) was used to generate single-cell V(D)J sequences and annotations." > {output.MandM}
         """

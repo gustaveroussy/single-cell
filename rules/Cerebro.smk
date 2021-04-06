@@ -35,7 +35,10 @@ rule cerebro:
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         SING_CEREBRO_GMT_FILE = os.path.normpath("/WORKDIR/" + CEREBRO_GMT_FILE) if CEREBRO_GMT_FILE != "NULL" else "NULL"
     threads:
-        4
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
         singularity exec {params.sing_bind} \

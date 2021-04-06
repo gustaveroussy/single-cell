@@ -41,6 +41,9 @@ rule norm_dimred_ge:
         output_folder = os.path.normpath("/WORKDIR/" + "{output_norm_dimred_dir_ge}") + "/"
     threads:
         4
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(6144 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
         singularity exec --no-home {params.sing_bind} \

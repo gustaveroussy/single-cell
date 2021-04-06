@@ -17,7 +17,10 @@ rule fastqc_adt:
         html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt_R}/QC/fastqc/{sample_name_adt_R}{lane_R_complement}_fastqc.html"),
         zip_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt_R}/QC/fastqc/{sample_name_adt_R}{lane_R_complement}_fastqc.zip")
     threads:
-        8
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -46,6 +49,9 @@ rule multiqc_adt:
         zip_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC/multiqc/{sample_name_adt}_RAW_data.zip")
     threads:
         1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -72,6 +78,11 @@ rule alignment_adt:
         run_info_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/run_info.json")
     params:
         kbusdir = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS")
+    threads:
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -87,6 +98,9 @@ rule correct_UMIs_adt:
         corrected_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus")
     threads:
         1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -103,7 +117,10 @@ rule sort_file_adt:
     params:
         tmp_dir=os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/tmp")
     threads:
-        8
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(12288 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -126,6 +143,9 @@ rule build_count_matrix_adt:
         os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS")
     threads:
         1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:

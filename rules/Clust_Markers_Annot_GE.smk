@@ -42,7 +42,10 @@ rule clust_markers_annot_ge:
         output_folder = os.path.normpath("/WORKDIR/" + "{output_clust_markers_annot_dir_ge}") + "/",
         SING_CMA_MARKFILE = [os.path.normpath("/WORKDIR/" + x) for x in CMA_MARKFILE.split(',')] if CMA_MARKFILE != "NULL" else "NULL"
     threads:
-        4
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
         singularity exec --no-home {params.sing_bind} \
