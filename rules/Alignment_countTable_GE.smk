@@ -78,7 +78,7 @@ rule multiqc_ge:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "multiqc -n {wildcards.sample_name_ge}'_RAW' -i {wildcards.sample_name_ge}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqscreen && rm {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/{sample_name_ge}_RAW_data.zip {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/{sample_name_ge}_RAW_plots"
+        "multiqc -n {wildcards.sample_name_ge}'_RAW' -i {wildcards.sample_name_ge}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqscreen {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/{sample_name_ge}_RAW_data.zip {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/{sample_name_ge}_RAW_plots"
 
 
 """

@@ -54,7 +54,7 @@ rule multiqc_adt:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "multiqc -n {wildcards.sample_name_adt}'_RAW' -i {wildcards.sample_name_adt}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqscreen && rm {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{sample_name_adt}_RAW_data.zip {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{sample_name_adt}_RAW_plots"
+        "multiqc -n {wildcards.sample_name_adt}'_RAW' -i {wildcards.sample_name_adt}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqscreen {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{sample_name_adt}_RAW_data.zip {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{sample_name_adt}_RAW_plots"
 
 
 """
