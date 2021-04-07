@@ -28,6 +28,15 @@ option_list <- list(
 parser <- OptionParser(usage="Rscript %prog [options]", description = " ", option_list = option_list)
 args <- parse_args(parser, positional_arguments = 0)
 
+#### Formatting Parameters ####
+#convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
+for (i in names(args$options)){
+  if ((length(args$options[i]) == 0) || (length(args$options[i]) == 1 && toupper(args$options[i]) == "NULL")) { args$options[i] <- NULL
+  } else if ((length(args$options[i]) == 1) && (toupper(args$options[i]) == "FALSE")) { args$options[i] <- FALSE
+  } else if ((length(args$options[i]) == 1) && (toupper(args$options[i]) == "TRUE")) { args$options[i] <- TRUE
+  }
+}
+
 #### Get Paramaters ####
 ### Project
 input.rda.ge <- args$options$input.rda.ge

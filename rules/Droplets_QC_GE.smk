@@ -48,10 +48,10 @@ rule QC_droplets_ge:
     input:
         QC_droplets_input_ge
     output:
-        kneeplot_file = os.path.normpath("{outputqc_droplets_dir_ge}" + "/UNFILTERED/" + "{sample_name_ge}_kneeplot.png") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/UNFILTERED_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_kneeplot.png"),
-        saturation_file = os.path.normpath("{outputqc_droplets_dir_ge}" + "/UNFILTERED/" + "{sample_name_ge}_saturation_plot.png") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/UNFILTERED_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_saturation_plot.png"),
-        QC_hist_unfiltred_file =  os.path.normpath("{outputqc_droplets_dir_ge}" + "/UNFILTERED/" + "{sample_name_ge}_QChist.png") if str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" +  "/UNFILTERED_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_QChist.png"),
-        unfiltred_non_norm_rda = os.path.normpath("{outputqc_droplets_dir_ge}" + "/UNFILTERED/" + "{sample_name_ge}_UNFILTERED_NON-NORMALIZED.rda") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/UNFILTERED_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_UNFILTERED_NON-NORMALIZED.rda")
+        kneeplot_file = os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_kneeplot.png") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_kneeplot.png"),
+        saturation_file = os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_saturation_plot.png") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_saturation_plot.png"),
+        QC_hist_unfiltred_file =  os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_QChist.png") if str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" +  "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_QChist.png"),
+        unfiltred_non_norm_rda = os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_QC_NON-NORMALIZED.rda") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_QC_NON-NORMALIZED.rda")
     params:
         sing_bind = QC_params_sing,
         pipeline_folder = PIPELINE_FOLDER,

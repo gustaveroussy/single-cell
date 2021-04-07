@@ -32,9 +32,9 @@ args <- parse_args(parser, positional_arguments = 0)
 #### Formatting Parameters ####
 #convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
 for (i in names(args$options)){
-  if (toupper(args$options[i]) == "NULL") { args$options[i] <- NULL
-  } else if (toupper(args$options[i]) == "FALSE") { args$options[i] <- FALSE
-  } else if (toupper(args$options[i]) == "TRUE") { args$options[i] <- TRUE
+  if ((length(args$options[i]) == 0) || (length(args$options[i]) == 1 && toupper(args$options[i]) == "NULL")) { args$options[i] <- NULL
+  } else if ((length(args$options[i]) == 1) && (toupper(args$options[i]) == "FALSE")) { args$options[i] <- FALSE
+  } else if ((length(args$options[i]) == 1) && (toupper(args$options[i]) == "TRUE")) { args$options[i] <- TRUE
   }
 }
 

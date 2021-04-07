@@ -48,7 +48,7 @@ if "Alignment_countTable_GE" in STEPS:
         sys.stderr.write("don't end with the _GE tag!\n")
         sys.exit()
     #with path and extention
-    PATH_ALL_FILES_GE_FQ_GZ =glob.glob(os.path.join(ALIGN_INPUT_DIR_GE, str(ALIGN_SAMPLE_NAME_GE) + "*" + str(["R1","R2"]) + "*.f*q*"))
+    PATH_ALL_FILES_GE_FQ_GZ = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE, str(ALIGN_SAMPLE_NAME_GE) + "*R1*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE, str(ALIGN_SAMPLE_NAME_GE) + "*R2*.f*q*"))
     #without path and extention
     ALL_FILES_GE = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_GE_FQ_GZ]
 
@@ -76,7 +76,7 @@ if "Alignment_countTable_ADT" in STEPS:
         sys.stderr.write("don't end with the _ADT tag!\n")
         sys.exit()
     #with path and extention
-    PATH_ALL_FILES_ADT_FQ_GZ =glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT, str(ALIGN_SAMPLE_NAME_ADT) + "*" + str(["R1","R2"]) + "*.f*q*"))
+    PATH_ALL_FILES_ADT_FQ_GZ =glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT, str(ALIGN_SAMPLE_NAME_ADT) + "*R1*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT, str(ALIGN_SAMPLE_NAME_ADT) + "*R2*.f*q*"))
     #without path and extention
     ALL_FILES_ADT = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_ADT_FQ_GZ]
 
@@ -103,7 +103,7 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
         sys.stderr.write("don't end with the _TCR or _BCR tags!\n")
         sys.exit()
     #with path and extention
-    PATH_ALL_FILES_TCR_BCR_FQ_GZ=glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_BCR, str(ALIGN_SAMPLE_NAME_TCR_BCR) + "*" + str(["R1","R2"]) + "*.f*q*"))
+    PATH_ALL_FILES_TCR_BCR_FQ_GZ=glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_BCR, str(ALIGN_SAMPLE_NAME_TCR_BCR) + "*R1*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_BCR, str(ALIGN_SAMPLE_NAME_TCR_BCR) + "*R2*.f*q*"))
     #without path and extention
     ALL_FILES_TCR_BCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_TCR_BCR_FQ_GZ]
 
@@ -206,7 +206,7 @@ if "Filtering_GE" in STEPS:
     elif "Droplets_QC_GE" in STEPS:
         sys.stderr.write("Warning: No input.rda.ge find in Filtering_GE section of configfile; input.rda.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
         FILERING_SAMPLE_NAME_GE = copy.deepcopy(QC_SAMPLE_NAME_GE)
-        FILERING_INPUT_RDA_GE = [os.path.normpath(dic_SAMPLE_NAME_GE_INFO[x]['QC_OUTPUT_DIR'] + ("/UNFILTERED/" if str(QC_EMPTYDROPS_RETAIN) == "NULL" else "/UNFILTERED_retain" + str(QC_EMPTYDROPS_RETAIN)) + str(x) + "_UNFILTERED_NON-NORMALIZED.rda") for x in QC_SAMPLE_NAME_GE]
+        FILERING_INPUT_RDA_GE = [os.path.normpath(dic_SAMPLE_NAME_GE_INFO[x]['QC_OUTPUT_DIR'] + ("/QC_droplets/" if str(QC_EMPTYDROPS_RETAIN) == "NULL" else "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN)) + str(x) + "_QC_NON-NORMALIZED.rda") for x in QC_SAMPLE_NAME_GE]
     else:
         sys.exit("Error: No sample.name.ge or/and input.rda.ge in configfile!\n")
     if 'Filtering_GE' in config and 'output.dir.ge' in config['Filtering_GE'] :

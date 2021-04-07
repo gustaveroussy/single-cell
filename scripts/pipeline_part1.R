@@ -43,9 +43,9 @@ args <- parse_args(parser, positional_arguments = 0)
 #### Formatting Parameters ####
 #convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
 for (i in names(args$options)){
-  if (toupper(args$options[i]) == "NULL") { args$options[i] <- NULL
-  } else if (toupper(args$options[i]) == "FALSE") { args$options[i] <- FALSE
-  } else if (toupper(args$options[i]) == "TRUE") { args$options[i] <- TRUE
+  if ((length(args$options[i]) == 0) || (length(args$options[i]) == 1 && toupper(args$options[i]) == "NULL")) { args$options[i] <- NULL
+  } else if ((length(args$options[i]) == 1) && (toupper(args$options[i]) == "FALSE")) { args$options[i] <- FALSE
+  } else if ((length(args$options[i]) == 1) && (toupper(args$options[i]) == "TRUE")) { args$options[i] <- TRUE
   }
 }
 
@@ -93,8 +93,6 @@ if (!is.null(args$options$yaml)){
     } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "FALSE")) { yaml_options[[i]] <- FALSE
     } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "TRUE")) { yaml_options[[i]] <- TRUE
     }
-    print(i)
-    print(length(yaml_options[[i]]))
     #assign values
     if(i %in% c("emptydrops.fdr", "droplets.limit", "min.features", "min.counts", "features.n")) assign(i, as.numeric(yaml_options[[i]])) else assign(i, yaml_options[[i]])
   }
@@ -173,7 +171,7 @@ source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 ## MAIN
 #########
 
-## A. UNFILTERED ANALYSIS
+## A. QC_droplets ANALYSIS
 ##-------------------
 
 ### printing parameters:
@@ -187,7 +185,7 @@ print("###########################################")
 cl <- create.parallel.instance(nthreads = nthreads)
 
 ### Building output directory
-unfiltred.dir <- paste0(output.dir.ge, 'UNFILTERED', if(!is.null(emptydrops.retain)) '_retain', emptydrops.retain, '/')
+unfiltred.dir <- paste0(output.dir.ge, 'QC_droplets', if(!is.null(emptydrops.retain)) '_retain', emptydrops.retain, '/')
 dir.create(path = unfiltred.dir, recursive = TRUE, showWarnings = FALSE)
 
 ### Loading raw count matrix + Filtering duplicated cell barcodes + Removing empty droplets
@@ -212,4 +210,4 @@ To call real cells from empty droplets, we used the emptyDrops() function from t
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 
 ### Saving non-normalized object
-save(sobj, file = paste0(unfiltred.dir, sample.name.GE, '_UNFILTERED_NON-NORMALIZED.rda'), compress = "bzip2")
+save(sobj, file = paste0(unfiltred.dir, sample.name.GE, '_QC_NON-NORMALIZED.rda'), compress = "bzip2")
