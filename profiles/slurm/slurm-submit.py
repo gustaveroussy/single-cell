@@ -116,10 +116,10 @@ opt_keys = ["array", "account", "begin", "cpus_per_task",
             "mail_user", "ntasks", "nodes", "output", "partition",
             "quiet", "time", "wrap", "constraint", "mem"]
 
-arg_dict["output"] = "logs/slurm/slurm-%x-%j-%N.out"
+arg_dict["output"] = "./%j-%x-%N.out"
 if arg_dict["output"] is not None:
     os.makedirs(os.path.dirname(arg_dict["output"]), exist_ok=True)
-arg_dict["error"] = "logs/slurm/slurm-%x-%j-%N.err"
+arg_dict["error"] = "./%j-%x-%N.out"
 if arg_dict["error"] is not None:
     os.makedirs(os.path.dirname(arg_dict["error"]), exist_ok=True)
 

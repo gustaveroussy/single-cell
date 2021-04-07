@@ -1,4 +1,5 @@
 from pathlib import Path
+import snakemake.utils  # Load snakemake API
 import os
 import datetime
 import re

@@ -9,7 +9,6 @@ jobs: 30
 keep-going: true
 reason: true
 printshellcmds: true
-jobname: "{name}.{jobid}.snakejob.sh"
+jobname: "{name}.{jobid}.snakejob"
 use-conda: true
 conda-prefix: /mnt/beegfs/userdata/m_aglave/pipeline/scRNAseq_10X/envs/conda
-

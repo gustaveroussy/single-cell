@@ -14,8 +14,8 @@ rule fastqc_tcr_bcr:
     input:
         fq = os.path.join(ALIGN_INPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqc/{sample_name_tcr_bcr_R}{lane_R_complement}_fastqc.html"),
-        zip_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqc/{sample_name_tcr_bcr_R}{lane_R_complement}_fastqc.zip")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC_reads/fastqc/{sample_name_tcr_bcr_R}{lane_R_complement}_fastqc.html"),
+        zip_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC_reads/fastqc/{sample_name_tcr_bcr_R}{lane_R_complement}_fastqc.zip")
     threads:
         1
     resources:
@@ -24,7 +24,7 @@ rule fastqc_tcr_bcr:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr_R}/QC/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr_R}/QC/fastqc -t {threads} {input}"
+        "mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr_R}/QC_reads/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr_R}/QC_reads/fastqc -t {threads} {input}"
 
 
 """
@@ -34,9 +34,9 @@ rule fastqscreen_tcr_bcr:
     input:
         R2_fq = os.path.join(ALIGN_INPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqscreen/{sample_name_tcr_bcr_R}{lane_R_complement}_screen.html"),
-        #png_file = os.path.join(OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqscreen/{sample_name_tcr_bcr_R}{lane_R_complement}_screen.png"),
-        txt_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC/fastqscreen/{sample_name_tcr_bcr_R}{lane_R_complement}_screen.txt")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC_reads/fastqscreen/{sample_name_tcr_bcr_R}{lane_R_complement}_screen.html"),
+        #png_file = os.path.join(OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC_reads/fastqscreen/{sample_name_tcr_bcr_R}{lane_R_complement}_screen.png"),
+        txt_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr_R}/QC_reads/fastqscreen/{sample_name_tcr_bcr_R}{lane_R_complement}_screen.txt")
     threads:
         2
     resources:
@@ -45,7 +45,7 @@ rule fastqscreen_tcr_bcr:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr_R}/QC/fastqscreen && fastq_screen --quiet --threads {threads} --force --outdir {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr_R}/QC/fastqscreen --subset 100000 --conf {FASTQSCREEN_INDEX} {input.R2_fq}"
+        "mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr_R}/QC_reads/fastqscreen && fastq_screen --quiet --threads {threads} --force --outdir {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr_R}/QC_reads/fastqscreen --subset 100000 --conf {FASTQSCREEN_INDEX} {input.R2_fq}"
 
 
 """
@@ -58,20 +58,19 @@ def multiqc_inputs_tcr_bcr(wildcards):
     files=[]
     for name in name_R1_R2:
         #fastqc
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC/fastqc",name) + "_fastqc.html")
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC/fastqc", name) + "_fastqc.zip")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC_reads/fastqc",name) + "_fastqc.html")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC_reads/fastqc", name) + "_fastqc.zip")
     for name in name_R2:
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC/fastqscreen", name) + "_screen.html")
-        #files.append(os.path.join(OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC/fastqscreen", name) + "_screen.png")
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC/fastqscreen", name) + "_screen.txt")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC_reads/fastqscreen", name) + "_screen.html")
+        #files.append(os.path.join(OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC_reads/fastqscreen", name) + "_screen.png")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,wildcards.sample_name_tcr_bcr,"QC_reads/fastqscreen", name) + "_screen.txt")
     return files
 
 rule multiqc_tcr_bcr:
     input:
         qc_files = multiqc_inputs_tcr_bcr
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC/multiqc/{sample_name_tcr_bcr}_RAW.html"),
-        zip_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC/multiqc/{sample_name_tcr_bcr}_RAW_data.zip")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW.html")
     threads:
         1
     resources:
@@ -80,7 +79,7 @@ rule multiqc_tcr_bcr:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC/multiqc && multiqc -n {wildcards.sample_name_tcr_bcr}'_RAW' -i {wildcards.sample_name_tcr_bcr}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC/multiqc {input}"
+        "multiqc -n {wildcards.sample_name_tcr_bcr}'_RAW' -i {wildcards.sample_name_tcr_bcr}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqscreen && rm {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW_data.zip {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW_plots"
 
 """
 This function allows to determine the singularity binding parameters.
@@ -104,7 +103,7 @@ def alignment_annotations_inputs_tcr_bcr(wildcards):
 rule alignment_annotations_tcr_bcr:
     input:
         fq = alignment_annotations_inputs_tcr_bcr,
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC/multiqc/{sample_name_tcr_bcr}_RAW.html")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW.html")
     output:
         csv_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/filtered_contig_annotations.csv"),
         html_file = os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/web_summary.html"),

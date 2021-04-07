@@ -8,8 +8,7 @@ def get_targets(STEPS):
     if "Alignment_countTable_GE" in STEPS:
         targets["Alignment_countTable_GE"]=[
         #multiqc
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC/multiqc/{sample_name_ge}_RAW.html"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC/multiqc/{sample_name_ge}_RAW_data.zip"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
+        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC_reads/{sample_name_ge}_RAW.html"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
         #alignment
         # expand(os.path.join(OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/output.bus"), zip, sample_name_ge=SAMPLE_NAME_GE),
         # expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/transcripts.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
@@ -28,8 +27,7 @@ def get_targets(STEPS):
     if "Alignment_countTable_ADT" in STEPS:
         targets["Alignment_countTable_ADT"]=[
         #multiqc
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC/multiqc/{sample_name_adt}_RAW.html"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC/multiqc/{sample_name_adt}_RAW_data.zip"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
+        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
         #alignment
         # expand(os.path.join(OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/output.bus"), zip, sample_name_adt=SAMPLE_NAME_ADT),
         # expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/transcripts.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
@@ -48,8 +46,7 @@ def get_targets(STEPS):
     if "Alignment_annotations_TCR_BCR" in STEPS:
         targets["Alignment_annotations_TCR_BCR"]=[
         #multiqc
-        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC/multiqc/{sample_name_tcr_bcr}_RAW.html"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC/multiqc/{sample_name_tcr_bcr}_RAW_data.zip"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
+        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW.html"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
         #alignment_annotations_
         expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/filtered_contig_annotations.csv"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
         expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/web_summary.html"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),

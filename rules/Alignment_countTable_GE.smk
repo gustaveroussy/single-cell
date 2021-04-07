@@ -14,8 +14,8 @@ rule fastqc_ge:
     input:
         fq = os.path.join(ALIGN_INPUT_DIR_GE,"{sample_name_ge_R}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqc/{sample_name_ge_R}{lane_R_complement}_fastqc.html"),
-        zip_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqc/{sample_name_ge_R}{lane_R_complement}_fastqc.zip")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC_reads/fastqc/{sample_name_ge_R}{lane_R_complement}_fastqc.html"),
+        zip_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC_reads/fastqc/{sample_name_ge_R}{lane_R_complement}_fastqc.zip")
     threads:
         1
     resources:
@@ -24,7 +24,7 @@ rule fastqc_ge:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge_R}/QC/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge_R}/QC/fastqc -t {threads} {input}"
+        "mkdir -p {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge_R}/QC_reads/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge_R}/QC_reads/fastqc -t {threads} {input}"
 
 
 """
@@ -34,9 +34,8 @@ rule fastqscreen_ge:
     input:
         R2_fq = os.path.join(ALIGN_INPUT_DIR_GE,"{sample_name_ge_R}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqscreen/{sample_name_ge_R}{lane_R_complement}_screen.html"),
-        #png_file = os.path.join(OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqscreen/{sample_name_ge_R}{lane_R_complement}_screen.png"),
-        txt_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC/fastqscreen/{sample_name_ge_R}{lane_R_complement}_screen.txt")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC_reads/fastqscreen/{sample_name_ge_R}{lane_R_complement}_screen.html"),
+        txt_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge_R}/QC_reads/fastqscreen/{sample_name_ge_R}{lane_R_complement}_screen.txt")
     threads:
         2
     resources:
@@ -45,7 +44,7 @@ rule fastqscreen_ge:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge_R}/QC/fastqscreen && fastq_screen --quiet --threads {threads} --force --outdir {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge_R}/QC/fastqscreen --subset 100000 --conf {FASTQSCREEN_INDEX} {input.R2_fq}"
+        "mkdir -p {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge_R}/QC_reads/fastqscreen && fastq_screen --quiet --threads {threads} --force --outdir {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge_R}/QC_reads/fastqscreen --subset 100000 --conf {FASTQSCREEN_INDEX} {input.R2_fq}"
 
 
 """
@@ -58,20 +57,19 @@ def multiqc_inputs_ge(wildcards):
     files=[]
     for name in name_R1_R2:
         #fastqc
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC/fastqc",name) + "_fastqc.html")
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC/fastqc", name) + "_fastqc.zip")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC_reads/fastqc",name) + "_fastqc.html")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC_reads/fastqc", name) + "_fastqc.zip")
     for name in name_R2:
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC/fastqscreen", name) + "_screen.html")
-        #files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC/fastqscreen", name) + "_screen.png")
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC/fastqscreen", name) + "_screen.txt")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC_reads/fastqscreen", name) + "_screen.html")
+        #files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC_reads/fastqscreen", name) + "_screen.png")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_GE,wildcards.sample_name_ge,"QC_reads/fastqscreen", name) + "_screen.txt")
     return files
 
 rule multiqc_ge:
     input:
         qc_files2 = multiqc_inputs_ge
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC/multiqc/{sample_name_ge}_RAW.html"),
-        zip_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC/multiqc/{sample_name_ge}_RAW_data.zip")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC_reads/{sample_name_ge}_RAW.html")
     threads:
         1
     resources:
@@ -80,7 +78,7 @@ rule multiqc_ge:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC/multiqc && multiqc -n {wildcards.sample_name_ge}'_RAW' -i {wildcards.sample_name_ge}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC/multiqc {input}"
+        "multiqc -n {wildcards.sample_name_ge}'_RAW' -i {wildcards.sample_name_ge}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqscreen && rm {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/{sample_name_ge}_RAW_data.zip {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/{sample_name_ge}_RAW_plots"
 
 
 """
@@ -95,7 +93,7 @@ def alignment_inputs_ge(wildcards):
 rule alignment_ge:
     input:
         fq_link = alignment_inputs_ge,
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC/multiqc/{sample_name_ge}_RAW.html")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC_reads/{sample_name_ge}_RAW.html")
     output:
         output_bus_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/output.bus"),
         transcripts_file = os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/transcripts.txt"),

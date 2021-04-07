@@ -14,8 +14,8 @@ rule fastqc_adt:
     input:
         fq = os.path.join(ALIGN_INPUT_DIR_ADT,"{sample_name_adt_R}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt_R}/QC/fastqc/{sample_name_adt_R}{lane_R_complement}_fastqc.html"),
-        zip_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt_R}/QC/fastqc/{sample_name_adt_R}{lane_R_complement}_fastqc.zip")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt_R}/QC_reads/fastqc/{sample_name_adt_R}{lane_R_complement}_fastqc.html"),
+        zip_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt_R}/QC_reads/fastqc/{sample_name_adt_R}{lane_R_complement}_fastqc.zip")
     threads:
         1
     resources:
@@ -24,7 +24,7 @@ rule fastqc_adt:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt_R}/QC/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt_R}/QC/fastqc -t {threads} {input}"
+        "mkdir -p {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt_R}/QC_reads/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt_R}/QC_reads/fastqc -t {threads} {input}"
 
 """
 This rule makes the multiqc from the fastqc and the fastq-screen results.
@@ -36,17 +36,16 @@ def multiqc_inputs_adt(wildcards):
     files=[]
     for name in name_R1_R2:
         #fastqc
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_ADT,wildcards.sample_name_adt,"QC/fastqc",name) + "_fastqc.html")
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_ADT,wildcards.sample_name_adt,"QC/fastqc", name) + "_fastqc.zip")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_ADT,wildcards.sample_name_adt,"QC_reads/fastqc",name) + "_fastqc.html")
+        files.append(os.path.join(ALIGN_OUTPUT_DIR_ADT,wildcards.sample_name_adt,"QC_reads/fastqc", name) + "_fastqc.zip")
     return files
 
 rule multiqc_adt:
     input:
-        #qc_files = lambda wildcards: glob.glob(os.path.join(OUTPUT_DIR_ADT, str(wildcards.sample_name_adt) + "/QC/*/" + str(wildcards.sample_name_adt) + "*")),
+        #qc_files = lambda wildcards: glob.glob(os.path.join(OUTPUT_DIR_ADT, str(wildcards.sample_name_adt) + "/QC_reads/*/" + str(wildcards.sample_name_adt) + "*")),
         qc_files2 = multiqc_inputs_adt
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC/multiqc/{sample_name_adt}_RAW.html"),
-        zip_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC/multiqc/{sample_name_adt}_RAW_data.zip")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html")
     threads:
         1
     resources:
@@ -55,7 +54,7 @@ rule multiqc_adt:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC/multiqc && multiqc -n {wildcards.sample_name_adt}'_RAW' -i {wildcards.sample_name_adt}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC/multiqc {input}"
+        "multiqc -n {wildcards.sample_name_adt}'_RAW' -i {wildcards.sample_name_adt}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqscreen && rm {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{sample_name_adt}_RAW_data.zip {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{sample_name_adt}_RAW_plots"
 
 
 """
@@ -70,7 +69,7 @@ def alignment_inputs_adt(wildcards):
 rule alignment_adt:
     input:
         fq_link = alignment_inputs_adt,
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC/multiqc/{sample_name_adt}_RAW.html")
+        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html")
     output:
         output_bus_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/output.bus"),
         transcripts_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/transcripts.txt"),
