@@ -1,5 +1,5 @@
 # Yaml file for single-cell pipeline
-steps: ["Alignment_countTable_GE", "Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE","Clust_Markers_Annot_GE","Cerebro"] #"Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE", "Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Adding_BCR","Cerebro"
+steps: ["Alignment_countTable_GE", "Droplets_QC_GE"] #,"Filtering_GE","Norm_DimRed_Eval_GE","Clust_Markers_Annot_GE","Cerebro"] #"Alignment_countTable_GE","Alignment_countTable_ADT","Alignment_annotations_TCR_BCR" ,"Droplets_QC_GE","Filtering_GE","Norm_DimRed_Eval_GE", "Clust_Markers_Annot_GE","Adding_ADT","Adding_TCR","Adding_BCR","Cerebro"
 
 ############################################ GE (RNA) ############################################
 #### Alignment_countTable_GE ####

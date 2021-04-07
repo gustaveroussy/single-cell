@@ -48,7 +48,8 @@ if "Alignment_countTable_GE" in STEPS:
         sys.stderr.write("don't end with the _GE tag!\n")
         sys.exit()
     #with path and extention
-    PATH_ALL_FILES_GE_FQ_GZ = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE, str(ALIGN_SAMPLE_NAME_GE) + "*R1*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE, str(ALIGN_SAMPLE_NAME_GE) + "*R2*.f*q*"))
+    PATH_ALL_FILES_GE_FQ_GZ = [ glob.glob(os.path.join(ALIGN_INPUT_DIR_GE, str(sample_name) + "*" + str(read_type_R) + "*.f*q*")) for read_type_R in ['R1','R2'] for sample_name in ALIGN_SAMPLE_NAME_GE ]
+    PATH_ALL_FILES_GE_FQ_GZ = [ x for xs in PATH_ALL_FILES_GE_FQ_GZ for x in xs] #concatenate list
     #without path and extention
     ALL_FILES_GE = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_GE_FQ_GZ]
 
@@ -76,7 +77,8 @@ if "Alignment_countTable_ADT" in STEPS:
         sys.stderr.write("don't end with the _ADT tag!\n")
         sys.exit()
     #with path and extention
-    PATH_ALL_FILES_ADT_FQ_GZ =glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT, str(ALIGN_SAMPLE_NAME_ADT) + "*R1*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT, str(ALIGN_SAMPLE_NAME_ADT) + "*R2*.f*q*"))
+    PATH_ALL_FILES_ADT_FQ_GZ = [ glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT, str(sample_name) + "*" + str(read_type_R) + "*.f*q*")) for read_type_R in ['R1','R2'] for sample_name in ALIGN_SAMPLE_NAME_ADT ]
+    PATH_ALL_FILES_ADT_FQ_GZ = [ x for xs in PATH_ALL_FILES_ADT_FQ_GZ for x in xs] #concatenate list
     #without path and extention
     ALL_FILES_ADT = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_ADT_FQ_GZ]
 
@@ -103,7 +105,8 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
         sys.stderr.write("don't end with the _TCR or _BCR tags!\n")
         sys.exit()
     #with path and extention
-    PATH_ALL_FILES_TCR_BCR_FQ_GZ=glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_BCR, str(ALIGN_SAMPLE_NAME_TCR_BCR) + "*R1*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_BCR, str(ALIGN_SAMPLE_NAME_TCR_BCR) + "*R2*.f*q*"))
+    PATH_ALL_FILES_TCR_BCR_FQ_GZ = [ glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_BCR, str(sample_name) + "*" + str(read_type_R) + "*.f*q*")) for read_type_R in ['R1','R2'] for sample_name in ALIGN_SAMPLE_NAME_TCR_BCR ]
+    PATH_ALL_FILES_TCR_BCR_FQ_GZ = [ x for xs in PATH_ALL_FILES_TCR_BCR_FQ_GZ for x in xs] #concatenate list
     #without path and extention
     ALL_FILES_TCR_BCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_TCR_BCR_FQ_GZ]
 
