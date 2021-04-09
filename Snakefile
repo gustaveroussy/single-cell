@@ -21,7 +21,7 @@ __author__ = "Marine AGLAVE"
 STEPS = config['steps']
 PIPELINE_FOLDER = workflow.snakefile
 PIPELINE_FOLDER = PIPELINE_FOLDER.replace("/Snakefile", "")
-CONDA_ENV_SING =  PIPELINE_FOLDER + "/envs/conda/singularity.yml"
+#CONDA_ENV_SING =  PIPELINE_FOLDER + "/envs/conda/Singularity.yml"
 
 if "Alignment_countTable_GE" in STEPS:
     ### Sample/Project
@@ -418,10 +418,10 @@ if "Adding_TCR" in STEPS:
         ADD_TCR_INPUT_RDA_GE = config['Adding_TCR']['input.rda']
     elif "Adding_ADT" in STEPS:
         sys.stderr.write("Warning: No input.rda find in Adding_TCR section of configfile; input.rda will be determine from Adding_ADT step for Adding_TCR step!\n")
-        ADD_TCR_INPUT_RDA = [ x + "_ADT.rda" for x in ADD_ADT_OUTPUT]
+        ADD_TCR_INPUT_RDA_GE = [ x + "_ADT.rda" for x in ADD_ADT_OUTPUT]
     elif "Clust_Markers_Annot_GE" in STEPS:
         sys.stderr.write("Warning: No input.rda find in Adding_TCR section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Adding_TCR step!\n")
-        ADD_TCR_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
+        ADD_TCR_INPUT_RDA_GE = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
     else:
         sys.exit("Error: No input.rda in configfile!\n")
     if 'Adding_TCR' in config and 'vdj.input.file.tcr' in config['Adding_TCR'] :
@@ -437,11 +437,11 @@ if "Adding_TCR" in STEPS:
     ADD_TCR_AUTHOR_MAIL = config['Adding_TCR']['author.mail'] if ('Adding_TCR' in config and 'author.mail' in config['Adding_TCR'] and config['Adding_TCR']['author.mail'] != None) else "NULL"
     ### Snakefile parameters
     #Correspondance input/output
-    ADD_TCR_OUTPUT = [os.path.splitext(x)[0] for x in ADD_TCR_INPUT_RDA]
+    ADD_TCR_OUTPUT = [os.path.splitext(x)[0] for x in ADD_TCR_INPUT_RDA_GE]
     dic_ADD_TCR_INFO = {}
     for i in range(0,len(ADD_TCR_OUTPUT),1):
         dic_ADD_TCR_INFO[ADD_TCR_OUTPUT[i]] = {}
-        dic_ADD_TCR_INFO[ADD_TCR_OUTPUT[i]]['ADD_TCR_INPUT_RDA'] = ADD_TCR_INPUT_RDA[i]
+        dic_ADD_TCR_INFO[ADD_TCR_OUTPUT[i]]['ADD_TCR_INPUT_RDA_GE'] = ADD_TCR_INPUT_RDA_GE[i]
         dic_ADD_TCR_INFO[ADD_TCR_OUTPUT[i]]['ADD_TCR_INPUT_CSV_TCR'] = ADD_TCR_INPUT_CSV_TCR[i]
 
 if "Adding_BCR" in STEPS:
@@ -450,13 +450,13 @@ if "Adding_BCR" in STEPS:
         ADD_BCR_INPUT_RDA_GE = config['Adding_BCR']['input.rda']
     elif "Adding_TCR" in STEPS:
         sys.stderr.write("Warning: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_TCR step for Adding_BCR step!\n")
-        ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in ADD_TCR_OUTPUT]
+        ADD_BCR_INPUT_RDA_GE = [ x + "_TCR.rda" for x in ADD_TCR_OUTPUT]
     elif "Adding_ADT" in STEPS:
         sys.stderr.write("Warning: No input.rda find in Adding_BCR section of configfile; input.rda will be determine from Adding_ADT step for Adding_BCR step!\n")
-        ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in ADD_ADT_OUTPUT]
+        ADD_BCR_INPUT_RDA_GE = [ x + "_ADT.rda" for x in ADD_ADT_OUTPUT]
     elif "Clust_Markers_Annot_GE" in STEPS:
         sys.stderr.write("Warning: No input.rda find in Adding_BCR section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Adding_BCR step!\n")
-        ADD_BCR_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
+        ADD_BCR_INPUT_RDA_GE = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
     else:
         sys.exit("Error: No input.rda in configfile!\n")
     if 'Adding_BCR' in config and 'vdj.input.file.bcr' in config['Adding_BCR'] :
@@ -472,11 +472,11 @@ if "Adding_BCR" in STEPS:
     ADD_BCR_AUTHOR_MAIL = config['Adding_BCR']['author.mail'] if ('Adding_BCR' in config and 'author.mail' in config['Adding_BCR'] and config['Adding_BCR']['author.mail'] != None) else "NULL"
     ### Snakefile parameters
     #Correspondance input/output
-    ADD_BCR_OUTPUT = [os.path.splitext(x)[0] for x in ADD_BCR_INPUT_RDA]
+    ADD_BCR_OUTPUT = [os.path.splitext(x)[0] for x in ADD_BCR_INPUT_RDA_GE]
     dic_ADD_BCR_INFO = {}
     for i in range(0,len(ADD_BCR_OUTPUT),1):
         dic_ADD_BCR_INFO[ADD_BCR_OUTPUT[i]] = {}
-        dic_ADD_BCR_INFO[ADD_BCR_OUTPUT[i]]['ADD_BCR_INPUT_RDA'] = ADD_BCR_INPUT_RDA[i]
+        dic_ADD_BCR_INFO[ADD_BCR_OUTPUT[i]]['ADD_BCR_INPUT_RDA_GE'] = ADD_BCR_INPUT_RDA_GE[i]
         dic_ADD_BCR_INFO[ADD_BCR_OUTPUT[i]]['ADD_BCR_INPUT_CSV_BCR'] = ADD_BCR_INPUT_CSV_BCR[i]
 
 if "Alignment_annotations_TCR_BCR" in STEPS or "Adding_TCR" in STEPS or "Adding_BCR" in STEPS:
@@ -570,37 +570,37 @@ onstart:
     if "Droplets_QC_GE" in STEPS:
         sys.stderr.write("\n" + "Droplets_QC_GE:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(QC_SAMPLE_NAME_GE_RAW, list):
-            for sample in QC_SAMPLE_NAME_GE_RAW:
+        if isinstance(QC_SAMPLE_NAME_GE, list):
+            for sample in QC_SAMPLE_NAME_GE:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(QC_SAMPLE_NAME_GE_RAW) + "\n")
+            sys.stderr.write("\t" + str(QC_SAMPLE_NAME_GE) + "\n")
 
     if "Filtering_GE" in STEPS:
         sys.stderr.write("\n" + "Filtering_GE:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(FILERING_SAMPLE_NAME_GE_RAW, list):
-            for sample in FILERING_SAMPLE_NAME_GE_RAW:
+        if isinstance(FILERING_SAMPLE_NAME_GE, list):
+            for sample in FILERING_SAMPLE_NAME_GE:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(FILERING_SAMPLE_NAME_GE_RAW) + "\n")
+            sys.stderr.write("\t" + str(FILERING_SAMPLE_NAME_GE) + "\n")
 
     if "Norm_DimRed_Eval_GE" in STEPS:
         sys.stderr.write("\n" + "Norm_DimRed_Eval_GE:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(NDRE_SAMPLE_NAME_GE_RAW, list):
-            for sample in NDRE_SAMPLE_NAME_GE_RAW:
+        if isinstance(NDRE_SAMPLE_NAME_GE, list):
+            for sample in NDRE_SAMPLE_NAME_GE:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(NDRE_SAMPLE_NAME_GE_RAW) + "\n")
+            sys.stderr.write("\t" + str(NDRE_SAMPLE_NAME_GE) + "\n")
     if "Clust_Markers_Annot_GE" in STEPS:
         sys.stderr.write("\n" + "Clust_Markers_Annot_GE:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(CMA_SAMPLE_NAME_GE_RAW, list):
-            for sample in CMA_SAMPLE_NAME_GE_RAW:
+        if isinstance(CMA_SAMPLE_NAME_GE, list):
+            for sample in CMA_SAMPLE_NAME_GE:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(CMA_SAMPLE_NAME_GE_RAW) + "\n")
+            sys.stderr.write("\t" + str(CMA_SAMPLE_NAME_GE) + "\n")
     if "Adding_ADT" in STEPS:
         sys.stderr.write("\n" + "Adding_ADT:" + "\n")
         sys.stderr.write("RDA FILE(S):\n")
@@ -619,7 +619,7 @@ onstart:
             sys.stderr.write("\t" + str(ADD_TCR_INPUT_RDA_GE) + "\n")
     if "Adding_BCR" in STEPS:
         sys.stderr.write("\n" + "Adding_BCR:" + "\n")
-        sys.stderr.write("SAMPLE(S):\n")
+        sys.stderr.write("RDA FILE(S):\n")
         if isinstance(ADD_BCR_INPUT_RDA_GE, list):
             for sample in ADD_BCR_INPUT_RDA_GE:
                 sys.stderr.write("\t" + str(sample) + "\n")

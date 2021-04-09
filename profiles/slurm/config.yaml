@@ -7,7 +7,7 @@ max-status-checks-per-second: 10
 local-cores: 1
 jobs: 30
 keep-going: true
-reason: true
+reason: false
 printshellcmds: true
 jobname: "{name}.{jobid}.snakejob"
 use-conda: true

@@ -8,7 +8,7 @@ This rule add tcr information to expression gene analysis in single-cell RNA-seq
 This function allows to determine the input .rda file and csv file from cellranger vdj.
 """
 def add_bcr_input(wildcards):
-    rda_file = dic_ADD_BCR_INFO[wildcards.add_bcr_output]['ADD_BCR_INPUT_RDA']
+    rda_file = dic_ADD_BCR_INFO[wildcards.add_bcr_output]['ADD_BCR_INPUT_RDA_GE']
     csv_file = dic_ADD_BCR_INFO[wildcards.add_bcr_output]['ADD_BCR_INPUT_CSV_BCR']
     return [rda_file,csv_file]
 
@@ -16,7 +16,7 @@ def add_bcr_input(wildcards):
 This function allows to determine the singularity binding parameters.
 """
 def add_bcr_params_sing(wildcards):
-    rda_folder = os.path.dirname(dic_ADD_BCR_INFO[wildcards.add_bcr_output]['ADD_BCR_INPUT_RDA']) # output_folder too
+    rda_folder = os.path.dirname(dic_ADD_BCR_INFO[wildcards.add_bcr_output]['ADD_BCR_INPUT_RDA_GE']) # output_folder too
     csv_folder = os.path.dirname(dic_ADD_BCR_INFO[wildcards.add_bcr_output]['ADD_BCR_INPUT_CSV_BCR'])
     concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + rda_folder + ":" + os.path.normpath("/WORKDIR/" + rda_folder) + " -B " + csv_folder + ":" + os.path.normpath("/WORKDIR/" + csv_folder)
     return concat
@@ -41,8 +41,8 @@ rule add_bcr_ge:
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         input_csv = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[1]),
         output_folder = add_bcr_params_output_folder
-    conda:
-        CONDA_ENV_SING
+    #conda:
+    #    CONDA_ENV_SING
     threads:
         1
     resources:

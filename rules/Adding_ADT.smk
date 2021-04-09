@@ -56,8 +56,8 @@ rule add_adt_ge:
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         kallisto_folder = add_adt_params_input_folder,
         output_folder = add_adt_params_output_folder
-    conda:
-        CONDA_ENV_SING
+    #conda:
+    #    CONDA_ENV_SING
     threads:
         1
     resources:
