@@ -8,49 +8,35 @@ def get_targets(STEPS):
     if "Alignment_countTable_GE" in STEPS:
         targets["Alignment_countTable_GE"]=[
         #multiqc
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/QC_reads/{sample_name_ge}_RAW.html"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/{sample_name_ge}_RAW.html"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
         #alignment
-        # expand(os.path.join(OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/output.bus"), zip, sample_name_ge=SAMPLE_NAME_GE),
-        # expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/transcripts.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        # expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/matrix.ec"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/run_info.json"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        #correct_UMIs
-        # expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_corrected.bus"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        #sort
-        # expand(os.path.join(OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_sorted.bus"), zip, sample_name_ge=SAMPLE_NAME_GE),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/run_info.json"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
         #build_count_matrix
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.mtx"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.barcodes.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.genes.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_GE,"{sample_name_ge}/KALLISTOBUS/Materials_and_Methods.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE)
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.mtx"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.barcodes.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.genes.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/Materials_and_Methods.txt"), zip, sample_name_ge=ALIGN_SAMPLE_NAME_GE)
         ]
     if "Alignment_countTable_ADT" in STEPS:
         targets["Alignment_countTable_ADT"]=[
         #multiqc
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
         #alignment
-        # expand(os.path.join(OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/output.bus"), zip, sample_name_adt=SAMPLE_NAME_ADT),
-        # expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/transcripts.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        # expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/matrix.ec"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/run_info.json"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        #correct_UMIs
-        # expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        #sort
-        # expand(os.path.join(OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_sorted.bus"), zip, sample_name_adt=SAMPLE_NAME_ADT),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/run_info.json"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
         #build_count_matrix
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.mtx"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.barcodes.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.genes.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/Materials_and_Methods.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT)
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.mtx"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.barcodes.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.genes.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/Materials_and_Methods.txt"), zip, sample_name_adt=ALIGN_SAMPLE_NAME_ADT)
         ]
     if "Alignment_annotations_TCR_BCR" in STEPS:
         targets["Alignment_annotations_TCR_BCR"]=[
         #multiqc
-        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW.html"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW.html"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
         #alignment_annotations_
-        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/filtered_contig_annotations.csv"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/web_summary.html"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
-        expand(os.path.join(ALIGN_OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/Materials_and_Methods.txt"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR)
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/filtered_contig_annotations.csv"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/web_summary.html"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR),
+        expand(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/Materials_and_Methods.txt"), zip, sample_name_tcr_bcr=ALIGN_SAMPLE_NAME_TCR_BCR)
         ]
     if "Droplets_QC_GE" in STEPS:
         targets["Droplets_QC_GE"]=[

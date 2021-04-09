@@ -4,18 +4,36 @@ These rules make the alignment of cell surface protein in single-cell RNA-seq.
 ##########################################################################
 """
 wildcard_constraints:
-    sample_name_adt_R=".+_ADT",
-    sample_name_adt=".+_ADT"
+    sample_name_adt = ".+_ADT"
+
+"""
+This rule makes the symbolic links of fastq files with the good sample name.
+"""
+def symlink_rename_inputs_adt(wildcards):
+    for i in range(0,len(ALIGN_SAMPLE_NAME_ADT ),1):
+        if ALIGN_SAMPLE_NAME_ADT[i] == wildcards.sample_name_adt :
+            return os.path.normpath(ALIGN_INPUT_DIR_ADT_RAW + "/" + ALIGN_SAMPLE_NAME_ADT_RAW[i] + str("{lane_R_complement}.fastq.gz"))
+
+rule symlink_rename_fq_adt:
+    input:
+        fq = symlink_rename_inputs_adt
+    output:
+        fq_link = temp(os.path.normpath(ALIGN_INPUT_DIR_ADT + "/{sample_name_adt}{lane_R_complement}.fastq.gz"))
+    run:
+        sys.stderr.write("\t Create symbolic link: \n")
+        sys.stderr.write("\t From :" + "\t" + str(input.fq) + "\n")
+        sys.stderr.write("\t To :" + "\t" + str(output.fq_link) + "\n")
+        os.symlink(str(input.fq), str(output.fq_link))
 
 """
 This rule makes the fastqc control-quality.
 """
 rule fastqc_adt:
     input:
-        fq = os.path.join(ALIGN_INPUT_DIR_ADT,"{sample_name_adt_R}{lane_R_complement}.fastq.gz")
+        fq = os.path.normpath(ALIGN_INPUT_DIR_ADT + "/{sample_name_adt}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt_R}/QC_reads/fastqc/{sample_name_adt_R}{lane_R_complement}_fastqc.html"),
-        zip_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt_R}/QC_reads/fastqc/{sample_name_adt_R}{lane_R_complement}_fastqc.zip")
+        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/QC_reads/fastqc/{sample_name_adt}{lane_R_complement}_fastqc.html"),
+        zip_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/QC_reads/fastqc/{sample_name_adt}{lane_R_complement}_fastqc.zip")
     threads:
         1
     resources:
@@ -24,28 +42,26 @@ rule fastqc_adt:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt_R}/QC_reads/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt_R}/QC_reads/fastqc -t {threads} {input}"
+        "mkdir -p {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc -t {threads} {input}"
 
 """
 This rule makes the multiqc from the fastqc and the fastq-screen results.
 The function allows to get all QC input files for one specific sample (wildcards).
 """
 def multiqc_inputs_adt(wildcards):
-    name_R1_R2=[elem for elem in ALL_FILES_ADT if re.search(wildcards.sample_name_adt, elem)]
-    name_R2=[elem for elem in name_R1_R2 if re.search("R2", elem)]
+    name_R1_R2=[elem for elem in ALIGN_SYMLINK_FILES_NAME_ADT if re.search(wildcards.sample_name_adt, elem)]
     files=[]
     for name in name_R1_R2:
         #fastqc
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_ADT,wildcards.sample_name_adt,"QC_reads/fastqc",name) + "_fastqc.html")
-        files.append(os.path.join(ALIGN_OUTPUT_DIR_ADT,wildcards.sample_name_adt,"QC_reads/fastqc", name) + "_fastqc.zip")
+        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/" + wildcards.sample_name_adt + "/QC_reads/fastqc/" + name + "_fastqc.html"))
+        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/" + wildcards.sample_name_adt + "/QC_reads/fastqc/" + name + "_fastqc.zip"))
     return files
 
 rule multiqc_adt:
     input:
-        #qc_files = lambda wildcards: glob.glob(os.path.join(OUTPUT_DIR_ADT, str(wildcards.sample_name_adt) + "/QC_reads/*/" + str(wildcards.sample_name_adt) + "*")),
         qc_files2 = multiqc_inputs_adt
     output:
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html")
+        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html")
     threads:
         1
     resources:
@@ -62,21 +78,19 @@ This rule makes the alignment by kallisto.
 The function alignment_inputs_adt allows to get all fastq input files for one specific sample (wildcards).
 """
 def alignment_inputs_adt(wildcards):
-    files=[]
-    files=[elem for elem in PATH_ALL_FILES_ADT_FQ_GZ if re.search(wildcards.sample_name_adt, elem)]
-    return sorted(files)
+    return sorted([elem for elem in ALIGN_SYMLINK_FILES_ADT if re.search(wildcards.sample_name_adt, elem)])
 
 rule alignment_adt:
     input:
         fq_link = alignment_inputs_adt,
-        html_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html")
+        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/QC_reads/{sample_name_adt}_RAW.html")
     output:
-        output_bus_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/output.bus"),
-        transcripts_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/transcripts.txt"),
-        matrix_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/matrix.ec"),
-        run_info_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/run_info.json")
+        output_bus_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/output.bus"),
+        transcripts_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/transcripts.txt"),
+        matrix_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/matrix.ec"),
+        run_info_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/run_info.json")
     params:
-        kbusdir = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS")
+        kbusdir = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS")
     threads:
         1
     resources:
@@ -92,9 +106,9 @@ This rule correct UMI from the sorted results of alignment, by bustools.
 """
 rule correct_UMIs_adt:
     input:
-        output_bus_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/output.bus")
+        output_bus_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/output.bus")
     output:
-        corrected_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus")
+        corrected_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus")
     threads:
         1
     resources:
@@ -110,11 +124,11 @@ This rule sort the results of alignment, by bustools.
 """
 rule sort_file_adt:
     input:
-        corrected_bus_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus")
+        corrected_bus_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus")
     output:
-        sorted_bus_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_sorted.bus")
+        sorted_bus_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_sorted.bus")
     params:
-        tmp_dir=os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/tmp")
+        tmp_dir=os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/tmp")
     threads:
         1
     resources:
@@ -130,16 +144,16 @@ This rule count UMI from the corrected sorted results of alignment, by bustools.
 """
 rule build_count_matrix_adt:
     input:
-        sorted_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_sorted.bus"),
-        transcripts_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/transcripts.txt"),
-        matrix_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/matrix.ec")
+        sorted_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_sorted.bus"),
+        transcripts_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/transcripts.txt"),
+        matrix_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/matrix.ec")
     output:
-        mtx_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.mtx"),
-        barcodes_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.barcodes.txt"),
-        genes_file = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.genes.txt"),
-	    MandM = os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS/Materials_and_Methods.txt")
+        mtx_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.mtx"),
+        barcodes_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.barcodes.txt"),
+        genes_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}.genes.txt"),
+	    MandM = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/Materials_and_Methods.txt")
     params:
-        os.path.join(ALIGN_OUTPUT_DIR_ADT,"{sample_name_adt}/KALLISTOBUS")
+        os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS")
     threads:
         1
     resources:

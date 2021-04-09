@@ -28,87 +28,116 @@ if "Alignment_countTable_GE" in STEPS:
     if 'Alignment_countTable_GE' in config and 'sample.name.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No sample.name.ge in configfile (Alignment_countTable_GE)!")
     if 'Alignment_countTable_GE' in config and 'input.dir.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No input.dir.ge in configfile (Alignment_countTable_GE)!")
     if 'Alignment_countTable_GE' in config and 'output.dir.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No output.dir.ge in configfile (Alignment_countTable_GE)!")
-    ALIGN_SAMPLE_NAME_GE = config['Alignment_countTable_GE']['sample.name.ge']
-    ALIGN_INPUT_DIR_GE = config['Alignment_countTable_GE']['input.dir.ge'] if config['Alignment_countTable_GE']['input.dir.ge'][len(config['Alignment_countTable_GE']['input.dir.ge'])-1:] == "/" else config['Alignment_countTable_GE']['input.dir.ge'] + "/"
-    ALIGN_OUTPUT_DIR_GE = config['Alignment_countTable_GE']['output.dir.ge'] if config['Alignment_countTable_GE']['output.dir.ge'][len(config['Alignment_countTable_GE']['output.dir.ge'])-1:] == "/" else config['Alignment_countTable_GE']['output.dir.ge'] + "/"
+    ALIGN_SAMPLE_NAME_GE_RAW = config['Alignment_countTable_GE']['sample.name.ge']
+    ALIGN_INPUT_DIR_GE_RAW = os.path.normpath(config['Alignment_countTable_GE']['input.dir.ge'])
+    ALIGN_OUTPUT_DIR_GE = os.path.normpath(config['Alignment_countTable_GE']['output.dir.ge'])
+    ALIGN_INPUT_DIR_GE = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/fastq/")
     ### Index
     KINDEX_GE = config['Alignment_countTable_GE']['kindex.ge'] if 'Alignment_countTable_GE' in config and 'kindex.ge' in config['Alignment_countTable_GE'] else sys.exit("Error: No kindex.ge in configfile (Alignment_countTable_GE)!")
     TR2GFILE_GE = config['Alignment_countTable_GE']['tr2g.file.ge'] if 'Alignment_countTable_GE' in config and 'tr2g.file.ge' in config['Alignment_countTable_GE'] else sys.exit("Error: No tr2g.file.ge in configfile (Alignment_countTable_GE)!")
     REF_TXT_GE = config['Alignment_countTable_GE']['reference.txt'] if 'reference.txt' in config['Alignment_countTable_GE'] else "<insert_you_reference_here>"
     ### File names
-    #check samples names
-    ERROR_SAMPLE_NAME_GE=[]
-    for sample_name_ge in ALIGN_SAMPLE_NAME_GE:
-        if sample_name_ge[len(sample_name_ge)-3:] != "_GE":
-            ERROR_SAMPLE_NAME_GE.append(sample_name_ge)
-    if ERROR_SAMPLE_NAME_GE != []: # si pas vide
-        sys.stderr.write("Error: samples:\n")
-        for sample_name in ERROR_SAMPLE_NAME_GE:
-            sys.stderr.write("\t" + str(sample_name) + "\n")
-        sys.stderr.write("don't end with the _GE tag!\n")
-        sys.exit()
-    #with path and extention
-    PATH_ALL_FILES_GE_FQ_GZ = [ glob.glob(os.path.join(ALIGN_INPUT_DIR_GE, str(sample_name) + "*" + str(read_type_R) + "*.f*q*")) for read_type_R in ['R1','R2'] for sample_name in ALIGN_SAMPLE_NAME_GE ]
-    PATH_ALL_FILES_GE_FQ_GZ = [ x for xs in PATH_ALL_FILES_GE_FQ_GZ for x in xs] #concatenate list
-    #without path and extention
-    ALL_FILES_GE = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_GE_FQ_GZ]
+    ALIGN_SAMPLE_NAME_GE = []
+    ALIGN_SYMLINK_FILES_GE = []
+    ALIGN_SYMLINK_FILES_NAME_GE = []
+    for i in range(0,len(ALIGN_SAMPLE_NAME_GE_RAW),1):
+        #check samples names and add "_GE" if needed
+        ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i] + "_GE") if (ALIGN_SAMPLE_NAME_GE_RAW[i][len(ALIGN_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i])
+        ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R2_*.f*q*"))
+        #files with path and extention
+        ALIGN_SYMLINK_FILES_GE = ALIGN_SYMLINK_FILES_GE + [ os.path.normpath(ALIGN_INPUT_DIR_GE + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_GE_RAW[i], ALIGN_SAMPLE_NAME_GE[i])) for file in ORIG_FILES]
+    #files without path and extention
+    ALIGN_SYMLINK_FILES_NAME_GE = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_GE]
 
 if "Alignment_countTable_ADT" in STEPS:
     ### Sample/Project
     if 'Alignment_countTable_ADT' in config and 'sample.name.adt' not in config['Alignment_countTable_ADT']: sys.exit("Error: No sample.name.adt in configfile (Alignment_countTable_ADT)!")
     if 'Alignment_countTable_ADT' in config and 'input.dir.adt' not in config['Alignment_countTable_ADT']: sys.exit("Error: No input.dir.adt in configfile (Alignment_countTable_ADT)!")
     if 'Alignment_countTable_ADT' in config and 'output.dir.adt' not in config['Alignment_countTable_ADT']: sys.exit("Error: No output.dir.adt in configfile (Alignment_countTable_ADT)!")
-    ALIGN_SAMPLE_NAME_ADT = config['Alignment_countTable_ADT']['sample.name.adt']
-    ALIGN_INPUT_DIR_ADT = config['Alignment_countTable_ADT']['input.dir.adt'] if config['Alignment_countTable_ADT']['input.dir.adt'][len(config['Alignment_countTable_ADT']['input.dir.adt'])-1:] == "/" else config['Alignment_countTable_ADT']['input.dir.adt'] + "/"
-    ALIGN_OUTPUT_DIR_ADT = config['Alignment_countTable_ADT']['output.dir.adt'] if config['Alignment_countTable_ADT']['output.dir.adt'][len(config['Alignment_countTable_ADT']['output.dir.adt'])-1:] == "/" else config['Alignment_countTable_ADT']['output.dir.adt'] + "/"
+    ALIGN_SAMPLE_NAME_ADT_RAW = config['Alignment_countTable_ADT']['sample.name.adt']
+    ALIGN_INPUT_DIR_ADT_RAW = os.path.normpath(config['Alignment_countTable_ADT']['input.dir.adt'])
+    ALIGN_OUTPUT_DIR_ADT = os.path.normpath(config['Alignment_countTable_ADT']['output.dir.adt'])
+    ALIGN_INPUT_DIR_ADT = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/fastq/")
     ### Index
     KINDEX_ADT = config['Alignment_countTable_ADT']['kindex.adt'] if 'Alignment_countTable_ADT' in config and 'kindex.adt' in config['Alignment_countTable_ADT'] else sys.exit("Error: No kindex.adt in configfile (Alignment_countTable_ADT)!")
     TR2GFILE_ADT = config['Alignment_countTable_ADT']['tr2g.file.adt'] if 'Alignment_countTable_ADT' in config and 'tr2g.file.adt' in config['Alignment_countTable_ADT'] else sys.exit("Error: No tr2g.file.adt in configfile (Alignment_countTable_ADT)!")
     ### File names
-    #check samples names
-    ERROR_SAMPLE_NAME_ADT=[]
-    for sample_name_adt in ALIGN_SAMPLE_NAME_ADT:
-        if sample_name_adt[len(sample_name_adt)-4:] != "_ADT":
-            ERROR_SAMPLE_NAME_ADT.append(sample_name_adt)
-    if ERROR_SAMPLE_NAME_ADT != []: # si pas vide
-        sys.stderr.write("Error: samples:\n")
-        for sample_name in ERROR_SAMPLE_NAME_ADT:
-            sys.stderr.write("\t" + str(sample_name) + "\n")
-        sys.stderr.write("don't end with the _ADT tag!\n")
-        sys.exit()
-    #with path and extention
-    PATH_ALL_FILES_ADT_FQ_GZ = [ glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT, str(sample_name) + "*" + str(read_type_R) + "*.f*q*")) for read_type_R in ['R1','R2'] for sample_name in ALIGN_SAMPLE_NAME_ADT ]
-    PATH_ALL_FILES_ADT_FQ_GZ = [ x for xs in PATH_ALL_FILES_ADT_FQ_GZ for x in xs] #concatenate list
-    #without path and extention
-    ALL_FILES_ADT = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_ADT_FQ_GZ]
+    ALIGN_SAMPLE_NAME_ADT = []
+    ALIGN_SYMLINK_FILES_ADT = []
+    ALIGN_SYMLINK_FILES_NAME_ADT = []
+    for i in range(0,len(ALIGN_SAMPLE_NAME_ADT_RAW),1):
+        #check samples names and add "_ADT" if needed
+        ALIGN_SAMPLE_NAME_ADT.append(ALIGN_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (ALIGN_SAMPLE_NAME_ADT_RAW[i][len(ALIGN_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else ALIGN_SAMPLE_NAME_ADT.append(ALIGN_SAMPLE_NAME_ADT_RAW[i])
+        ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R2_*.f*q*"))
+        #files with path and extention
+        ALIGN_SYMLINK_FILES_ADT = ALIGN_SYMLINK_FILES_ADT + [ os.path.normpath(ALIGN_INPUT_DIR_ADT + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_ADT_RAW[i], ALIGN_SAMPLE_NAME_ADT[i])) for file in ORIG_FILES]
+    #files without path and extention
+    ALIGN_SYMLINK_FILES_NAME_ADT = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_ADT]
 
 if "Alignment_annotations_TCR_BCR" in STEPS:
     ### Sample/Project
-    if 'Alignment_annotations_TCR_BCR' in config and 'sample.name.tcr_bcr' not in config['Alignment_annotations_TCR_BCR']: sys.exit("Error: No sample.name.tcr_bcr in configfile (Alignment_annotations_TCR_BCR)!")
-    if 'Alignment_annotations_TCR_BCR' in config and 'input.dir.tcr_bcr' not in config['Alignment_annotations_TCR_BCR']: sys.exit("Error: No input.dir.tcr_bcr in configfile (Alignment_annotations_TCR_BCR)!")
+    if 'Alignment_annotations_TCR_BCR' in config and 'sample.name.tcr' not in config['Alignment_annotations_TCR_BCR'] and 'sample.name.bcr' not in config['Alignment_annotations_TCR_BCR']: sys.exit("Error: No sample.name.tcr or sample.name.bcr in configfile (Alignment_annotations_TCR_BCR)!")
+    if 'Alignment_annotations_TCR_BCR' in config and 'input.dir.tcr' not in config['Alignment_annotations_TCR_BCR'] and 'input.dir.bcr' not in config['Alignment_annotations_TCR_BCR']: sys.exit("Error: No input.dir.tcr or input.dir.bcr in configfile (Alignment_annotations_TCR_BCR)!")
     if 'Alignment_annotations_TCR_BCR' in config and 'output.dir.tcr_bcr' not in config['Alignment_annotations_TCR_BCR']: sys.exit("Error: No output.dir.tcr_bcr in configfile (Alignment_annotations_TCR_BCR)!")
-    ALIGN_SAMPLE_NAME_TCR_BCR = config['Alignment_annotations_TCR_BCR']['sample.name.tcr_bcr'] if config['Alignment_annotations_TCR_BCR'] else sys.exit("Error: No sample.name.tcr_bcr in configfile!")
-    ALIGN_INPUT_DIR_TCR_BCR = config['Alignment_annotations_TCR_BCR']['input.dir.tcr_bcr'] if config['Alignment_annotations_TCR_BCR']['input.dir.tcr_bcr'][len(config['Alignment_annotations_TCR_BCR']['input.dir.tcr_bcr'])-1:] == "/" else config['Alignment_annotations_TCR_BCR']['input.dir.tcr_bcr'] + "/"
-    ALIGN_OUTPUT_DIR_TCR_BCR = config['Alignment_annotations_TCR_BCR']['output.dir.tcr_bcr'] if config['Alignment_annotations_TCR_BCR']['output.dir.tcr_bcr'][len(config['Alignment_annotations_TCR_BCR']['output.dir.tcr_bcr'])-1:] == "/" else config['Alignment_annotations_TCR_BCR']['output.dir.tcr_bcr'] + "/"
+    ALIGN_SAMPLE_NAME_TCR_RAW = config['Alignment_annotations_TCR_BCR']['sample.name.tcr'] if 'sample.name.tcr' in config['Alignment_annotations_TCR_BCR'] else None
+    ALIGN_SAMPLE_NAME_BCR_RAW = config['Alignment_annotations_TCR_BCR']['sample.name.bcr'] if 'sample.name.bcr' in config['Alignment_annotations_TCR_BCR'] else None
+    ALIGN_INPUT_DIR_TCR_RAW = os.path.normpath(config['Alignment_annotations_TCR_BCR']['input.dir.tcr'] + "/") if 'input.dir.tcr' in config['Alignment_annotations_TCR_BCR'] else None
+    ALIGN_INPUT_DIR_BCR_RAW = os.path.normpath(config['Alignment_annotations_TCR_BCR']['input.dir.bcr'] + "/") if 'input.dir.bcr' in config['Alignment_annotations_TCR_BCR'] else None
+    ALIGN_OUTPUT_DIR_TCR_BCR = os.path.normpath(config['Alignment_annotations_TCR_BCR']['output.dir.tcr_bcr'])
+    ALIGN_INPUT_DIR_TCR_BCR = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/fastq/")
     ### Index
     CRINDEX_TCR_BCR=config['Alignment_annotations_TCR_BCR']['crindex.tcr_bcr'] if 'Alignment_annotations_TCR_BCR' in config and 'crindex.tcr_bcr' in config['Alignment_annotations_TCR_BCR'] else sys.exit("Error: No crindex.tcr_bcr in configfile (Alignment_annotations_TCR_BCR)!")
     ### File names
-    #check samples names
-    ERROR_SAMPLE_NAME_TCR_BCR=[]
-    for sample_name_tcr_bcr in ALIGN_SAMPLE_NAME_TCR_BCR:
-        if sample_name_tcr_bcr[len(sample_name_tcr_bcr)-4:] not in ["_TCR","_BCR"]:
-            ERROR_SAMPLE_NAME_TCR_BCR.append(sample_name_tcr_bcr)
-    if ERROR_SAMPLE_NAME_TCR_BCR != []: # si pas vide
-        sys.stderr.write("Error: samples:\n")
-        for sample_name in ERROR_SAMPLE_NAME_TCR_BCR:
-            sys.stderr.write("\t" + str(sample_name) + "\n")
-        sys.stderr.write("don't end with the _TCR or _BCR tags!\n")
-        sys.exit()
-    #with path and extention
-    PATH_ALL_FILES_TCR_BCR_FQ_GZ = [ glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_BCR, str(sample_name) + "*" + str(read_type_R) + "*.f*q*")) for read_type_R in ['R1','R2'] for sample_name in ALIGN_SAMPLE_NAME_TCR_BCR ]
-    PATH_ALL_FILES_TCR_BCR_FQ_GZ = [ x for xs in PATH_ALL_FILES_TCR_BCR_FQ_GZ for x in xs] #concatenate list
-    #without path and extention
-    ALL_FILES_TCR_BCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in PATH_ALL_FILES_TCR_BCR_FQ_GZ]
+    #TCR
+    ALIGN_SAMPLE_NAME_TCR = []
+    ALIGN_ORIG_FILES_TCR = []
+    ALIGN_SYMLINK_FILES_TCR = []
+    ALIGN_SYMLINK_FILES_NAME_TCR = []
+    if ALIGN_SAMPLE_NAME_TCR_RAW is not None:
+        for i in range(0,len(ALIGN_SAMPLE_NAME_TCR_RAW),1):
+            #check samples names and add "_TCR" if needed
+            ALIGN_SAMPLE_NAME_TCR.append(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_TCR") if (ALIGN_SAMPLE_NAME_TCR_RAW[i][len(ALIGN_SAMPLE_NAME_TCR_RAW[i])-4:] != "_TCR") else ALIGN_SAMPLE_NAME_TCR.append(ALIGN_SAMPLE_NAME_TCR_RAW[i])
+            ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_R2_*.f*q*"))
+             #files with path and extention
+            ALIGN_ORIG_FILES_TCR = ALIGN_ORIG_FILES_TCR + ORIG_FILES
+            for file in ORIG_FILES:
+                if re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_S[0-9]+_L00[0-9]{1}_R[1-2]{1}_.*"), os.path.basename(file)) is not None: #good name format
+                    ALIGN_SYMLINK_FILES_TCR = ALIGN_SYMLINK_FILES_TCR + [ os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_TCR_RAW[i], ALIGN_SAMPLE_NAME_TCR[i])) ]
+                elif re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_[0-9]{1}_S[0-9]+_R[1-2]{1}_.*"), os.path.basename(file)) is not None: # => reformat
+                    res_match = re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_(?P<nb>[0-9]{1})_(?P<S>S[0-9]+)_(?P<R_compl>R[1-2]{1}_.*)"), os.path.basename(file))
+                    ALIGN_SYMLINK_FILES_TCR = ALIGN_SYMLINK_FILES_TCR + [ os.path.normpath(str(ALIGN_INPUT_DIR_TCR_BCR + "/" + ALIGN_SAMPLE_NAME_TCR[i] + "_" + res_match.group('S') + "_L00" + res_match.group('nb') + "_" + res_match.group('R_compl'))) ]
+                else:
+                    sys.exit("File names for TCR not recognized. It must be like mysample_2_S1_R1_001.fastq.gz or mysample_S1_L002_R1_001.fastq.gz")
+        #files without path and extention
+        ALIGN_SYMLINK_FILES_NAME_TCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_TCR]
+    #BCR
+    ALIGN_SAMPLE_NAME_BCR = []
+    ALIGN_ORIG_FILES_BCR = []
+    ALIGN_SYMLINK_FILES_BCR = []
+    ALIGN_SYMLINK_FILES_NAME_BCR = []
+    if ALIGN_SAMPLE_NAME_BCR_RAW is not None:
+        for i in range(0,len(ALIGN_SAMPLE_NAME_BCR_RAW),1):
+            #check samples names and add "_BCR" if needed
+            ALIGN_SAMPLE_NAME_BCR.append(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_BCR") if (ALIGN_SAMPLE_NAME_BCR_RAW[i][len(ALIGN_SAMPLE_NAME_BCR_RAW[i])-4:] != "_BCR") else ALIGN_SAMPLE_NAME_BCR.append(ALIGN_SAMPLE_NAME_BCR_RAW[i])
+            ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_R2_*.f*q*"))
+            #files with path and extention
+            ALIGN_ORIG_FILES_BCR = ALIGN_ORIG_FILES_BCR + ORIG_FILES
+            for file in ORIG_FILES:
+                if re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_S[0-9]+_L00[0-9]{1}_R[1-2]{1}_.*"), os.path.basename(file)) is not None: #good name format
+                    ALIGN_SYMLINK_FILES_BCR = ALIGN_SYMLINK_FILES_BCR + [ os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_BCR_RAW[i], ALIGN_SAMPLE_NAME_BCR[i])) ]
+                elif re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_[0-9]{1}_S[0-9]+_R[1-2]{1}_.*"), os.path.basename(file)) is not None: # => reformat
+                    res_match = re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_(?P<nb>[0-9]{1})_(?P<S>S[0-9]+)_(?P<R_compl>R[1-2]{1}_.*)"), os.path.basename(file))
+                    ALIGN_SYMLINK_FILES_BCR = ALIGN_SYMLINK_FILES_BCR + [ os.path.normpath(str(ALIGN_INPUT_DIR_TCR_BCR + "/" + ALIGN_SAMPLE_NAME_BCR[i] + "_" + res_match.group('S') + "_L00" + res_match.group('nb') + "_" + res_match.group('R_compl'))) ]
+                else:
+                    sys.exit("File names for BCR not recognized. It must be like mysample_2_S1_R1_001.fastq.gz or mysample_S1_L002_R1_001.fastq.gz")
+        #files without path and extention
+        ALIGN_SYMLINK_FILES_NAME_BCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_BCR]
+    #Fusion TCR/BCR
+    ALIGN_SAMPLE_NAME_TCR_BCR_RAW = ALIGN_SAMPLE_NAME_TCR_RAW  + ALIGN_SAMPLE_NAME_BCR_RAW
+    ALIGN_SAMPLE_NAME_TCR_BCR = ALIGN_SAMPLE_NAME_TCR + ALIGN_SAMPLE_NAME_BCR
+    ALIGN_ORIG_FILES_TCR_BCR = ALIGN_ORIG_FILES_TCR + ALIGN_ORIG_FILES_BCR
+    ALIGN_SYMLINK_FILES_TCR_BCR = ALIGN_SYMLINK_FILES_TCR + ALIGN_SYMLINK_FILES_BCR
+    ALIGN_SYMLINK_FILES_NAME_TCR_BCR = ALIGN_SYMLINK_FILES_NAME_TCR + ALIGN_SYMLINK_FILES_NAME_BCR
 
 if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS:
     # 10X Technology
@@ -128,6 +157,7 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS:
 if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
     # Fastq-screen Index
     FASTQSCREEN_INDEX = "/mnt/beegfs/database/bioinfo/single-cell/INDEX/FASTQ_SCREEN/0.14.0/fastq_screen.conf"
+    #FASTQSCREEN_INDEX = "/home/m_aglave/Bureau/SCRNASEQ/RESOURCES/INDEX/fastqscreen/FastQ_Screen_Genomes/fastq_screen.conf"
     # Cutadapt parameters
     ADAPTERSEQ='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'
     MINBASEQ=28
@@ -137,8 +167,12 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or 
 if "Droplets_QC_GE" in STEPS:
     ### Sample/Project
     if 'Droplets_QC_GE' in config and 'sample.name.ge' in config['Droplets_QC_GE'] and 'input.dir.ge' in config['Droplets_QC_GE']:
-        QC_SAMPLE_NAME_GE = config['Droplets_QC_GE']['sample.name.ge']
+        QC_SAMPLE_NAME_GE_RAW = config['Droplets_QC_GE']['sample.name.ge']
         QC_INPUT_DIR_GE = config['Droplets_QC_GE']['input.dir.ge']
+        #check samples names and add "_GE" if needed
+        QC_SAMPLE_NAME_GE = []
+        for i in range(0,len(QC_SAMPLE_NAME_GE_RAW),1):
+            QC_SAMPLE_NAME_GE.append(QC_SAMPLE_NAME_GE_RAW[i] + "_GE") if (QC_SAMPLE_NAME_GE_RAW[i][len(QC_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else QC_SAMPLE_NAME_GE.append(QC_SAMPLE_NAME_GE_RAW[i])
     elif 'sample.name.ge' in config['Alignment_countTable_GE'] and 'input.dir.ge' in config['Alignment_countTable_GE']  and "Alignment_countTable_GE" in STEPS:
         sys.stderr.write("Warning: No sample.name.ge or input.dir.ge find in Droplets_QC_GE section of configfile; sample.name.ge and input.dir.ge will be determine from Alignment_countTable_GE step for Droplets_QC_GE step!\n")
         QC_SAMPLE_NAME_GE = copy.deepcopy(ALIGN_SAMPLE_NAME_GE)
@@ -179,17 +213,6 @@ if "Droplets_QC_GE" in STEPS:
     # Translation into gene Symbols
     QC_TRANSLATION_FILE = config['Droplets_QC_GE']['translation.file'] if ('Droplets_QC_GE' in config and 'translation.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['translation.file'] != None) else "NULL"
     ### Snakefile parameters
-    #check samples names
-    ERROR_SAMPLE_NAME_GE=[]
-    for sample_name_ge in QC_SAMPLE_NAME_GE:
-        if sample_name_ge[len(sample_name_ge)-3:] != "_GE":
-            ERROR_SAMPLE_NAME_GE.append(sample_name_ge)
-    if ERROR_SAMPLE_NAME_GE != []: # si pas vide
-        sys.stderr.write("Error: samples:\n")
-        for sample_name in ERROR_SAMPLE_NAME_GE:
-            sys.stderr.write("\t" + str(sample_name) + "\n")
-        sys.stderr.write("don't end with the _GE tag!\n")
-        sys.exit()
     #check end paths (del "/" if necessary)
     for i in range(0,len(QC_INPUT_DIR_GE),1):
         QC_INPUT_DIR_GE[i] = os.path.normpath(QC_INPUT_DIR_GE[i])
@@ -204,8 +227,12 @@ if "Droplets_QC_GE" in STEPS:
 if "Filtering_GE" in STEPS:
     ### Sample/Project
     if 'Filtering_GE' in config and 'sample.name.ge' in config['Filtering_GE'] and 'input.rda.ge' in config['Filtering_GE'] :
-        FILERING_SAMPLE_NAME_GE = config['Filtering_GE']['sample.name.ge']
+        FILERING_SAMPLE_NAME_GE_RAW = config['Filtering_GE']['sample.name.ge']
         FILERING_INPUT_RDA_GE = config['Filtering_GE']['input.rda.ge']
+        #check samples names and add "_GE" if needed
+        FILERING_SAMPLE_NAME_GE = []
+        for i in range(0,len(FILERING_SAMPLE_NAME_GE_RAW),1):
+            FILERING_SAMPLE_NAME_GE.append(FILERING_SAMPLE_NAME_GE_RAW[i] + "_GE") if (FILERING_SAMPLE_NAME_GE_RAW[i][len(FILERING_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else FILERING_SAMPLE_NAME_GE.append(FILERING_SAMPLE_NAME_GE_RAW[i])
     elif "Droplets_QC_GE" in STEPS:
         sys.stderr.write("Warning: No input.rda.ge find in Filtering_GE section of configfile; input.rda.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
         FILERING_SAMPLE_NAME_GE = copy.deepcopy(QC_SAMPLE_NAME_GE)
@@ -238,17 +265,6 @@ if "Filtering_GE" in STEPS:
     FILERING_CC_SEURAT_FILE = config['Filtering_GE']['cc.seurat.file'] if ('Filtering_GE' in config and 'cc.seurat.file' in config['Filtering_GE'] and config['Filtering_GE']['cc.seurat.file'] != None) else "NULL"
     FILERING_CC_CYCLONE_FILE = config['Filtering_GE']['cc.cyclone.file'] if ('Filtering_GE' in config and 'cc.cyclone.file' in config['Filtering_GE'] and config['Filtering_GE']['cc.cyclone.file'] != None) else "NULL"
     ### Snakefile parameters
-    #check samples names
-    ERROR_SAMPLE_NAME_GE=[]
-    for sample_name_ge in FILERING_SAMPLE_NAME_GE:
-        if sample_name_ge[len(sample_name_ge)-3:] != "_GE":
-            ERROR_SAMPLE_NAME_GE.append(sample_name_ge)
-    if ERROR_SAMPLE_NAME_GE != []: # si pas vide
-        sys.stderr.write("Error: samples:\n")
-        for sample_name in ERROR_SAMPLE_NAME_GE:
-            sys.stderr.write("\t" + str(sample_name) + "\n")
-        sys.stderr.write("don't end with the _GE tag!\n")
-        sys.exit()
     #Correspondance sample/input/output
     dic_FILTER_INFO = {}
     for i in range(0,len(FILERING_SAMPLE_NAME_GE),1):
@@ -262,8 +278,12 @@ if "Filtering_GE" in STEPS:
 if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     ### Sample/Project
     if ('Norm_DimRed_Eval_GE' in config) and ('sample.name.ge' in config['Norm_DimRed_Eval_GE']) and ('input.rda.ge' in config['Norm_DimRed_Eval_GE']) :
-        NDRE_SAMPLE_NAME_GE = config['Norm_DimRed_Eval_GE']['sample.name.ge']
+        NDRE_SAMPLE_NAME_GE_RAW = config['Norm_DimRed_Eval_GE']['sample.name.ge']
         NDRE_INPUT_RDA_GE = config['Norm_DimRed_Eval_GE']['input.rda.ge']
+        #check samples names and add "_GE" if needed
+        NDRE_SAMPLE_NAME_GE = []
+        for i in range(0,len(NDRE_SAMPLE_NAME_GE_RAW),1):
+            NDRE_SAMPLE_NAME_GE.append(NDRE_SAMPLE_NAME_GE_RAW[i] + "_GE") if (NDRE_SAMPLE_NAME_GE_RAW[i][len(NDRE_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else NDRE_SAMPLE_NAME_GE.append(NDRE_SAMPLE_NAME_GE_RAW[i])
     elif "Filtering_GE" in STEPS:
         sys.stderr.write("Warning: No input.rda.ge find in Norm_DimRed_Eval_GE section of configfile; input.rda.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
         NDRE_SAMPLE_NAME_GE = copy.deepcopy(FILERING_SAMPLE_NAME_GE)
@@ -297,17 +317,6 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     NDRE_RES_MIN = config['Norm_DimRed_Eval_GE']['res.min'] if ('Norm_DimRed_Eval_GE' in config and 'res.min' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['res.min'] != None) else 0.1
     NDRE_RES_STEPS = config['Norm_DimRed_Eval_GE']['res.steps'] if ('Norm_DimRed_Eval_GE' in config and 'res.steps' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['res.steps'] != None) else 0.1
     ### Snakefile parameters
-    #check samples names
-    ERROR_SAMPLE_NAME_GE=[]
-    for sample_name_ge in NDRE_SAMPLE_NAME_GE:
-        if sample_name_ge[len(sample_name_ge)-3:] != "_GE":
-            ERROR_SAMPLE_NAME_GE.append(sample_name_ge)
-    if ERROR_SAMPLE_NAME_GE != []: # si pas vide
-        sys.stderr.write("Error: samples:\n")
-        for sample_name in ERROR_SAMPLE_NAME_GE:
-            sys.stderr.write("\t" + str(sample_name) + "\n")
-        sys.stderr.write("don't end with the _GE tag!\n")
-        sys.exit()
     #Correspondance sample/input/output
     dic_NDRE_INFO = {}
     for i in range(0,len(NDRE_SAMPLE_NAME_GE),1):
@@ -324,8 +333,12 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
 if "Clust_Markers_Annot_GE" in STEPS:
     ### Sample/Project
     if ('Clust_Markers_Annot_GE' in config) and ('sample.name.ge' in config['Clust_Markers_Annot_GE']) and ('input.rda.ge' in config['Clust_Markers_Annot_GE']) :
-        CMA_SAMPLE_NAME_GE = config['Clust_Markers_Annot_GE']['sample.name.ge']
+        CMA_SAMPLE_NAME_GE_RAW = config['Clust_Markers_Annot_GE']['sample.name.ge']
         CMA_INPUT_RDA_GE = config['Clust_Markers_Annot_GE']['input.rda.ge']
+        #check samples names and add "_GE" if needed
+        CMA_SAMPLE_NAME_GE = []
+        for i in range(0,len(CMA_SAMPLE_NAME_GE_RAW),1):
+            CMA_SAMPLE_NAME_GE.append(CMA_SAMPLE_NAME_GE_RAW[i] + "_GE") if (CMA_SAMPLE_NAME_GE_RAW[i][len(CMA_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else CMA_SAMPLE_NAME_GE.append(CMA_SAMPLE_NAME_GE_RAW[i])
     elif "Norm_DimRed_Eval_GE" in STEPS:
         sys.stderr.write("Warning: No input.rda.ge and sample.name.ge find in Clust_Markers_Annot_GE section of configfile; input.rda.ge and sample.name.ge will be determine from Norm_DimRed_Eval_GE step for Clust_Markers_Annot_GE step!\n")
         CMA_SAMPLE_NAME_GE = copy.deepcopy(NDRE_SAMPLE_NAME_GE)
@@ -350,17 +363,6 @@ if "Clust_Markers_Annot_GE" in STEPS:
     CMA_CFR_MINSCORE = config['Clust_Markers_Annot_GE']['cfr.minscore'] if ('Clust_Markers_Annot_GE' in config and 'cfr.minscore' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['cfr.minscore'] != None) else "NULL"
     CMA_SR_MINSCORE = config['Clust_Markers_Annot_GE']['sr.minscore'] if ('Clust_Markers_Annot_GE' in config and 'sr.minscore' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['sr.minscore'] != None) else "NULL"
     ### Snakefile parameters
-    #check samples names
-    ERROR_SAMPLE_NAME_GE=[]
-    for sample_name_ge in CMA_SAMPLE_NAME_GE:
-        if sample_name_ge[len(sample_name_ge)-3:] != "_GE":
-            ERROR_SAMPLE_NAME_GE.append(sample_name_ge)
-    if ERROR_SAMPLE_NAME_GE != []: # si pas vide
-        sys.stderr.write("Error: samples:\n")
-        for sample_name in ERROR_SAMPLE_NAME_GE:
-            sys.stderr.write("\t" + str(sample_name) + "\n")
-        sys.stderr.write("don't end with the _GE tag!\n")
-        sys.exit()
     #check end paths (add "/" if necessary)
     for i in range(0,len(CMA_OUTPUT_DIR_GE),1):
         CMA_OUTPUT_DIR_GE[i] = os.path.normpath(CMA_OUTPUT_DIR_GE[i])
@@ -541,58 +543,98 @@ onstart:
     if "Alignment_countTable_GE" in STEPS:
         sys.stderr.write("\n" + "Alignment_countTable_GE:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(ALIGN_SAMPLE_NAME_GE, list):
-            for sample in ALIGN_SAMPLE_NAME_GE:
+        if isinstance(ALIGN_SAMPLE_NAME_GE_RAW, list):
+            for sample in ALIGN_SAMPLE_NAME_GE_RAW:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_GE) + "\n")
+            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_GE_RAW) + "\n")
 
     if "Alignment_countTable_ADT" in STEPS:
         sys.stderr.write("\n" + "Alignment_countTable_ADT:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(ALIGN_SAMPLE_NAME_ADT, list):
-            for sample in ALIGN_SAMPLE_NAME_ADT:
+        if isinstance(ALIGN_SAMPLE_NAME_ADT_RAW, list):
+            for sample in ALIGN_SAMPLE_NAME_ADT_RAW:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_ADT) + "\n")
+            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_ADT_RAW) + "\n")
 
     if "Alignment_annotations_TCR_BCR" in STEPS:
         sys.stderr.write("\n" + "Alignment_annotations_TCR_BCR:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(ALIGN_SAMPLE_NAME_TCR_BCR, list):
-            for sample in ALIGN_SAMPLE_NAME_TCR_BCR:
+        if isinstance(ALIGN_SAMPLE_NAME_TCR_BCR_RAW, list):
+            for sample in ALIGN_SAMPLE_NAME_TCR_BCR_RAW:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_TCR_BCR) + "\n")
+            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_TCR_BCR_RAW) + "\n")
 
     if "Droplets_QC_GE" in STEPS:
         sys.stderr.write("\n" + "Droplets_QC_GE:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(QC_SAMPLE_NAME_GE, list):
-            for sample in QC_SAMPLE_NAME_GE:
+        if isinstance(QC_SAMPLE_NAME_GE_RAW, list):
+            for sample in QC_SAMPLE_NAME_GE_RAW:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(QC_SAMPLE_NAME_GE) + "\n")
+            sys.stderr.write("\t" + str(QC_SAMPLE_NAME_GE_RAW) + "\n")
 
     if "Filtering_GE" in STEPS:
         sys.stderr.write("\n" + "Filtering_GE:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(FILERING_SAMPLE_NAME_GE, list):
-            for sample in FILERING_SAMPLE_NAME_GE:
+        if isinstance(FILERING_SAMPLE_NAME_GE_RAW, list):
+            for sample in FILERING_SAMPLE_NAME_GE_RAW:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(FILERING_SAMPLE_NAME_GE) + "\n")
+            sys.stderr.write("\t" + str(FILERING_SAMPLE_NAME_GE_RAW) + "\n")
 
     if "Norm_DimRed_Eval_GE" in STEPS:
         sys.stderr.write("\n" + "Norm_DimRed_Eval_GE:" + "\n")
         sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(NDRE_SAMPLE_NAME_GE, list):
-            for sample in NDRE_SAMPLE_NAME_GE:
+        if isinstance(NDRE_SAMPLE_NAME_GE_RAW, list):
+            for sample in NDRE_SAMPLE_NAME_GE_RAW:
                 sys.stderr.write("\t" + str(sample) + "\n")
         else:
-            sys.stderr.write("\t" + str(NDRE_SAMPLE_NAME_GE) + "\n")
+            sys.stderr.write("\t" + str(NDRE_SAMPLE_NAME_GE_RAW) + "\n")
+    if "Clust_Markers_Annot_GE" in STEPS:
+        sys.stderr.write("\n" + "Clust_Markers_Annot_GE:" + "\n")
+        sys.stderr.write("SAMPLE(S):\n")
+        if isinstance(CMA_SAMPLE_NAME_GE_RAW, list):
+            for sample in CMA_SAMPLE_NAME_GE_RAW:
+                sys.stderr.write("\t" + str(sample) + "\n")
+        else:
+            sys.stderr.write("\t" + str(CMA_SAMPLE_NAME_GE_RAW) + "\n")
+    if "Adding_ADT" in STEPS:
+        sys.stderr.write("\n" + "Adding_ADT:" + "\n")
+        sys.stderr.write("RDA FILE(S):\n")
+        if isinstance(ADD_ADT_INPUT_RDA_GE, list):
+            for sample in ADD_ADT_INPUT_RDA_GE:
+                sys.stderr.write("\t" + str(sample) + "\n")
+        else:
+            sys.stderr.write("\t" + str(ADD_ADT_INPUT_RDA_GE) + "\n")
+    if "Adding_TCR" in STEPS:
+        sys.stderr.write("\n" + "Adding_TCR:" + "\n")
+        sys.stderr.write("RDA FILE(S):\n")
+        if isinstance(ADD_TCR_INPUT_RDA_GE, list):
+            for sample in ADD_TCR_INPUT_RDA_GE:
+                sys.stderr.write("\t" + str(sample) + "\n")
+        else:
+            sys.stderr.write("\t" + str(ADD_TCR_INPUT_RDA_GE) + "\n")
+    if "Adding_BCR" in STEPS:
+        sys.stderr.write("\n" + "Adding_BCR:" + "\n")
+        sys.stderr.write("SAMPLE(S):\n")
+        if isinstance(ADD_BCR_INPUT_RDA_GE, list):
+            for sample in ADD_BCR_INPUT_RDA_GE:
+                sys.stderr.write("\t" + str(sample) + "\n")
+        else:
+            sys.stderr.write("\t" + str(ADD_BCR_INPUT_RDA_GE) + "\n")
+    if "Cerebro" in STEPS:
+        sys.stderr.write("\n" + "Cerebro:" + "\n")
+        sys.stderr.write("RDA FILE(S):\n")
+        if isinstance(CEREBRO_INPUT_RDA, list):
+            for sample in CEREBRO_INPUT_RDA:
+                sys.stderr.write("\t" + str(sample) + "\n")
+        else:
+            sys.stderr.write("\t" + str(CEREBRO_INPUT_RDA) + "\n")
 
-    sys.stderr.write("\n***************** Run ******************\n")
+    sys.stderr.write("\n***************** RUN ******************\n")
     return []
 
 
