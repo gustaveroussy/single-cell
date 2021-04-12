@@ -2,9 +2,9 @@ BootStrap: docker
 From: ubuntu:20.04
 
 #build image
-#sudo singularity build single_cell.simg single_cell.def
+#sudo singularity build single_cell_oldcerebro.simg single_cell_oldcerebro.def
 #using image
-#sudo singularity shell -B local_folder:/WORKDIR/container_folder single_cell.simg
+#sudo singularity shell -B local_folder:/WORKDIR/container_folder single_cell_oldcerebro.simg
 
 %environment
     export PATH=/opt/tools/bin:$PATH
@@ -82,7 +82,9 @@ From: ubuntu:20.04
     R -e 'devtools::install_github("rnabioco/clustifyr")' # annotation
     R -e 'devtools::install_github("rnabioco/clustifyrdata")' # annotation
     R -e 'install.packages("UpSetR")' # Markers
-    R -e 'BiocManager::install("romanhaa/cerebroApp")' #Vizu/comm
+    R -e 'install.packages("shinyFiles", dependencies = TRUE)' # for cerebro v1.2
+    R -e 'install.packages("shinycssloaders", dependencies = TRUE)' # for cerebro v1.2
+    R -e 'devtools::install_github("romanhaa/cerebroApp@v1.2.2")'
     R -e 'library(cerebroApp)'
     R -e 'library(Seurat)'
 %labels
