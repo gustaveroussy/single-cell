@@ -1,0 +1,8 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - conda-forge::python=3.8.5
+  - bioconda::snakemake=5.32.2
+  - singularity=3.6.3
