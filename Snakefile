@@ -154,17 +154,17 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS:
     else :
         sys.exit("Error: sctech doesn't exist! Only '10xv2' and '10xv3' are available.\n")
 
-if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
+if "Alignment_countTable_GE" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
     # Fastq-screen Index
     if 'Alignment_countTable_GE' in config and 'fastqscreen_index' in config['Alignment_countTable_GE']:
-        FASTQSCREEN_INDEX = config['Alignment_countTable_GE']['fastqscreen_index']
-    elif 'Alignment_countTable_ADT' in config and 'fastqscreen_index' in config['Alignment_countTable_ADT']:
         FASTQSCREEN_INDEX = config['Alignment_countTable_GE']['fastqscreen_index']
     elif 'Alignment_annotations_TCR_BCR' in config and 'fastqscreen_index' in config['Alignment_annotations_TCR_BCR']:
         FASTQSCREEN_INDEX = config['Alignment_annotations_TCR_BCR']['fastqscreen_index']
     else :
         FASTQSCREEN_INDEX = "/mnt/beegfs/database/bioinfo/single-cell/INDEX/FASTQ_SCREEN/0.14.0/fastq_screen.conf"
         #FASTQSCREEN_INDEX = "/home/m_aglave/Bureau/SCRNASEQ/RESOURCES/INDEX/fastqscreen/FastQ_Screen_Genomes/fastq_screen.conf"
+
+if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
     # Cutadapt parameters
     ADAPTERSEQ='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'
     MINBASEQ=28

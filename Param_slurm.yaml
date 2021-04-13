@@ -136,7 +136,7 @@ Alignment_countTable_ADT:
   # sctech : '10xv2'
   kindex.adt : '/mnt/beegfs/userdata/m_aglave/ADT_FX/kallisto_index/P30_FXDA_CITEseq_kallisto_index'
   tr2g.file.adt : '/mnt/beegfs/userdata/m_aglave/ADT_FX/kallisto_index/P30_FXDA_CITEseq_tr2gs.txt'
-  #fastqscreen_index : ''
+
 
 #Adding_ADT:
 #  # input.rda.ge:
@@ -144,7 +144,8 @@ Alignment_countTable_ADT:
 #  # author.name:
 #  # author.mail:
 #  gene.names: "CD3G,CD4,CTLA4,IL2RA,PDCD1,DPP4,MS4A1,CD24,SDC1,CR2,CD38,CD19"
-
+#  ADT.max.cutoff:
+#  ADT.min.cutoff:
 ############################################ TCR/BCR ############################################
 
 Alignment_annotations_TCR_BCR:
