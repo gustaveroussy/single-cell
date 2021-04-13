@@ -56,7 +56,7 @@ rule cerebro:
         --remove.mt.genes {CEREBRO_REMOVE_MT} \
         --remove.crb.genes {CEREBRO_REMOVE_CRB} \
         --remove.str.genes {CEREBRO_REMOVE_STR} \
-        --only_pos_DE {CEREBRO_ONLY_POS_DE} \
+        --only.pos.DE {CEREBRO_ONLY_POS_DE} \
         --remove.custom.DE {CEREBRO_REMOVE_CUSTOM_DE} \
         --gmt.file {params.SING_CEREBRO_GMT_FILE}
         """

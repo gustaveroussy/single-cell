@@ -518,7 +518,7 @@ if "Cerebro" in STEPS:
     CEREBRO_REMOVE_MT = config['Cerebro']['remove.mt.genes'] if ('Cerebro' in config and 'remove.mt.genes' in config['Cerebro'] and config['Cerebro']['remove.mt.genes'] != None) else "NULL"
     CEREBRO_REMOVE_CRB = config['Cerebro']['remove.crb.genes'] if ('Cerebro' in config and 'remove.crb.genes' in config['Cerebro'] and config['Cerebro']['remove.crb.genes'] != None) else "NULL"
     CEREBRO_REMOVE_STR = config['Cerebro']['remove.str.genes'] if ('Cerebro' in config and 'remove.str.genes' in config['Cerebro'] and config['Cerebro']['remove.str.genes'] != None) else "NULL"
-    CEREBRO_ONLY_POS_DE = config['Cerebro']['only_pos_DE'] if ('Cerebro' in config and 'only_pos_DE' in config['Cerebro'] and config['Cerebro']['only_pos_DE'] != None) else "NULL"
+    CEREBRO_ONLY_POS_DE = config['Cerebro']['only.pos.DE'] if ('Cerebro' in config and 'only.pos.DE' in config['Cerebro'] and config['Cerebro']['only.pos.DE'] != None) else "NULL"
     CEREBRO_REMOVE_CUSTOM_DE = config['Cerebro']['remove.custom.DE'] if ('Cerebro' in config and 'remove.custom.DE' in config['Cerebro'] and config['Cerebro']['remove.custom.DE'] != None) else "NULL"
     CEREBRO_GMT_FILE = config['Cerebro']['gmt.file'] if ('Cerebro' in config and 'gmt.file' in config['Cerebro'] and config['Cerebro']['gmt.file'] != None) else "NULL"
     ### Snakefile parameters

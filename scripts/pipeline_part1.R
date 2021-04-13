@@ -6,8 +6,8 @@ option_list <- list(
   make_option("--output.dir.ge", help="Output path"),
   make_option("--sample.name.ge", help="Name of RNA-seq sample"),
   make_option("--species", help="Species of sample ( Only 'homo_sapiens', 'mus_musculus' supported yet)"),
-  make_option("--author.name", help="Name of auhtor of the analysis"),
-  make_option("--author.mail", help="Email of auhtor of the analysis"),
+  make_option("--author.name", help="Name of author of the analysis"),
+  make_option("--author.mail", help="Email of author of the analysis"),
   ### Computational Parameters
   make_option("--nthreads", help="Number of threads to use"),
   make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),

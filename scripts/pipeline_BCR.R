@@ -5,8 +5,8 @@ option_list <- list(
   make_option("--input.rda", help="Input seurat object (in .rda format)."),
   make_option("--output.dir", help="Output path"),
   make_option("--vdj.input.file.bcr", help="File filtered_contig_annotations.csv from CellRanger aligment pipeline."),
-  make_option("--author.name", help="Name of auhtor of the analysis"),
-  make_option("--author.mail", help="Email of auhtor of the analysis"),
+  make_option("--author.name", help="Name of author of the analysis"),
+  make_option("--author.mail", help="Email of author of the analysis"),
   ### Computational Parameters
   make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)

@@ -4,8 +4,8 @@ option_list <- list(
   ### Project
   make_option("--input.rda.ge", help="Input unfiltred seurat object (in .rda format)."),
   make_option("--output.dir.ge", help="Output path"),
-  make_option("--author.name", help="Name of auhtor of the analysis"),
-  make_option("--author.mail", help="Email of auhtor of the analysis"),
+  make_option("--author.name", help="Name of author of the analysis"),
+  make_option("--author.mail", help="Email of author of the analysis"),
   ### Computational Parameters
   make_option("--nthreads", help="Number of threads to use"),
   make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),
@@ -20,7 +20,7 @@ option_list <- list(
   # QC gene
   make_option("--min.cells", help="Include genes expressed in at least this many cells (minimum cells covering)"),
   # Doublets
-  make_option("--doublets.filter.method", help="Method used to filter doublets (scDblFinder, scds, both). To not filter set the parameter to none."),
+  make_option("--doublets.filter.method", help="Method used to filter doublets (scDblFinder, scds, all). To not filter set the parameter to none."),
   ### Databases
   # QC
   make_option("--cc.seurat.file", help="RDS file with list of cell cycle genes"),

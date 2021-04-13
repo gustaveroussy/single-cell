@@ -3,21 +3,21 @@ library(optparse)
 option_list <- list(
   ### Project
   make_option("--input.rda.ge", help="Input seurat object (in .rda format) to convert in cerebro object."),
-  make_option("--author.name", help="Name of auhtor of the analysis"),
-  make_option("--author.mail", help="Email of auhtor of the analysis"),
+  make_option("--author.name", help="Name of author of the analysis"),
+  make_option("--author.mail", help="Email of author of the analysis"),
   ### Computational Parameters
   make_option("--nthreads", help="Number of threads to use"),
   make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),
   ### Analysis Parameters
   # Cerebro
   make_option("--version", help="Version of cerebro to use (v1.2 or v1.3 (default))."),
-  make_option("--groups", help="Column name (in meta.data) to define clusters for Cerebro object (usefull for TCR/BCR part). The last RNA clustering (and samples information) is already included."),
+  make_option("--groups", help="Column name (in meta.data) to define clusters/comparisons for Cerebro object (usefull for TCR/BCR part). The last RNA clustering and samples information are already included."),
   make_option("--remove.other.reductions", help="Remove all other reductions present in seurat object (keep only final umap)"),
   make_option("--remove.other.idents", help="Remove all other clustering present in seurat object (keep only the last clustering)"),
   make_option("--remove.mt.genes", help="Remove mitochondrial genes (to see better the other genes)"),
   make_option("--remove.crb.genes", help="Remove ribosomal genes (to see better the other genes)"),
   make_option("--remove.str.genes", help="Remove stress genes (to see better the other genes)"),
-  make_option("--only_pos_DE", help="Keep only positive DE genes from customized differential expression analysis (for genes markers identification is always only positive)."),
+  make_option("--only.pos.DE", help="Keep only positive DE genes from customized differential expression analysis (for genes markers identification is always only positive)."),
   make_option("--remove.custom.DE", help="Remove results from customized differential expression analysis."),
   ### Databases
   # Cerebro
@@ -54,7 +54,7 @@ remove.other.idents <- args$options$remove.other.idents
 remove.mt.genes <- args$options$remove.mt.genes
 remove.crb.genes <- args$options$remove.crb.genes
 remove.str.genes <- args$options$remove.str.genes
-only_pos_DE <- args$options$only_pos_DE
+only.pos.DE <- args$options$only.pos.DE
 remove.custom.DE <- args$options$remove.custom.DE
 ### Databases
 # Cerebro
@@ -111,7 +111,7 @@ if (is.null(remove.other.idents)) remove.other.idents <- FALSE
 if (is.null(remove.mt.genes)) remove.mt.genes <- FALSE
 if (is.null(remove.crb.genes)) remove.crb.genes <- FALSE
 if (is.null(remove.str.genes)) remove.str.genes <- FALSE
-if (is.null(only_pos_DE)) only_pos_DE <- FALSE
+if (is.null(only.pos.DE)) only.pos.DE <- FALSE
 if (is.null(remove.custom.DE)) remove.custom.DE <- FALSE
 if (is.null(groups)){
   groups_v1.2 <- NULL
@@ -151,12 +151,12 @@ write_MandM(sobj=sobj, output.dir=dirname(input.rda.ge))
 ### Building cerebro binary
 cat("\nBuilding cerebro object...\n")
 if (version == "v1.2"){
-    seurat2cerebro(sobj = sobj, ident = ident.name, clusters.colnames = NULL, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, species = species.rdx, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, only_pos = TRUE, only_pos_DE = only_pos_DE, remove.custom.DE = remove.custom.DE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox')
+    seurat2cerebro(sobj = sobj, ident = ident.name, clusters.colnames = NULL, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, species = species.rdx, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, only_pos = TRUE, only_pos_DE = only.pos.DE, remove.custom.DE = remove.custom.DE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox')
   if(!is.null(groups_v1.2)){
     for (clusters.colnames in groups_v1.2){
-      seurat2cerebro(sobj = sobj, ident = ident.name, clusters.colnames = clusters.colnames, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, species = species.rdx, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, only_pos = TRUE, only_pos_DE = only_pos_DE, remove.custom.DE = remove.custom.DE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox')
+      seurat2cerebro(sobj = sobj, ident = ident.name, clusters.colnames = clusters.colnames, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, species = species.rdx, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, only_pos = TRUE, only_pos_DE = only.pos.DE, remove.custom.DE = remove.custom.DE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox')
     }
   }
 }else if (version == "v1.3"){
-  seurat2cerebro_1.3(sobj = sobj, ident = ident.name, groups = groups, species = species.rdx, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox', only_pos = TRUE, remove.custom.DE = remove.custom.DE, only_pos_DE = only_pos_DE)
+  seurat2cerebro_1.3(sobj = sobj, ident = ident.name, groups = groups, species = species.rdx, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox', only_pos = TRUE, remove.custom.DE = remove.custom.DE, only_pos_DE = only.pos.DE)
 }
