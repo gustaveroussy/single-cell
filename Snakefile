@@ -410,6 +410,8 @@ if "Adding_ADT" in STEPS:
     ADD_ADT_AUTHOR_NAME = config['Adding_ADT']['author.name'] if ('Adding_ADT' in config and 'author.name' in config['Adding_ADT'] and config['Adding_ADT']['author.name'] != None) else "NULL"
     ADD_ADT_AUTHOR_MAIL = config['Adding_ADT']['author.mail'] if ('Adding_ADT' in config and 'author.mail' in config['Adding_ADT'] and config['Adding_ADT']['author.mail'] != None) else "NULL"
     ADD_ADT_GENE_NAMES = config['Adding_ADT']['gene.names'] if ('Adding_ADT' in config and 'gene.names' in config['Adding_ADT'] and config['Adding_ADT']['gene.names'] != None) else "NULL"
+    ADD_ADT_MAX_CUTOFF = config['Adding_ADT']['ADT.max.cutoff'] if ('Adding_ADT' in config and 'ADT.max.cutoff' in config['Adding_ADT'] and config['Adding_ADT']['ADT.max.cutoff'] != None) else "NULL"
+    ADD_ADT_MIN_CUTOFF = config['Adding_ADT']['ADT.min.cutoff'] if ('Adding_ADT' in config and 'ADT.min.cutoff' in config['Adding_ADT'] and config['Adding_ADT']['ADT.min.cutoff'] != None) else "NULL"
     ### Snakefile parameters
     #Correspondance input/output
     ADD_ADT_OUTPUT = [os.path.splitext(x)[0] for x in ADD_ADT_INPUT_RDA_GE]

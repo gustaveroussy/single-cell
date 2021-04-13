@@ -12,8 +12,8 @@ option_list <- list(
   make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),
   ### Analysis Parameters
   make_option("--gene.names", help="List of gene names wich correspond to the ADT proteins."),
-  make_option("--ADT_min.cutoff", help="List of quantile min to cutoff protein expression for plot."),
-  make_option("--ADT_max.cutoff", help="List of quantile max to cutoff protein expression for plot."),
+  make_option("--ADT.min.cutoff", help="List of quantile min to cutoff protein expression for plot."),
+  make_option("--ADT.max.cutoff", help="List of quantile max to cutoff protein expression for plot."),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
@@ -41,8 +41,8 @@ nthreads <- as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
 ### Analysis Parameters
 gene.names <- unlist(stringr::str_split(args$options$gene.names, ",")) #gene list correponding to the protein ADT
-ADT_min.cutoff <- if (!is.null(args$options$ADT_min.cutoff)) unlist(stringr::str_split(args$options$ADT_min.cutoff, ","))
-ADT_max.cutoff <- if (!is.null(args$options$ADT_max.cutoff)) unlist(stringr::str_split(args$options$ADT_max.cutoff, ","))
+ADT.min.cutoff <- if (!is.null(args$options$ADT.min.cutoff)) unlist(stringr::str_split(args$options$ADT.min.cutoff, ","))
+ADT.max.cutoff <- if (!is.null(args$options$ADT.max.cutoff)) unlist(stringr::str_split(args$options$ADT.max.cutoff, ","))
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
@@ -89,8 +89,8 @@ GE_file <- sub("\\.rda$", "", input.rda.ge)
 RNA.reduction <- sobj@misc$params$clustering$umap
 sample.name.ADT <- sub("_GE", "_ADT", sobj@misc$params$sample.name.GE)
 ## ADT
-if (is.null(ADT_min.cutoff))  ADT_min.cutoff <- rep("q30", length(gene.names))
-if (is.null(ADT_max.cutoff))  ADT_max.cutoff <- rep("q95", length(gene.names))
+if (is.null(ADT.min.cutoff))  ADT.min.cutoff <- rep("q30", length(gene.names))
+if (is.null(ADT.max.cutoff))  ADT.max.cutoff <- rep("q95", length(gene.names))
 
 #### Fixed parameters ####
 output_path_ADT <- paste0(output.dir, "/ADT_results/")
@@ -130,8 +130,8 @@ sobjADT <- load.sc.data(data.path = input.dir.adt, sample.name = sample.name.ADT
 
 ### Check number of protein names and gene.names and quantiles cutoff
 if(length(rownames(sobjADT)) != length(gene.names)) stop(paste0("The number of gene.names is not the same as the proteins in the ADT count table: ", length(gene.names), " genes (", paste0(gene.names, collapse=","),") and ",length(rownames(sobjADT))," proteins (",paste0(rownames(sobjADT), collapse=","),")."))
-if(length(rownames(sobjADT)) != length(ADT_min.cutoff)) stop(paste0("The number of ADT_min.cutoff is not the same as the proteins in the ADT count table: ", length(ADT_min.cutoff), " quantiles (", paste0(ADT_min.cutoff, collapse=","),") and ",length(rownames(sobjADT))," proteins (",paste0(rownames(sobjADT), collapse=","),")."))
-if(length(rownames(sobjADT)) != length(ADT_max.cutoff)) stop(paste0("The number of ADT_max.cutoff is not the same as the proteins in the ADT count table: ", length(ADT_max.cutoff), " quantiles (", paste0(ADT_max.cutoff, collapse=","),") and ",length(rownames(sobjADT))," proteins (",paste0(rownames(sobjADT), collapse=","),")."))
+if(length(rownames(sobjADT)) != length(ADT.min.cutoff)) stop(paste0("The number of ADT.min.cutoff is not the same as the proteins in the ADT count table: ", length(ADT.min.cutoff), " quantiles (", paste0(ADT.min.cutoff, collapse=","),") and ",length(rownames(sobjADT))," proteins (",paste0(rownames(sobjADT), collapse=","),")."))
+if(length(rownames(sobjADT)) != length(ADT.max.cutoff)) stop(paste0("The number of ADT.max.cutoff is not the same as the proteins in the ADT count table: ", length(ADT.max.cutoff), " quantiles (", paste0(ADT.max.cutoff, collapse=","),") and ",length(rownames(sobjADT))," proteins (",paste0(rownames(sobjADT), collapse=","),")."))
 
 ### Synching ADT to GE cells
 cat("\nSynching ADT to GE cells...\n")
@@ -186,7 +186,7 @@ dev.off()
 #### with customized cutoff
 cat("\nCo-plot gene expression and ADT protein level with customized cutoff...\n")
 RNA_data_plot <- feature_plots(sobj, assay = assay, features = gene.names, slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(gene.names)), max.cutoff = rep("q95",length(gene.names)))
-ADT_data_plot <- feature_plots(sobj, assay = 'ADT', features = rownames(sobj@assays[['ADT']]@counts), slot = slot, reduction = RNA.reduction, min.cutoff = ADT_min.cutoff, max.cutoff = ADT_max.cutoff)
+ADT_data_plot <- feature_plots(sobj, assay = 'ADT', features = rownames(sobj@assays[['ADT']]@counts), slot = slot, reduction = RNA.reduction, min.cutoff = ADT.min.cutoff, max.cutoff = ADT.max.cutoff)
 png(paste0(output_path_ADT,'/ADT_dimplot_legend_cutoff.png'), width = 1200, height = 600 * length(gene.names))
 wrap_elements(RNA_data_plot) + wrap_elements(ADT_data_plot)
 dev.off()
@@ -211,10 +211,10 @@ sobj@assays[['ADT']]@misc$paramters$cor$slot <- slot
 sobj@misc$params$ADT$cor$method <- cor.method
 sobj@misc$params$ADT$cor$slot <- slot
 #cutoff:
-sobj@assays[['ADT']]@misc$paramters$cutoff_min = ADT_min.cutoff
-sobj@assays[['ADT']]@misc$paramters$cutoff_max = ADT_max.cutoff
-sobj@misc$params$ADT$cutoff_min = ADT_min.cutoff
-sobj@misc$params$ADT$cutoff_max = ADT_max.cutoff
+sobj@assays[['ADT']]@misc$paramters$cutoff_min = ADT.min.cutoff
+sobj@assays[['ADT']]@misc$paramters$cutoff_max = ADT.max.cutoff
+sobj@misc$params$ADT$cutoff_min = ADT.min.cutoff
+sobj@misc$params$ADT$cutoff_max = ADT.max.cutoff
 
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$ADT <- paste0(sobj@misc$parameters$Materials_and_Methods$ADT," Only cell barcodes corresponding to the cell barcodes of gene expression were kept. Counting table was log-normalize (NormalizeData() function from Seurat with normalization.method parameters setting to '", norm.method_ADT,"') and ", cor.method," correlation scores beetween protein levels and gene expression levels was computed and ploted on UMAP.")

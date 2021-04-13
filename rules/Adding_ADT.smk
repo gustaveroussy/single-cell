@@ -75,5 +75,7 @@ rule add_adt_ge:
         --author.mail {ADD_ADT_AUTHOR_MAIL} \
         --nthreads {threads} \
         --pipeline.path {params.pipeline_folder} \
-        --gene.names  {ADD_ADT_GENE_NAMES}
+        --gene.names  {ADD_ADT_GENE_NAMES} \
+        --ADT.min.cutoff  {ADD_ADT_MIN_CUTOFF} \
+        --ADT.max.cutoff  {ADD_ADT_MAX_CUTOFF}
         """
