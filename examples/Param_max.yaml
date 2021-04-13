@@ -1,0 +1,142 @@
+# Yaml file for single-cell pipeline
+steps:
+
+############################################ GE (RNA) ############################################
+
+Alignment_countTable_GE:
+  sample.name.ge :
+  input.dir.ge :
+  output.dir.ge :
+  sctech :
+  kindex.ge :
+  tr2g.file.ge :
+  reference.txt:
+  fastqscreen_index :
+
+Droplets_QC_GE:
+  sample.name.ge :
+  input.dir.ge :
+  output.dir.ge :
+  species :
+  author.name :
+  author.mail :
+  emptydrops.fdr :
+  droplets.limit :
+  emptydrops.retain :
+  translation :
+  pcmito.min :
+  pcmito.max :
+  pcribo.min :
+  pcribo.max :
+  min.features :
+  min.counts :
+  min.cells :
+  mt.genes.file :
+  crb.genes.file :
+  str.genes.file :
+  translation.file :
+
+Filtering_GE:
+  sample.name.ge :
+  input.rda.ge :
+  output.dir.ge :
+  author.name :
+  author.mail :
+  pcmito.min :
+  pcmito.max :
+  pcribo.min :
+  pcribo.max :
+  min.features :
+  min.counts :
+  min.cells :
+  doublets.filter.method :
+  cc.seurat.file :
+  cc.cyclone.file :
+
+
+Norm_DimRed_Eval_GE:
+  sample.name.ge :
+  input.rda.ge :
+  output.dir.ge :
+  author.name :
+  author.mail :
+  eval.markers :
+  features.n :
+  norm.method :
+  dimred.method :
+  vtr :
+  vtr.scale :
+  dims.max :
+  dims.min :
+  dims.steps :
+  res.max :
+  res.min :
+  res.steps :
+
+Clust_Markers_Annot_GE:
+  sample.name.ge :
+  input.rda.ge :
+  output.dir.ge :
+  author.name :
+  author.mail :
+  markfile :
+  keep.dims :
+  keep.res :
+  cfr.minscore :
+  sr.minscore :
+
+Cerebro:
+  input.rda :
+  version :
+  groups:
+  remove.other.reductions:
+  remove.other.idents :
+  remove.mt.genes:
+  remove.crb.genes:
+  remove.str.genes:
+  only.pos.DE:
+  remove.custom.DE:
+  gmt.file :
+
+############################################ ADT ############################################
+
+Alignment_countTable_ADT:
+  sample.name.adt :
+  input.dir.adt :
+  output.dir.adt :
+  sctech :
+  kindex.adt :
+  tr2g.file.adt :
+
+
+Adding_ADT:
+  input.rda.ge:
+  input.dir.adt:
+  author.name:
+  author.mail:
+  gene.names:
+  ADT.max.cutoff:
+  ADT.min.cutoff:
+
+############################################ TCR/BCR ############################################
+
+Alignment_annotations_TCR_BCR:
+  sample.name.tcr :
+  input.dir.tcr :
+  sample.name.bcr :
+  input.dir.bcr :
+  output.dir.tcr_bcr :
+  crindex.tcr_bcr :
+  fastqscreen_index :
+
+Adding_TCR:
+  input.rda :
+  vdj.input.file.tcr:
+  author.name:
+  author.mail:
+
+Adding_BCR:
+  input.rda :
+  vdj.input.file.bcr:
+  author.name:
+  author.mail:

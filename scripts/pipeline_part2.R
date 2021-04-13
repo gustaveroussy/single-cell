@@ -23,8 +23,8 @@ option_list <- list(
   make_option("--doublets.filter.method", help="Method used to filter doublets (scDblFinder, scds, all). To not filter set the parameter to none."),
   ### Databases
   # QC
-  make_option("--cc.seurat.file", help="RDS file with list of cell cycle genes"),
-  make_option("--cc.cyclone.file", help="RDS file with list of cell cycle genes"),
+  make_option("--cc.seurat.file", help="RDS file with list of cell cycle genes for seurat"),
+  make_option("--cc.cyclone.file", help="RDS file with list of cell cycle genes for cyclone"),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
