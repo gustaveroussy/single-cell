@@ -24,9 +24,13 @@ Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGen
 * Adding_BCR,
 * Cerebro.
 
+<br>
+<br>
+<br>
+<br>
+<br>
 
-
-See complete documentation on the [wiki](https://github.com/mAGLAVE/single-cell/wiki)
+See complete documentation on the [wiki](https://github.com/gustaveroussy/single-cell/wiki)
 
 <p align="center">
   <img src="https://github.com/gustaveroussy/single-cell/blob/master/images/wiki_footer.jpg" title="wiki_footer">
