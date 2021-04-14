@@ -9,7 +9,7 @@
 Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGenomics technology data.
 
 ---
-<img src="https://github.com/gustaveroussy/single-cell/blob/master/images/individual_analysis_pipeline.png" width="500" title="individual_analysis_pipeline" align="right" />
+<img src="https://github.com/gustaveroussy/single-cell/blob/master/images/individual_analysis_pipeline.png" width="550" title="individual_analysis_pipeline" align="right" />
 
 ### Available Steps:
 * Alignment_countTable_GE,
