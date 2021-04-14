@@ -4,10 +4,14 @@
 
 
 # Single-cell RNA-seq analysis pipeline
-
+---
+### Goal:  
 Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGenomics technology data.
 
-Available Steps:
+---
+<img src="https://github.com/gustaveroussy/single-cell/blob/master/images/individual_analysis_pipeline.png" width="600" title="individual_analysis_pipeline" align="right" />
+
+### Available Steps:
 * Alignment_countTable_GE,
 * Alignment_countTable_ADT",
 * Alignment_annotations_TCR_BCR,
@@ -20,11 +24,13 @@ Available Steps:
 * Adding_BCR,
 * Cerebro.
 
-<p align="center">
-  <img src="https://github.com/gustaveroussy/single-cell/blob/master/images/individual_analysis_pipeline.png" width="600" title="individual_analysis_pipeline">
-</p>
+<br>
+<br>
+<br>
+<br>
+<br>
 
-See complete documentation on the [wiki](https://github.com/mAGLAVE/single-cell/wiki)
+See complete documentation on the [wiki](https://github.com/gustaveroussy/single-cell/wiki)
 
 <p align="center">
   <img src="https://github.com/gustaveroussy/single-cell/blob/master/images/wiki_footer.jpg" title="wiki_footer">
