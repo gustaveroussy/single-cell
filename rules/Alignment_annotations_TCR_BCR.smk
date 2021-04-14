@@ -26,7 +26,7 @@ rule rsync_rename_fq_tcr_bcr:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(2048 + attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 2048)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     # run:
     #     sys.stderr.write("\t Create symbolic link: \n")
@@ -55,7 +55,7 @@ rule fastqc_tcr_bcr:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 512, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
@@ -109,7 +109,7 @@ rule multiqc_tcr_bcr:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
@@ -149,7 +149,7 @@ rule alignment_annotations_tcr_bcr:
     threads:
         3
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(1024 + attempt * 1024, 10240)),
         time_min = (lambda wildcards, attempt: min(10*60 + attempt * 60, 24*60))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT

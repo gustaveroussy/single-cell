@@ -19,6 +19,11 @@ rule symlink_rename_fq_adt:
         fq = symlink_rename_inputs_adt
     output:
         fq_link = temp(os.path.normpath(ALIGN_INPUT_DIR_ADT + "/{sample_name_adt}{lane_R_complement}.fastq.gz"))
+    threads:
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 2048)),
+        time_min = (lambda wildcards, attempt: min(attempt * 5, 50))
     run:
         sys.stderr.write("\t Create symbolic link: \n")
         sys.stderr.write("\t From :" + "\t" + str(input.fq) + "\n")
@@ -37,7 +42,7 @@ rule fastqc_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 512, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
@@ -65,7 +70,7 @@ rule multiqc_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
@@ -94,7 +99,7 @@ rule alignment_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
@@ -112,7 +117,7 @@ rule correct_UMIs_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
@@ -157,7 +162,7 @@ rule build_count_matrix_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT

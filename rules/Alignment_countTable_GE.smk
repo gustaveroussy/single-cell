@@ -19,6 +19,11 @@ rule symlink_rename_fq_ge:
         fq = symlink_rename_inputs_ge
     output:
         fq_link = temp(os.path.normpath(ALIGN_INPUT_DIR_GE + "/{sample_name_ge}{lane_R_complement}.fastq.gz"))
+    threads:
+        1
+    resources:
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 2048)),
+        time_min = (lambda wildcards, attempt: min(attempt * 5, 50))
     run:
         sys.stderr.write("\t Create symbolic link: \n")
         sys.stderr.write("\t From :" + "\t" + str(input.fq) + "\n")
@@ -37,7 +42,7 @@ rule fastqc_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 512, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
@@ -90,7 +95,7 @@ rule multiqc_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
@@ -139,7 +144,7 @@ rule correct_UMIs_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     shell:
         "bustools correct -w {WHITELISTNAME} -o {output} {input} && rm {input}"
@@ -182,7 +187,7 @@ rule build_count_matrix_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
