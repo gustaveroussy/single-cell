@@ -26,7 +26,7 @@ singularity --version
 
 #parameters
 path_to_configfile="/mnt/beegfs/userdata/m_aglave/pipeline/scRNAseq_10X/Param_snakfile_alignment.yaml"
-path_to_pipeline="/mnt/beegfs/pipelines/scRNAseq_10X"
+path_to_pipeline="/mnt/beegfs/pipelines/single-cell"
 
 #launch
 snakemake --profile ${path_to_pipeline}/profiles/slurm -s ${path_to_pipeline}/Snakefile --configfile ${path_to_configfile}
