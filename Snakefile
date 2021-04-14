@@ -243,7 +243,7 @@ if "Filtering_GE" in STEPS:
     elif "Droplets_QC_GE" in STEPS:
         sys.stderr.write("Warning: No input.rda.ge find in Filtering_GE section of configfile; input.rda.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
         FILERING_SAMPLE_NAME_GE = copy.deepcopy(QC_SAMPLE_NAME_GE)
-        FILERING_INPUT_RDA_GE = [os.path.normpath(dic_SAMPLE_NAME_GE_INFO[x]['QC_OUTPUT_DIR'] + ("/QC_droplets/" if str(QC_EMPTYDROPS_RETAIN) == "NULL" else "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN)) + str(x) + "_QC_NON-NORMALIZED.rda") for x in QC_SAMPLE_NAME_GE]
+        FILERING_INPUT_RDA_GE = [os.path.normpath(dic_SAMPLE_NAME_GE_INFO[x]['QC_OUTPUT_DIR'] + ("/QC_droplets/" if str(QC_EMPTYDROPS_RETAIN) == "NULL" else "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/") + str(x) + "_QC_NON-NORMALIZED.rda") for x in QC_SAMPLE_NAME_GE]
     else:
         sys.exit("Error: No sample.name.ge or/and input.rda.ge in configfile!\n")
     if 'Filtering_GE' in config and 'output.dir.ge' in config['Filtering_GE'] :
