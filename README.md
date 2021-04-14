@@ -7,7 +7,7 @@
 
 Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGenomics technology data.
 
-Steps available:
+Available Steps:
 * Alignment_countTable_GE,
 * Alignment_countTable_ADT",
 * Alignment_annotations_TCR_BCR,
