@@ -5,7 +5,7 @@
 
 # Single-cell RNA-seq analysis pipeline
 ---
-### Goal:  
+### Pipeline goal:  
 Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGenomics technology data.
 
 ---
@@ -13,7 +13,7 @@ Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGen
 
 ### Available Steps:
 * Alignment_countTable_GE,
-* Alignment_countTable_ADT",
+* Alignment_countTable_ADT,
 * Alignment_annotations_TCR_BCR,
 * Droplets_QC_GE,
 * Filtering_GE,
@@ -26,8 +26,15 @@ Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGen
 
 <br>
 <br>
-<br>
-<br>
+
+### Future Developments:
+* Integration analysis of several samples,
+* Grouped analysis (no integration) of several samples,
+* TCR for several samples together,
+* BCR for several samples together,
+* Improve cell annotation,
+* ...
+
 <br>
 
 See complete documentation on the [wiki](https://github.com/gustaveroussy/single-cell/wiki)
