@@ -1,4 +1,4 @@
-# single-cell
+# Single-cell RNA-seq analysis pipeline
 
 Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGenomics technology data.
 
