@@ -18,7 +18,7 @@ __author__ = "Marine AGLAVE"
 ### parameters ###################################################################################################################################
 
 #### Pipeline ####
-STEPS = config['steps']
+STEPS = config['Steps']
 PIPELINE_FOLDER = workflow.snakefile
 PIPELINE_FOLDER = PIPELINE_FOLDER.replace("/Snakefile", "")
 #CONDA_ENV_SING =  PIPELINE_FOLDER + "/envs/conda/Singularity.yml"
