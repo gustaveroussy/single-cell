@@ -43,6 +43,13 @@ def add_adt_params_output_folder(wildcards):
     return os.path.normpath("/WORKDIR/" + os.path.dirname(wildcards.add_adt_output)) + "/"
 
 """
+This function allows to determine the sample.name.adt for params.
+"""
+def add_adt_params_sample_name_adt(wildcards):
+    return dic_ADD_ADT_INFO[wildcards.add_adt_output]['ADD_ADT_SAMPLE_NAME_ADT']
+
+
+"""
 This rule launches the R script to add adt information to expression gene analysis.
 """
 rule add_adt_ge:
@@ -55,7 +62,8 @@ rule add_adt_ge:
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         kallisto_folder = add_adt_params_input_folder,
-        output_folder = add_adt_params_output_folder
+        output_folder = add_adt_params_output_folder,
+        sample_name_adt = add_adt_params_sample_name_adt
     #conda:
     #    CONDA_ENV_SING
     threads:
@@ -68,6 +76,7 @@ rule add_adt_ge:
         singularity exec --no-home {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_ADT.R \
+        --sample.name.adt {params.sample_name_adt} \
         --input.rda.ge {params.input_rda} \
         --output.dir {params.output_folder} \
         --input.dir.adt {params.kallisto_folder} \

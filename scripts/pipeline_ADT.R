@@ -2,6 +2,7 @@
 library(optparse)
 option_list <- list(
   ### Project
+  make_option("--sample.name.adt", help="Name of CITE-seq sample (ADT)"),
   make_option("--input.rda.ge", help="Input seurat object (in .rda format)."),
   make_option("--output.dir", help="Output path"),
   make_option("--input.dir.adt", help="Input path to the KALLISTOBUS result."),
@@ -31,6 +32,7 @@ for (i in names(args$options)){
 
 #### Get Paramaters ####
 ### Project
+sample.name.ADT <- args$options$sample.name.adt
 input.rda.ge <- args$options$input.rda.ge
 output.dir <- args$options$output.dir
 input.dir.adt <- args$options$input.dir.adt
@@ -64,6 +66,7 @@ rm(args)
 if(is.null(pipeline.path)) stop("--pipeline.path parameter must be set!")
 
 #### Check non-optional parameters ####
+if (is.null(sample.name.ADT)) stop("sample.name.ADT parameter can't be empty!")
 if (is.null(input.rda.ge)) stop("input.rda.ge parameter can't be empty!")
 if (is.null(output.dir)) stop("output.dir parameter can't be empty!")
 if (is.null(input.dir.adt)) stop("input.dir.adt parameter can't be empty!")
@@ -87,7 +90,6 @@ assay <- if(norm.method_GE == "SCTransform") 'SCT' else 'RNA'
 ## Clustering
 GE_file <- sub("\\.rda$", "", input.rda.ge)
 RNA.reduction <- sobj@misc$params$clustering$umap
-sample.name.ADT <- sub("_GE", "_ADT", sobj@misc$params$sample.name.GE)
 ## ADT
 if (is.null(ADT.min.cutoff))  ADT.min.cutoff <- rep("q30", length(gene.names))
 if (is.null(ADT.max.cutoff))  ADT.max.cutoff <- rep("q95", length(gene.names))
@@ -108,6 +110,7 @@ source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 ### printing parameters:
 print("###########################################")
+print(paste0("sample.name.adt : ",sample.name.ADT))
 print(paste0("input.rda.ge : ",input.rda.ge))
 print(paste0("output.dir : ",output.dir))
 print(paste0("input.dir.adt : ",input.dir.adt))

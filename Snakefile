@@ -397,17 +397,24 @@ if "Adding_ADT" in STEPS:
         ADD_ADT_INPUT_RDA_GE = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
     else:
         sys.exit("Error: No input.rda.ge in configfile!\n")
-    if 'Adding_ADT' in config and 'input.dir.adt' in config['Adding_ADT'] :
+    if 'Adding_ADT' in config and 'sample.name.adt' in config['Adding_ADT'] and 'input.dir.adt' in config['Adding_ADT'] :
         ADD_ADT_INPUT_DIR_ADT = config['Adding_ADT']['input.dir.adt']
+        ADD_ADT_SAMPLE_NAME_ADT_RAW = config['Adding_ADT']['sample.name.adt']
+        #check samples names and add "_ADT" if needed
+        ADD_ADT_SAMPLE_NAME_ADT = []
+        for i in range(0,len(ADD_ADT_SAMPLE_NAME_GE_RAW),1):
+            ADD_ADT_SAMPLE_NAME_ADT.append(ADD_ADT_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (ADD_ADT_SAMPLE_NAME_ADT_RAW[i][len(ADD_ADT_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else ADD_ADT_SAMPLE_NAME_ADT.append(ADD_ADT_SAMPLE_NAME_ADT_RAW[i])
     elif "Alignment_countTable_ADT" in STEPS:
-        sys.stderr.write("Note: No input.dir.adt find in Adding_ADT section of configfile; input.dir.adt will be determine from Alignment_countTable_ADT step for Adding_ADT step!\n")
+        sys.stderr.write("Note: No sample.name.adt or input.dir.adt find in Adding_ADT section of configfile; sample.name.adt and input.dir.adt will be determine from Alignment_countTable_ADT step for Adding_ADT step!\n")
         ADD_ADT_INPUT_DIR_ADT = [ os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/" + str(x) + "/KALLISTOBUS") for x in ALIGN_SAMPLE_NAME_ADT]
+        ADD_ADT_SAMPLE_NAME_ADT = copy.deepcopy(ALIGN_SAMPLE_NAME_ADT)
     else:
-        sys.exit("Error: No input.dir.adt in configfile!\n")
+        sys.exit("Error: No sample.name.adt or input.dir.adt in configfile!\n")
     ### Analysis Parameters
     ADD_ADT_AUTHOR_NAME = config['Adding_ADT']['author.name'].replace(", ", ",").replace(" ", "_") if ('Adding_ADT' in config and 'author.name' in config['Adding_ADT'] and config['Adding_ADT']['author.name'] != None) else "NULL"
     ADD_ADT_AUTHOR_MAIL = config['Adding_ADT']['author.mail'].replace(", ", ",") if ('Adding_ADT' in config and 'author.mail' in config['Adding_ADT'] and config['Adding_ADT']['author.mail'] != None) else "NULL"
     ADD_ADT_GENE_NAMES = config['Adding_ADT']['gene.names'].replace(", ", ",") if ('Adding_ADT' in config and 'gene.names' in config['Adding_ADT'] and config['Adding_ADT']['gene.names'] != None) else "NULL"
+    sys.stderr.write(ADD_ADT_GENE_NAMES)
     ADD_ADT_MAX_CUTOFF = config['Adding_ADT']['ADT.max.cutoff'].replace(", ", ",") if ('Adding_ADT' in config and 'ADT.max.cutoff' in config['Adding_ADT'] and config['Adding_ADT']['ADT.max.cutoff'] != None) else "NULL"
     ADD_ADT_MIN_CUTOFF = config['Adding_ADT']['ADT.min.cutoff'].replace(", ", ",") if ('Adding_ADT' in config and 'ADT.min.cutoff' in config['Adding_ADT'] and config['Adding_ADT']['ADT.min.cutoff'] != None) else "NULL"
     ### Snakefile parameters
@@ -418,6 +425,7 @@ if "Adding_ADT" in STEPS:
         dic_ADD_ADT_INFO[ADD_ADT_OUTPUT[i]] = {}
         dic_ADD_ADT_INFO[ADD_ADT_OUTPUT[i]]['ADD_ADT_INPUT_RDA_GE'] = ADD_ADT_INPUT_RDA_GE[i]
         dic_ADD_ADT_INFO[ADD_ADT_OUTPUT[i]]['ADD_ADT_INPUT_DIR_ADT'] = ADD_ADT_INPUT_DIR_ADT[i]
+        dic_ADD_ADT_INFO[ADD_ADT_OUTPUT[i]]['ADD_ADT_SAMPLE_NAME_ADT'] = ADD_ADT_SAMPLE_NAME_ADT[i]
 
 if "Adding_TCR" in STEPS:
     ### Sample/Project
