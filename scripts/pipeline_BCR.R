@@ -161,7 +161,7 @@ cat("\nDiversity analysis...\n")
 Div.g(combined = bcr.combined, list_type_clT = list_type_clT, out.dir = global_output, caption=caption, sample.name=sample.name)
 
 ## Combine BCR data with seurat object
-cat("\nCombine TCR data with seurat object...\n")
+cat("\nCombine BCR data with seurat object...\n")
 ### Corresponding barcode
 bcr.combined[[1]]$barcode <- gsub(pattern = paste0(sample.name, "_BCR_"), replacement = '', bcr.combined[[1]]$barcode)
 ### Combination
@@ -239,11 +239,11 @@ sobj <- Div.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_out
 
 ## Frequency analysis ##UTILE??? NB: il n'y a qu'un BCR par cellule alors la fréquence vaut 1 partout!!!!!!!!!!!!!!!
 cat("\nFrequency analysis...\n")
-Freq.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, ident.name=ident.name, reduction=, freq_col="Frequency", filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
+Freq.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, ident.name=ident.name, reduction=RNA.reduction, freq_col="Frequency", filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Clonal Overlap analysis ##UTILE??? NB: il n'y a qu'un BCR par cellule alors pas d'overlap!!!!!!!!!!!!!!!
 cat("\nClonal Overlap analysis...\n")
-if(length(levels(Seurat::Idents(sobj)))!=1) Overlap.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
+if(length(levels(Seurat::Idents(sobj)))!=1 && length(unique(sobj@meta.data[!is.na(sobj@meta.data$CTstrict),ident.name]))!=1) Overlap.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Physico-chemical properties of the CDR3
 cat("\nPhysico-chemical properties of the CDR3 analysis...\n")
@@ -263,9 +263,9 @@ if(file.exists(paste0(dirname(vdj.input.file.bcr), "/../../Materials_and_Methods
   tmp <- readr::read_tsv(paste0(dirname(vdj.input.file.bcr), "/../../Materials_and_Methods.txt"), col_names = FALSE)$X1
   tmp2 <- ""
   for (i in 1:length(tmp)) tmp2=paste(tmp2,tmp[i], sep="")
-  sobj@misc$parameters$Materials_and_Methods$TCR <- tmp2
+  sobj@misc$parameters$Materials_and_Methods$BCR <- tmp2
 } else sobj@misc$parameters$Materials_and_Methods$BCR <- NULL
-sobj@misc$parameters$Materials_and_Methods$BCR <- paste0(sobj@misc$parameters$Materials_and_Methods$TCR, " The annotation was merged with corresponding cell barcode of 5’ gene expression. The scRepertoire package (version ",sobj@misc$technical_info$scRepertoire,") was used to process annotation to assign clonotype based on Ig chains. scRepertoire allows to study contig quantification, contig abundance, contig length, clonal space homeostasis, clonal proportion, clonal overlap beetween clusters and diversity. Physicochemical properties of the CDR3, based on amino-acid sequences, was determined by the alakazam R package (version ",sobj@misc$technical_info$alakazam,").")
+sobj@misc$parameters$Materials_and_Methods$BCR <- paste0(sobj@misc$parameters$Materials_and_Methods$BCR, " The annotation was merged with corresponding cell barcode of 5’ gene expression. The scRepertoire package (version ",sobj@misc$technical_info$scRepertoire,") was used to process annotation to assign clonotype based on Ig chains. scRepertoire allows to study contig quantification, contig abundance, contig length, clonal space homeostasis, clonal proportion, clonal overlap beetween clusters and diversity. Physicochemical properties of the CDR3, based on amino-acid sequences, was determined by the alakazam R package (version ",sobj@misc$technical_info$alakazam,").")
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 write_MandM(sobj=sobj, output.dir=output.dir)
 

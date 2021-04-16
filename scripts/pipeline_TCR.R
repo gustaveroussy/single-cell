@@ -244,7 +244,7 @@ Freq.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, ca
 
 ## Clonal Overlap analysis (si plus de 1)
 cat("\nClonal Overlap analysis...\n")
-if(length(levels(Seurat::Idents(sobj)))!=1) Overlap.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
+if(length(levels(Seurat::Idents(sobj)))!=1 && length(unique(sobj@meta.data[!is.na(sobj@meta.data$CTstrict),ident.name]))!=1) Overlap.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt)
 
 ## Physico-chemical properties of the CDR3
 cat("\nPhysico-chemical properties of the CDR3 analysis...\n")
