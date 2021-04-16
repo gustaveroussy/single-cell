@@ -40,7 +40,7 @@ rule clust_markers_annot_ge:
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         output_folder = os.path.normpath("/WORKDIR/" + "{output_clust_markers_annot_dir_ge}") + "/",
-        SING_CMA_MARKFILE = [os.path.normpath("/WORKDIR/" + x) for x in CMA_MARKFILE.split(',')] if CMA_MARKFILE != "NULL" else "NULL"
+        SING_CMA_MARKFILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_MARKFILE.split(',')]) if CMA_MARKFILE != "NULL" else "NULL"
     threads:
         1
     resources:
