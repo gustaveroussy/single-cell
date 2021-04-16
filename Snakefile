@@ -44,10 +44,23 @@ if "Alignment_countTable_GE" in STEPS:
         #check samples names and add "_GE" if needed
         ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i] + "_GE") if (ALIGN_SAMPLE_NAME_GE_RAW[i][len(ALIGN_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i])
         ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R2_*.f*q*"))
+        for sample in ORIG_FILES:
+            sys.stderr.write("\t" + str(sample) + "\n")
+        
         #files with path and extention
         ALIGN_SYMLINK_FILES_GE = ALIGN_SYMLINK_FILES_GE + [ os.path.normpath(ALIGN_INPUT_DIR_GE + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_GE_RAW[i], ALIGN_SAMPLE_NAME_GE[i])) for file in ORIG_FILES]
     #files without path and extention
     ALIGN_SYMLINK_FILES_NAME_GE = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_GE]
+
+    for sample in ALIGN_SAMPLE_NAME_GE_RAW:
+        sys.stderr.write("\t" + str(sample) + "\n")
+    for sample in ALIGN_SAMPLE_NAME_GE:
+        sys.stderr.write("\t" + str(sample) + "\n")
+    for sample in ALIGN_SYMLINK_FILES_GE:
+        sys.stderr.write("\t" + str(sample) + "\n")
+
+
+
 
 if "Alignment_countTable_ADT" in STEPS:
     ### Sample/Project
@@ -180,7 +193,7 @@ if "Droplets_QC_GE" in STEPS:
         for i in range(0,len(QC_SAMPLE_NAME_GE_RAW),1):
             QC_SAMPLE_NAME_GE.append(QC_SAMPLE_NAME_GE_RAW[i] + "_GE") if (QC_SAMPLE_NAME_GE_RAW[i][len(QC_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else QC_SAMPLE_NAME_GE.append(QC_SAMPLE_NAME_GE_RAW[i])
     elif 'sample.name.ge' in config['Alignment_countTable_GE'] and 'input.dir.ge' in config['Alignment_countTable_GE']  and "Alignment_countTable_GE" in STEPS:
-        sys.stderr.write("Warning: No sample.name.ge or input.dir.ge find in Droplets_QC_GE section of configfile; sample.name.ge and input.dir.ge will be determine from Alignment_countTable_GE step for Droplets_QC_GE step!\n")
+        sys.stderr.write("Note: No sample.name.ge or input.dir.ge find in Droplets_QC_GE section of configfile; sample.name.ge and input.dir.ge will be determine from Alignment_countTable_GE step for Droplets_QC_GE step!\n")
         QC_SAMPLE_NAME_GE = copy.deepcopy(ALIGN_SAMPLE_NAME_GE)
         QC_INPUT_DIR_GE = [os.path.join(ALIGN_OUTPUT_DIR_GE, str(x), "KALLISTOBUS") for x in ALIGN_SAMPLE_NAME_GE]
     else:
@@ -189,7 +202,7 @@ if "Droplets_QC_GE" in STEPS:
         QC_OUTPUT_DIR_GE = config['Droplets_QC_GE']['output.dir.ge']
     elif 'output.dir.ge' in config['Alignment_countTable_GE'] :
         QC_OUTPUT_DIR_GE = [os.path.join(ALIGN_OUTPUT_DIR_GE, str(x)) for x in ALIGN_SAMPLE_NAME_GE]
-        sys.stderr.write("Warning: No output.dir.ge find in Droplets_QC_GE section of configfile; output.dir.ge will be determine from Alignment_countTable_GE step for Droplets_QC_GE step!\n")
+        sys.stderr.write("Note: No output.dir.ge find in Droplets_QC_GE section of configfile; output.dir.ge will be determine from Alignment_countTable_GE step for Droplets_QC_GE step!\n")
     else :
         sys.exit("Error: No output.dir.ge find in configfile!\n")
     QC_SPECIES = config['Droplets_QC_GE']['species'] if ('Droplets_QC_GE' in config and 'species' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['species'] != None) else "NULL"
@@ -240,7 +253,7 @@ if "Filtering_GE" in STEPS:
         for i in range(0,len(FILERING_SAMPLE_NAME_GE_RAW),1):
             FILERING_SAMPLE_NAME_GE.append(FILERING_SAMPLE_NAME_GE_RAW[i] + "_GE") if (FILERING_SAMPLE_NAME_GE_RAW[i][len(FILERING_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else FILERING_SAMPLE_NAME_GE.append(FILERING_SAMPLE_NAME_GE_RAW[i])
     elif "Droplets_QC_GE" in STEPS:
-        sys.stderr.write("Warning: No input.rda.ge find in Filtering_GE section of configfile; input.rda.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
+        sys.stderr.write("Note: No input.rda.ge find in Filtering_GE section of configfile; input.rda.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
         FILERING_SAMPLE_NAME_GE = copy.deepcopy(QC_SAMPLE_NAME_GE)
         FILERING_INPUT_RDA_GE = [os.path.normpath(dic_SAMPLE_NAME_GE_INFO[x]['QC_OUTPUT_DIR'] + ("/QC_droplets/" if str(QC_EMPTYDROPS_RETAIN) == "NULL" else "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/") + str(x) + "_QC_NON-NORMALIZED.rda") for x in QC_SAMPLE_NAME_GE]
     else:
@@ -249,7 +262,7 @@ if "Filtering_GE" in STEPS:
         FILERING_OUTPUT_DIR_GE = config['Filtering_GE']['output.dir.ge']
     elif "Droplets_QC_GE" in STEPS:
         FILERING_OUTPUT_DIR_GE = copy.deepcopy(QC_OUTPUT_DIR_GE)
-        sys.stderr.write("Warning: No output.dir.ge find in Filtering_GE section of configfile; output.dir.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
+        sys.stderr.write("Note: No output.dir.ge find in Filtering_GE section of configfile; output.dir.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
     else :
         sys.exit("Error: No output.dir.ge find in configfile!\n")
     FILERING_AUTHOR_NAME = config['Filtering_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Filtering_GE' in config and 'author.name' in config['Filtering_GE'] and config['Filtering_GE']['author.name'] != None) else "NULL"
@@ -291,7 +304,7 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
         for i in range(0,len(NDRE_SAMPLE_NAME_GE_RAW),1):
             NDRE_SAMPLE_NAME_GE.append(NDRE_SAMPLE_NAME_GE_RAW[i] + "_GE") if (NDRE_SAMPLE_NAME_GE_RAW[i][len(NDRE_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else NDRE_SAMPLE_NAME_GE.append(NDRE_SAMPLE_NAME_GE_RAW[i])
     elif "Filtering_GE" in STEPS:
-        sys.stderr.write("Warning: No input.rda.ge find in Norm_DimRed_Eval_GE section of configfile; input.rda.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
+        sys.stderr.write("Note: No input.rda.ge find in Norm_DimRed_Eval_GE section of configfile; input.rda.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
         NDRE_SAMPLE_NAME_GE = copy.deepcopy(FILERING_SAMPLE_NAME_GE)
         if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             NDRE_INPUT_RDA_GE = [os.path.normpath(dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + "/DOUBLETSKEPT/" + x + "_DOUBLETSKEPT_NON-NORMALIZED.rda") for x in FILERING_SAMPLE_NAME_GE]
@@ -303,7 +316,7 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
         NDRE_OUTPUT_DIR_GE = config['Norm_DimRed_Eval_GE']['output.dir.ge']
     elif "Filtering_GE" in STEPS:
         NDRE_OUTPUT_DIR_GE = [dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + ("/DOUBLETSKEPT" if FILERING_DOUBLET_FILTER_METHOD_NAME == "none" else ("/DOUBLETSFILTER_" + FILERING_DOUBLET_FILTER_METHOD_NAME)) for x in FILERING_SAMPLE_NAME_GE]
-        sys.stderr.write("Warning: No output.dir.ge find in Norm_DimRed_Eval_GE section of configfile; output.dir.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
+        sys.stderr.write("Note: No output.dir.ge find in Norm_DimRed_Eval_GE section of configfile; output.dir.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
     else :
         sys.exit("Error: No output.dir.ge find in configfile!\n")
     ### Analysis Parameters
@@ -346,7 +359,7 @@ if "Clust_Markers_Annot_GE" in STEPS:
         for i in range(0,len(CMA_SAMPLE_NAME_GE_RAW),1):
             CMA_SAMPLE_NAME_GE.append(CMA_SAMPLE_NAME_GE_RAW[i] + "_GE") if (CMA_SAMPLE_NAME_GE_RAW[i][len(CMA_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else CMA_SAMPLE_NAME_GE.append(CMA_SAMPLE_NAME_GE_RAW[i])
     elif "Norm_DimRed_Eval_GE" in STEPS:
-        sys.stderr.write("Warning: No input.rda.ge and sample.name.ge find in Clust_Markers_Annot_GE section of configfile; input.rda.ge and sample.name.ge will be determine from Norm_DimRed_Eval_GE step for Clust_Markers_Annot_GE step!\n")
+        sys.stderr.write("Note: No input.rda.ge and sample.name.ge find in Clust_Markers_Annot_GE section of configfile; input.rda.ge and sample.name.ge will be determine from Norm_DimRed_Eval_GE step for Clust_Markers_Annot_GE step!\n")
         CMA_SAMPLE_NAME_GE = copy.deepcopy(NDRE_SAMPLE_NAME_GE)
         CMA_INPUT_RDA_GE = [os.path.normpath(dic_NDRE_INFO[x]['NDRE_OUTPUT_DIR'] + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/" + x + "_" + NDRE_NORM_VTR + "_" + NDRE_DIMRED_VTR + ".rda") for x in NDRE_SAMPLE_NAME_GE]
     else:
@@ -355,7 +368,7 @@ if "Clust_Markers_Annot_GE" in STEPS:
         CMA_OUTPUT_DIR_GE = config['Clust_Markers_Annot_GE']['output.dir.ge']
     elif "Norm_DimRed_Eval_GE" in STEPS:
         CMA_OUTPUT_DIR_GE = [os.path.normpath(dic_NDRE_INFO[x]['NDRE_OUTPUT_DIR'] + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR) for x in NDRE_SAMPLE_NAME_GE]
-        sys.stderr.write("Warning: No output.dir.ge find in Clust_Markers_Annot_GE section of configfile; output.dir.ge will be determine from Norm_DimRed_Eval_GE step for Clust_Markers_Annot_GE step!\n")
+        sys.stderr.write("Note: No output.dir.ge find in Clust_Markers_Annot_GE section of configfile; output.dir.ge will be determine from Norm_DimRed_Eval_GE step for Clust_Markers_Annot_GE step!\n")
     else :
         sys.exit("Error: No output.dir.ge find in configfile!\n")
     ### Analysis Parameters
@@ -393,14 +406,14 @@ if "Adding_ADT" in STEPS:
     if 'Adding_ADT' in config and 'input.rda.ge' in config['Adding_ADT'] :
         ADD_ADT_INPUT_RDA_GE = config['Adding_ADT']['input.rda.ge']
     elif "Clust_Markers_Annot_GE" in STEPS:
-        sys.stderr.write("Warning: No input.rda.ge find in Adding_ADT section of configfile; input.rda.ge will be determine from Clust_Markers_Annot_GE step for Adding_ADT step!\n")
+        sys.stderr.write("Note: No input.rda.ge find in Adding_ADT section of configfile; input.rda.ge will be determine from Clust_Markers_Annot_GE step for Adding_ADT step!\n")
         ADD_ADT_INPUT_RDA_GE = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
     else:
         sys.exit("Error: No input.rda.ge in configfile!\n")
     if 'Adding_ADT' in config and 'input.dir.adt' in config['Adding_ADT'] :
         ADD_ADT_INPUT_DIR_ADT = config['Adding_ADT']['input.dir.adt']
     elif "Alignment_countTable_ADT" in STEPS:
-        sys.stderr.write("Warning: No input.dir.adt find in Adding_ADT section of configfile; input.dir.adt will be determine from Alignment_countTable_ADT step for Adding_ADT step!\n")
+        sys.stderr.write("Note: No input.dir.adt find in Adding_ADT section of configfile; input.dir.adt will be determine from Alignment_countTable_ADT step for Adding_ADT step!\n")
         ADD_ADT_INPUT_DIR_ADT = [ os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/" + str(x) + "/KALLISTOBUS") for x in ALIGN_SAMPLE_NAME_ADT]
     else:
         sys.exit("Error: No input.dir.adt in configfile!\n")
@@ -424,17 +437,17 @@ if "Adding_TCR" in STEPS:
     if 'Adding_TCR' in config and 'input.rda' in config['Adding_TCR'] :
         ADD_TCR_INPUT_RDA_GE = config['Adding_TCR']['input.rda']
     elif "Adding_ADT" in STEPS:
-        sys.stderr.write("Warning: No input.rda find in Adding_TCR section of configfile; input.rda will be determine from Adding_ADT step for Adding_TCR step!\n")
+        sys.stderr.write("Note: No input.rda find in Adding_TCR section of configfile; input.rda will be determine from Adding_ADT step for Adding_TCR step!\n")
         ADD_TCR_INPUT_RDA_GE = [ x + "_ADT.rda" for x in ADD_ADT_OUTPUT]
     elif "Clust_Markers_Annot_GE" in STEPS:
-        sys.stderr.write("Warning: No input.rda find in Adding_TCR section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Adding_TCR step!\n")
+        sys.stderr.write("Note: No input.rda find in Adding_TCR section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Adding_TCR step!\n")
         ADD_TCR_INPUT_RDA_GE = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
     else:
         sys.exit("Error: No input.rda in configfile!\n")
     if 'Adding_TCR' in config and 'vdj.input.file.tcr' in config['Adding_TCR'] :
         ADD_TCR_INPUT_CSV_TCR = config['Adding_TCR']['vdj.input.file.tcr']
     elif "Alignment_annotations_TCR_BCR" in STEPS:
-        sys.stderr.write("Warning: No vdj.input.file.tcr find in Adding_TCR section of configfile; vdj.input.file.tcr will be determine from Alignment_annotations_TCR_BCR step for Adding_TCR step!\n")
+        sys.stderr.write("Note: No vdj.input.file.tcr find in Adding_TCR section of configfile; vdj.input.file.tcr will be determine from Alignment_annotations_TCR_BCR step for Adding_TCR step!\n")
         ALIGN_SAMPLE_NAME_TCR = [sample for sample in ALIGN_SAMPLE_NAME_TCR_BCR if bool(re.match(".+_TCR", sample))]
         ADD_TCR_INPUT_CSV_TCR = [ os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + x + "/" + x + "_CellRanger/outs/filtered_contig_annotations.csv") for x in ALIGN_SAMPLE_NAME_TCR]
     else:
@@ -456,20 +469,20 @@ if "Adding_BCR" in STEPS:
     if 'Adding_BCR' in config and 'input.rda' in config['Adding_BCR'] :
         ADD_BCR_INPUT_RDA_GE = config['Adding_BCR']['input.rda']
     elif "Adding_TCR" in STEPS:
-        sys.stderr.write("Warning: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_TCR step for Adding_BCR step!\n")
+        sys.stderr.write("Note: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_TCR step for Adding_BCR step!\n")
         ADD_BCR_INPUT_RDA_GE = [ x + "_TCR.rda" for x in ADD_TCR_OUTPUT]
     elif "Adding_ADT" in STEPS:
-        sys.stderr.write("Warning: No input.rda find in Adding_BCR section of configfile; input.rda will be determine from Adding_ADT step for Adding_BCR step!\n")
+        sys.stderr.write("Note: No input.rda find in Adding_BCR section of configfile; input.rda will be determine from Adding_ADT step for Adding_BCR step!\n")
         ADD_BCR_INPUT_RDA_GE = [ x + "_ADT.rda" for x in ADD_ADT_OUTPUT]
     elif "Clust_Markers_Annot_GE" in STEPS:
-        sys.stderr.write("Warning: No input.rda find in Adding_BCR section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Adding_BCR step!\n")
+        sys.stderr.write("Note: No input.rda find in Adding_BCR section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Adding_BCR step!\n")
         ADD_BCR_INPUT_RDA_GE = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
     else:
         sys.exit("Error: No input.rda in configfile!\n")
     if 'Adding_BCR' in config and 'vdj.input.file.bcr' in config['Adding_BCR'] :
         ADD_BCR_INPUT_CSV_BCR = config['Adding_BCR']['vdj.input.file.bcr']
     elif "Alignment_annotations_TCR_BCR" in STEPS:
-        sys.stderr.write("Warning: No vdj.input.file.bcr find in Adding_BCR section of configfile; vdj.input.file.bcr will be determine from Alignment_annotations_BCR_BCR step for Adding_BCR step!\n")
+        sys.stderr.write("Note: No vdj.input.file.bcr find in Adding_BCR section of configfile; vdj.input.file.bcr will be determine from Alignment_annotations_BCR_BCR step for Adding_BCR step!\n")
         ALIGN_SAMPLE_NAME_BCR = [sample for sample in ALIGN_SAMPLE_NAME_TCR_BCR if bool(re.match(".+_BCR", sample))]
         ADD_BCR_INPUT_CSV_BCR = [ os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + x + "/" + x + "_CellRanger/outs/filtered_contig_annotations.csv") for x in ALIGN_SAMPLE_NAME_BCR]
     else:
@@ -494,16 +507,16 @@ if "Cerebro" in STEPS:
     if 'Cerebro' in config and 'input.rda.ge' in config['Cerebro'] :
         CEREBRO_INPUT_RDA = config['Cerebro']['input.rda']
     elif "Adding_BCR" in STEPS:
-        sys.stderr.write("Warning: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_BCR_GE step for Cerebro step!\n")
+        sys.stderr.write("Note: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_BCR_GE step for Cerebro step!\n")
         CEREBRO_INPUT_RDA = [ x + "_BCR.rda" for x in ADD_BCR_OUTPUT]
     elif "Adding_TCR" in STEPS:
-        sys.stderr.write("Warning: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_TCR_GE step for Cerebro step!\n")
+        sys.stderr.write("Note: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_TCR_GE step for Cerebro step!\n")
         CEREBRO_INPUT_RDA = [ x + "_TCR.rda" for x in ADD_TCR_OUTPUT]
     elif "Adding_ADT" in STEPS:
-        sys.stderr.write("Warning: No input.rda find in Cerebro section of configfile; input.rda will be determine from Adding_ADT step for Cerebro step!\n")
+        sys.stderr.write("Note: No input.rda find in Cerebro section of configfile; input.rda will be determine from Adding_ADT step for Cerebro step!\n")
         CEREBRO_INPUT_RDA = [ x + "_ADT.rda" for x in ADD_ADT_OUTPUT]
     elif "Clust_Markers_Annot_GE" in STEPS:
-        sys.stderr.write("Warning: No input.rda find in Cerebro section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Cerebro step!\n")
+        sys.stderr.write("Note: No input.rda find in Cerebro section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Cerebro step!\n")
         CEREBRO_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
     else:
         sys.exit("Error: No input.rda in configfile!\n")
