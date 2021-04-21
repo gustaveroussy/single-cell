@@ -1,5 +1,5 @@
 from pathlib import Path
-import snakemake.utils  # Load snakemake API
+import snakemake.utils
 import os
 import datetime
 import re
@@ -10,10 +10,7 @@ import numpy
 
 __author__ = "Marine AGLAVE"
 
-
-#using: snakemake -j5 --configfile /home/m_aglave/Bureau/scRNAseq_10X/Param_snakfile_alignment.yaml --use-conda --printshellcmds -s ./Snakefile
-
-
+#using: snakemake --profile /mnt/beegfs/pipelines/single-cell/profiles/slurm -s /mnt/beegfs/pipelines/single-cell/Snakefile --configfile /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Params.yaml
 
 ### parameters ###################################################################################################################################
 
@@ -414,7 +411,6 @@ if "Adding_ADT" in STEPS:
     ADD_ADT_AUTHOR_NAME = config['Adding_ADT']['author.name'].replace(", ", ",").replace(" ", "_") if ('Adding_ADT' in config and 'author.name' in config['Adding_ADT'] and config['Adding_ADT']['author.name'] != None) else "NULL"
     ADD_ADT_AUTHOR_MAIL = config['Adding_ADT']['author.mail'].replace(", ", ",") if ('Adding_ADT' in config and 'author.mail' in config['Adding_ADT'] and config['Adding_ADT']['author.mail'] != None) else "NULL"
     ADD_ADT_GENE_NAMES = config['Adding_ADT']['gene.names'].replace(", ", ",") if ('Adding_ADT' in config and 'gene.names' in config['Adding_ADT'] and config['Adding_ADT']['gene.names'] != None) else "NULL"
-    sys.stderr.write(ADD_ADT_GENE_NAMES)
     ADD_ADT_MAX_CUTOFF = config['Adding_ADT']['ADT.max.cutoff'].replace(", ", ",") if ('Adding_ADT' in config and 'ADT.max.cutoff' in config['Adding_ADT'] and config['Adding_ADT']['ADT.max.cutoff'] != None) else "NULL"
     ADD_ADT_MIN_CUTOFF = config['Adding_ADT']['ADT.min.cutoff'].replace(", ", ",") if ('Adding_ADT' in config and 'ADT.min.cutoff' in config['Adding_ADT'] and config['Adding_ADT']['ADT.min.cutoff'] != None) else "NULL"
     ### Snakefile parameters
