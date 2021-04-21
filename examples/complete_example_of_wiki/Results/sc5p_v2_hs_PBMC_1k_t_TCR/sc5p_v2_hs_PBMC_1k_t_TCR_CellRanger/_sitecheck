@@ -1,0 +1,322 @@
+Fri Apr 16 19:34:19 CEST 2021
+
+=====================================================================
+System Info
+uname -a
+---------------------------------------------------------------------
+Linux n21 3.10.0-957.27.2.el7.x86_64 #1 SMP Mon Jul 29 17:46:05 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
+=====================================================================
+
+=====================================================================
+Linux Distro
+cat /etc/lsb-release /etc/os-release | sort -u
+---------------------------------------------------------------------
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+DISTRIB_CODENAME=focal
+DISTRIB_DESCRIPTION="Ubuntu 20.04.2 LTS"
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=20.04
+HOME_URL="https://www.ubuntu.com/"
+ID=ubuntu
+ID_LIKE=debian
+NAME="Ubuntu"
+PRETTY_NAME="Ubuntu 20.04.2 LTS"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+SUPPORT_URL="https://help.ubuntu.com/"
+UBUNTU_CODENAME=focal
+VERSION="20.04.2 LTS (Focal Fossa)"
+VERSION_CODENAME=focal
+VERSION_ID="20.04"
+=====================================================================
+
+=====================================================================
+Kernel Build
+cat /proc/version
+---------------------------------------------------------------------
+Linux version 3.10.0-957.27.2.el7.x86_64 (mockbuild@kbuilder.bsys.centos.org) (gcc version 4.8.5 20150623 (Red Hat 4.8.5-36) (GCC) ) #1 SMP Mon Jul 29 17:46:05 UTC 2019
+=====================================================================
+
+=====================================================================
+glibc version
+ldd --version | head -n 1
+---------------------------------------------------------------------
+ldd (Ubuntu GLIBC 2.31-0ubuntu9.2) 2.31
+=====================================================================
+
+=====================================================================
+CPU Model
+grep -m 1 'model name' /proc/cpuinfo | cut -d ':' -f 2 | sed 's/^[ \t]*//'
+---------------------------------------------------------------------
+Intel(R) Xeon(R) CPU E5-2670 v3 @ 2.30GHz
+=====================================================================
+
+=====================================================================
+CPU Sockets
+grep 'physical id' /proc/cpuinfo | sort -u | wc -l
+---------------------------------------------------------------------
+2
+=====================================================================
+
+=====================================================================
+CPU Cores
+grep -c processor /proc/cpuinfo
+---------------------------------------------------------------------
+48
+=====================================================================
+
+=====================================================================
+CPU Support
+grep -m 1 'flags' /proc/cpuinfo | cut -d ':' -f 2 | sed 's/^\s*//'
+---------------------------------------------------------------------
+fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm epb ssbd ibrs ibpb stibp tpr_shadow vnmi flexpriority ept vpid fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm xsaveopt cqm_llc cqm_occup_llc dtherm ida arat pln pts md_clear spec_ctrl intel_stibp flush_l1d
+=====================================================================
+
+=====================================================================
+Memory Total
+grep MemTotal /proc/meminfo | cut -d ':' -f 2 | sed 's/^[ \t]*//'
+---------------------------------------------------------------------
+131609756 kB
+=====================================================================
+
+=====================================================================
+Disk Space
+df -Ph | awk '{print $2, $3, $4}'
+---------------------------------------------------------------------
+Size Used Avail
+16M 12K 16M
+63G 0 63G
+63G 4.0K 63G
+454G 13G 418G
+16M 12K 16M
+437T 407T 30T
+=====================================================================
+
+=====================================================================
+Filesystem Options
+mount | cut -d ' ' -f 5,6
+---------------------------------------------------------------------
+overlay (ro,nodev,relatime,lowerdir=/mnt/beegfs/software/singularity/3.6.3/var/singularity/mnt/session/overlay-lowerdir:/mnt/beegfs/software/singularity/3.6.3/var/singularity/mnt/session/rootfs)
+devtmpfs (rw,nosuid,size=65794148k,nr_inodes=16448537,mode=755)
+tmpfs (rw,nosuid,nodev)
+devpts (rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000)
+mqueue (rw,relatime)
+hugetlbfs (rw,relatime)
+ext4 (rw,nosuid,nodev,relatime,data=ordered)
+ext4 (rw,nosuid,nodev,relatime,data=ordered)
+proc (rw,nosuid,nodev,noexec,relatime)
+autofs (rw,relatime,fd=25,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=58241)
+sysfs (rw,nosuid,nodev,relatime)
+ext4 (rw,nosuid,nodev,relatime,data=ordered)
+ext4 (rw,nosuid,nodev,relatime,data=ordered)
+tmpfs (rw,nosuid,relatime,size=16384k,uid=800679573,gid=800677146)
+tmpfs (rw,nosuid,relatime,size=16384k,uid=800679573,gid=800677146)
+tmpfs (rw,nosuid,relatime,size=16384k,uid=800679573,gid=800677146)
+beegfs (rw,nosuid,nodev,relatime,cfgFile=/etc/beegfs/beegfs-client.conf)
+beegfs (rw,nosuid,nodev,relatime,cfgFile=/etc/beegfs/beegfs-client.conf)
+beegfs (rw,nosuid,nodev,relatime,cfgFile=/etc/beegfs/beegfs-client.conf)
+beegfs (rw,nosuid,nodev,relatime,cfgFile=/etc/beegfs/beegfs-client.conf)
+=====================================================================
+
+=====================================================================
+User Limits
+bash -c 'ulimit -a'
+---------------------------------------------------------------------
+core file size          (blocks, -c) 0
+data seg size           (kbytes, -d) unlimited
+scheduling priority             (-e) 0
+file size               (blocks, -f) unlimited
+pending signals                 (-i) 514016
+max locked memory       (kbytes, -l) unlimited
+max memory size         (kbytes, -m) 2097152
+open files                      (-n) 1024
+pipe size            (512 bytes, -p) 8
+POSIX message queues     (bytes, -q) 819200
+real-time priority              (-r) 0
+stack size              (kbytes, -s) 8192
+cpu time               (seconds, -t) unlimited
+max user processes              (-u) 4096
+virtual memory          (kbytes, -v) unlimited
+file locks                      (-x) unlimited
+=====================================================================
+
+=====================================================================
+User Limits (hard)
+bash -c 'ulimit -aH'
+---------------------------------------------------------------------
+core file size          (blocks, -c) unlimited
+data seg size           (kbytes, -d) unlimited
+scheduling priority             (-e) 0
+file size               (blocks, -f) unlimited
+pending signals                 (-i) 514016
+max locked memory       (kbytes, -l) unlimited
+max memory size         (kbytes, -m) 2097152
+open files                      (-n) 131072
+pipe size            (512 bytes, -p) 8
+POSIX message queues     (bytes, -q) 819200
+real-time priority              (-r) 0
+stack size              (kbytes, -s) unlimited
+cpu time               (seconds, -t) unlimited
+max user processes              (-u) 514016
+virtual memory          (kbytes, -v) unlimited
+file locks                      (-x) unlimited
+=====================================================================
+
+=====================================================================
+Global File Limit
+cat /proc/sys/fs/file-{max,nr}
+---------------------------------------------------------------------
+65536
+3200	0	65536
+=====================================================================
+
+=====================================================================
+Memory config
+sysctl vm
+---------------------------------------------------------------------
+vm.admin_reserve_kbytes = 8192
+vm.block_dump = 0
+vm.dirty_background_bytes = 0
+vm.dirty_background_ratio = 10
+vm.dirty_bytes = 0
+vm.dirty_expire_centisecs = 3000
+vm.dirty_ratio = 40
+vm.dirty_writeback_centisecs = 500
+vm.drop_caches = 0
+vm.extfrag_threshold = 500
+vm.hugepages_treat_as_movable = 0
+vm.hugetlb_shm_group = 0
+vm.laptop_mode = 0
+vm.legacy_va_layout = 0
+vm.lowmem_reserve_ratio = 256	256	32
+vm.max_map_count = 65530
+vm.memory_failure_early_kill = 0
+vm.memory_failure_recovery = 1
+vm.min_free_kbytes = 262144
+vm.min_slab_ratio = 5
+vm.min_unmapped_ratio = 1
+vm.mmap_min_addr = 4096
+vm.nr_hugepages = 0
+vm.nr_hugepages_mempolicy = 0
+vm.nr_overcommit_hugepages = 0
+vm.nr_pdflush_threads = 0
+vm.numa_zonelist_order = N
+vm.oom_dump_tasks = 1
+vm.oom_kill_allocating_task = 0
+vm.overcommit_kbytes = 0
+vm.overcommit_memory = 0
+vm.overcommit_ratio = 50
+vm.page-cluster = 3
+vm.panic_on_oom = 0
+vm.percpu_pagelist_fraction = 0
+vm.stat_interval = 1
+vm.swappiness = 10
+vm.user_reserve_kbytes = 131072
+vm.vfs_cache_pressure = 100
+vm.zone_reclaim_mode = 0
+=====================================================================
+
+=====================================================================
+THP memory config
+cat /sys/kernel/mm/transparent_hugepage/enabled
+---------------------------------------------------------------------
+[always] madvise never
+=====================================================================
+
+=====================================================================
+cgroups
+cat /proc/self/cgroup
+---------------------------------------------------------------------
+11:freezer:/slurm/uid_800679573/job_2393122/step_batch
+10:hugetlb:/
+9:devices:/slurm/uid_800679573/job_2393122/step_batch
+8:memory:/slurm/uid_800679573/job_2393122/step_batch/task_0
+7:blkio:/system.slice/slurmd.service
+6:pids:/system.slice/slurmd.service
+5:net_prio,net_cls:/
+4:perf_event:/
+3:cpuacct,cpu:/slurm/uid_800679573/job_2393122/step_batch/task_0
+2:cpuset:/slurm/uid_800679573/job_2393122/step_batch
+1:name=systemd:/system.slice/slurmd.service
+=====================================================================
+
+=====================================================================
+cgroup mem stats
+cat /slurm/uid_800679573/job_2393122/step_batch/task_0/memory.stat
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+Container
+[ -e /.dockerenv ] || [ -e /.dockerinit ] || [ ! -z "$container" ] || grep -m 1 -E 'docker|lxc' /proc/1/cgroup > /dev/null && echo 'Detected'
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+init process
+head -n 1 /proc/1/sched | cut -d ' ' -f 1
+---------------------------------------------------------------------
+systemd
+=====================================================================
+
+=====================================================================
+SGE Submit
+which qsub
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+LSF Submit
+which bsub
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+BCL2FASTQ 1
+which configureBclToFastq.pl
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+BCL2FASTQ 2
+which bcl2fastq
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+Java
+which java
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+10X Refdata
+echo $TENX_REFDATA
+---------------------------------------------------------------------
+
+=====================================================================
+
+=====================================================================
+10X Refdata Version
+cat $TENX_REFDATA/version
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+qconf
+which qconf
+---------------------------------------------------------------------
+=====================================================================
+
+=====================================================================
+MRP
+mrp --version
+---------------------------------------------------------------------
+'3.1.0-v3.2.3'
+=====================================================================
+
+=====================================================================
+mrp templates
+ls $(dirname $(dirname $(which mrp)))/jobmanagers/*.template
+---------------------------------------------------------------------
+=====================================================================
+

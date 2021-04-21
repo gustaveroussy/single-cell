@@ -1,0 +1,1135 @@
+#
+# @include "_chemistry_detector_stages.mro"
+#
+
+filetype fastq;
+filetype json;
+filetype txt;
+#
+# @include "_common_stages.mro"
+#
+
+#
+# Copyright (c) 2017 10X Genomics, Inc. All rights reserved.
+#
+filetype bam;
+filetype bam.bai;
+filetype csv;
+filetype fastq;
+filetype json;
+filetype pickle;
+#
+# @include "_sc_vdj_assembler_stages.mro"
+#
+
+#
+# Copyright (c) 2017 10X Genomics, Inc. All rights reserved.
+#
+filetype bam;
+filetype bam.bai;
+filetype sam;
+filetype fasta;
+filetype fasta.fai;
+filetype fastq;
+filetype h5;
+filetype json;
+filetype pickle;
+filetype gtf;
+filetype csv;
+filetype tsv;
+filetype html;
+filetype bed;
+filetype lz4;
+filetype bin;
+filetype txt;
+#
+# @include "_vloupe_stages.mro"
+#
+
+#
+# Copyright (c) 2017 10X Genomics, Inc. All rights reserved.
+#
+filetype bam;
+filetype bam.bai;
+filetype bed;
+filetype csv;
+filetype fasta;
+filetype fasta.fai;
+filetype json;
+filetype vloupe;
+
+#
+# @include "_chemistry_detector_stages.mro"
+#
+
+stage DETECT_CHEMISTRY(
+    in  string   sample_id,
+    in  map[]    sample_def,
+    in  path     reference_path,
+    in  path     vdj_reference_path,
+    in  string   chemistry_name_spec  "Specified chemistry name",
+    in  string[] allowed_chems        "Restricted set of chem names",
+    in  int      r1_length,
+    in  int      r2_length,
+    out json     summary,
+    out string   chemistry_type,
+    out txt      report,
+    out bool     is_antibody_only,
+    src py       "stages/chemistry_detector/detect_chemistry",
+) using (
+    mem_gb   = 8,
+    volatile = strict,
+)
+
+#
+# @include "chemistry_detector.mro"
+#
+
+pipeline CHEMISTRY_DETECTOR(
+    in  string   sample_id,
+    in  map[]    sample_def,
+    in  path     reference_path,
+    in  path     vdj_reference_path,
+    in  string   chemistry_name_spec,
+    in  string[] allowed_chems,
+    in  int      r1_length,
+    in  int      r2_length,
+    out json     summary,
+    out txt      report,
+    out string   chemistry_type,
+    out bool     is_antibody_only,
+)
+{
+    call DETECT_CHEMISTRY(
+        sample_id           = self.sample_id,
+        reference_path      = self.reference_path,
+        vdj_reference_path  = self.vdj_reference_path,
+        sample_def          = self.sample_def,
+        chemistry_name_spec = self.chemistry_name_spec,
+        allowed_chems       = self.allowed_chems,
+        r1_length           = self.r1_length,
+        r2_length           = self.r2_length,
+    )
+
+    return (
+        summary          = DETECT_CHEMISTRY.summary,
+        chemistry_type   = DETECT_CHEMISTRY.chemistry_type,
+        report           = DETECT_CHEMISTRY.report,
+        is_antibody_only = DETECT_CHEMISTRY.is_antibody_only,
+    )
+}
+
+#
+# @include "_common_stages.mro"
+#
+
+# Convert sample_def = { "libraries_csv": "/path/to/libraries.csv" } into a
+# standard sample_def map used by the rest of the pipeline. Only used by the
+# CS pipeline to handle the --libraries cmd-line argument.
+stage EXPAND_SAMPLE_DEF(
+    in  map[] raw_sample_def,
+    out map[] sample_def,
+    src py    "stages/common/expand_sample_def",
+)
+
+stage CELLRANGER_PREFLIGHT(
+    in  map[]    sample_def,
+    in  string   chemistry_name,
+    in  map      custom_chemistry_def,
+    in  path     reference_path,
+    in  csv      feature_reference,
+    in  bool     check_executables,
+    in  int      recovered_cells,
+    in  int      force_cells,
+    in  string[] allowed_chems,
+    in  int      r1_length,
+    in  int      r2_length,
+    src py       "stages/common/cellranger_preflight",
+) using (
+    mem_gb = 2,
+)
+
+stage CELLRANGER_PREFLIGHT_LOCAL(
+    in  map[]    sample_def,
+    in  string   chemistry_name,
+    in  map      custom_chemistry_def,
+    in  path     reference_path,
+    in  csv      feature_reference,
+    in  bool     check_executables,
+    in  int      recovered_cells,
+    in  int      force_cells,
+    in  string[] allowed_chems,
+    in  int      r1_length,
+    in  int      r2_length,
+    src py       "stages/common/cellranger_preflight",
+) using (
+    mem_gb = 2,
+)
+
+stage DISABLE_FEATURE_STAGES(
+    in  map[] sample_def,
+    out bool  disable_crispr,
+    out bool  disable_antibody,
+    src py    "stages/common/disable_feature_stages",
+)
+
+stage SETUP_CHUNKS(
+    in  string   sample_id,
+    in  map[]    sample_def,
+    in  string[] library_type_filter,
+    in  string   chemistry_name,
+    in  map      custom_chemistry_def,
+    in  string   default_library_type,
+    out map[]    chunks,
+    out map      chemistry_def,
+    out string   barcode_whitelist,
+    out map[]    library_info,
+    src py       "stages/common/setup_chunks",
+)
+
+stage CHUNK_READS(
+    in  map[] chunks,
+    in  int   reads_per_file,
+    out map[] out_chunks,
+    src py    "stages/common/chunk_reads",
+) split (
+    in  map   read_chunk,
+) using (
+    mem_gb = 2,
+)
+
+stage EXTRACT_READS(
+    in  map[]    chunks,
+    in  map      chemistry_def,
+    in  string   barcode_whitelist,
+    in  int      reads_per_file,
+    in  float    subsample_rate,
+    in  int      initial_reads,
+    in  map[]    primers,
+    in  map      align,
+    in  int      r1_length,
+    in  int      r2_length,
+    in  bool     skip_metrics,
+    in  path     reference_path,
+    in  csv      feature_reference,
+    in  bool     augment_fastq,
+    in  map[]    library_info,
+    out pickle   chunked_reporter,
+    out json     summary,
+    out json     barcode_counts,
+    out json     feature_counts,
+    out fastq[]  reads,
+    out fastq[]  read2s,
+    out fastq[]  tags,
+    out int[]    gem_groups,
+    out string[] library_types,
+    out string[] library_ids,
+    out string[] read_groups,
+    out map      align,
+    out string[] bam_comments,
+    src py       "stages/common/extract_reads",
+) split (
+    in  map      read_chunks,
+    in  bool     reads_interleaved,
+    in  int      chunk_initial_reads,
+    in  float    chunk_subsample_rate,
+    in  string   read_group,
+    in  string   library_type,
+    in  map      chemistry,
+    in  string   library_id,
+    in  int      gem_group,
+    out fastq    read,
+) using (
+    mem_gb = 2,
+)
+
+#
+# @include "_sc_vdj_assembler_stages.mro"
+#
+
+stage VDJ_PREFLIGHT(
+    in  map[]  sample_def,
+    in  string chemistry_name,
+    in  map    custom_chemistry_def,
+    in  path   vdj_reference_path,
+    in  bool   denovo,
+    in  bool   check_executables,
+    in  int    force_cells,
+    in  path   inner_enrichment_primers,
+    src py     "stages/vdj/vdj_preflight",
+)
+
+stage VDJ_PREFLIGHT_LOCAL(
+    in  map[]  sample_def,
+    in  string chemistry_name,
+    in  map    custom_chemistry_def,
+    in  path   vdj_reference_path,
+    in  bool   denovo,
+    in  bool   check_executables,
+    in  int    force_cells,
+    in  path   inner_enrichment_primers,
+    src py     "stages/vdj/vdj_preflight",
+)
+
+stage CORRECT_BARCODES(
+    in  fastq[]  read1s,
+    in  fastq[]  read2s,
+    in  int[]    gem_groups,
+    in  json     barcode_counts,
+    in  float    barcode_confidence_threshold,
+    in  string   barcode_whitelist,
+    in  int      initial_reads,
+    in  map      chemistry_def,
+    in  string[] library_types,
+    out tsv[]    corrected_bcs,
+    out json     corrected_barcode_counts,
+    out pickle   chunked_reporter,
+    out json     summary,
+    out h5       barcode_summary,
+    src py       "stages/vdj/correct_barcodes",
+) split (
+    in  fastq    read1_chunk,
+    in  fastq    read2_chunk,
+    in  int      gem_group,
+)
+
+stage SUMMARIZE_VDJ_READ_REPORTS(
+    in  json     extract_reads_summary,
+    in  json     correct_barcodes_summary,
+    in  json     raw_barcode_counts,
+    in  json     corrected_barcode_counts,
+    in  h5       barcode_summary,
+    in  int[]    gem_groups,
+    in  string[] read_groups,
+    in  map      align,
+    in  string[] bam_comments,
+    in  fastq[]  read1s,
+    in  fastq[]  read2s,
+    in  tsv[]    corrected_bcs,
+    in  bool     retain_fastqs,
+    in  json     trim_reads_summary,
+    in  map      chemistry_def,
+    out json     summary,
+    out json     raw_barcode_counts,
+    out json     corrected_barcode_counts,
+    out h5       barcode_summary,
+    out int[]    gem_groups,
+    out string[] read_groups,
+    out map      align,
+    out string[] bam_comments,
+    out fastq[]  read1s,
+    out fastq[]  read2s,
+    out tsv[]    corrected_bcs,
+    src py       "stages/vdj/summarize_read_reports",
+) split (
+    in  fastq    read1,
+    in  fastq    read2,
+    in  tsv      bcs,
+)
+
+stage BUCKET_FASTQ_BY_BC(
+    in  fastq[] read1s,
+    in  fastq[] read2s,
+    in  tsv[]   corrected_bcs,
+    in  int[]   gem_groups,
+    in  json    reads_summary,
+    in  int     readpairs_per_chunk,
+    in  map     chemistry_def,
+    in  map[]   library_info,
+    out map[]   buckets,
+    src py      "stages/vdj/bucket_fastq_by_bc",
+) split (
+    in  fastq   read1s_chunk,
+    in  fastq   read2s_chunk,
+    in  tsv     bcs,
+    in  map     chunks_per_gem_group,
+)
+
+stage GROUP_FASTQ_BY_BC(
+    in  map[]   buckets,
+    in  map     chemistry_def,
+    out lz4[]   read1s,
+    out lz4[]   read2s,
+    out int[]   chunk_gem_groups,
+    out json[]  chunk_barcodes,
+    src py      "stages/vdj/group_fastq_by_bc",
+) split (
+    in  string  bucket_name,
+    in  int     gem_group,
+    in  fastq[] fastqs,
+) using (
+    # Based on highest observed, 1.2 would be enough.
+    mem_gb = 2,
+)
+
+stage ASSEMBLY_PREP(
+    in  lz4[] read1s,
+    in  lz4[] read2s,
+    in  path  vdj_reference_path,
+    out int   n50_n50_rpu,
+    out int   npairs,
+    out bool  is_tcr,
+    out bool  is_bcr,
+    src comp  "vdj_asm_prep martian assembly_prep",
+) split (
+    in  lz4   read1,
+    in  int   nchunks,
+    out map   asm_prep_ch,
+)
+
+stage ASSEMBLE_VDJ(
+    in  map       chemistry_def,
+    in  lz4[]     read1s                    "Per-chunk fastqs",
+    in  lz4[]     read2s                    "Per-chunk fastqs",
+    in  path      vdj_reference_path,
+    in  int       n50_n50_rpu,
+    in  int       npairs,
+    in  int       force_cells,
+    in  bool      is_tcr,
+    in  bool      is_bcr,
+    in  bool      denovo,
+    in  path      inner_enrichment_primers,
+    in  json      extract_reads_summary,
+    out fasta     contig_fasta,
+    out fasta.fai contig_fasta_fai,
+    out fastq     contig_fastq,
+    out fasta     filtered_contig_fasta,
+    out fastq     filtered_contig_fastq,
+    out bam       contig_bam,
+    out bam.bai   contig_bam_bai,
+    out tsv       summary_tsv,
+    out tsv       umi_summary_tsv,
+    out json      summary,
+    out json      metrics_summary_json,
+    out json      cell_barcodes,
+    out json      contig_annotations,
+    out bed       annotations_bed,
+    out csv       barcode_support,
+    out json[]    barcodes_in_chunks,
+    out txt       align_info,
+    out h5        umi_info,
+    src comp      "vdj_asm_asm martian assembly",
+) split (
+    in  lz4       read1,
+    in  bool      perf_track,
+)
+
+stage REPORT_CONTIG_ALIGNMENTS(
+    in  bam      contig_bam,
+    in  json[]   barcodes_in_chunks,
+    in  map      chemistry_def,
+    out pickle   chunked_reporter,
+    out json     summary,
+    src py       "stages/vdj/report_contig_alignments",
+) split (
+    in  string[] contigs,
+)
+
+stage ANNOTATE_CONTIGS(
+    in  path   vdj_reference_path,
+    in  fasta  contigs,
+    in  fastq  contigs_fastq,
+    in  json[] barcodes_in_chunks,
+    in  map[]  primers,
+    in  csv    filter_summary,
+    in  tsv    contig_summary,
+    in  map    min_score_ratios     "dict of min score ratios by feature type to use for filtering annotations",
+    in  map    min_word_sizes       "dict of min word sizes by feature type to use for filtering annotations",
+    in  json   cell_barcodes,
+    out pickle chunked_annotations,
+    out json   annotations          "Annotations for filtered contigs",
+    out json   raw_annotations      "Annotations for all contigs",
+    out bed    annotations_bed      "BED for IGV",
+    out csv    annotations_csv,
+    src py     "stages/vdj/annotate_contigs",
+) split (
+    in  json   barcodes,
+)
+
+stage REPORT_CONTIGS(
+    in  path   vdj_reference_path,
+    in  json   cell_barcodes,
+    in  fasta  contigs,
+    in  json   annotations,
+    in  csv    filter_summary,
+    in  tsv    contig_summary,
+    in  tsv    umi_summary,
+    in  json   reads_summary,
+    in  json   assemble_metrics_summary,
+    out string chain_type,
+    out json   summary,
+    src py     "stages/vdj/report_contigs",
+) split (
+)
+
+stage SUMMARIZE_VDJ_REPORTS(
+    in  string sample_id,
+    in  string sample_desc,
+    in  path   vdj_reference_path,
+    in  string barcode_whitelist,
+    in  int[]  gem_groups,
+    in  json   reads_summary,
+    in  json   trim_reads_summary,
+    in  json   filter_reads_summary,
+    in  json   assemble_vdj_summary,
+    in  json   assemble_vdj_summary2,
+    in  json   report_contigs_summary,
+    in  json   report_contig_alignments_summary,
+    in  json   group_clonotypes_summary,
+    in  json   raw_consensus_summary,
+    in  h5     barcode_summary,
+    in  json   cell_barcodes,
+    in  h5     umi_info,
+    in  csv    clonotype_summary,
+    in  csv    barcode_support,
+    in  string chain_type_auto                   "Detected chain type",
+    out json   metrics_summary_json,
+    out csv    metrics_summary_csv,
+    out html   web_summary,
+    out json   alerts,
+    out h5     barcode_summary,
+    out json   cell_barcodes,
+    out h5     umi_info,
+    out csv    barcode_support,
+    src py     "stages/vdj/summarize_reports",
+) split (
+)
+
+stage TRIM_READS(
+    in  fastq[] read1s,
+    in  fastq[] read2s,
+    in  map[]   primers,
+    in  map     chemistry_def,
+    out fastq[] read1s,
+    out fastq[] read2s,
+    out json    summary,
+    out pickle  chunked_reporter,
+    src py      "stages/vdj/trim_reads",
+) split (
+    in  fastq   read1s_chunk,
+    in  fastq   read2s_chunk,
+)
+
+stage ASSEMBLE_CONSENSUS(
+    in  path      vdj_reference_path,
+    in  map[]     primers,
+    in  string    metric_prefix                "to prefix summary metrics (eg. if you're running for raw and inferred clonotypes)",
+    in  json      annotations_json             "contig annotations",
+    in  json      clonotype_assignments,
+    in  tsv       umi_summary_tsv,
+    in  fastq     contigs_fastq,
+    in  bam       contig_bam,
+    in  map       min_score_ratios             "dict of min score ratios by feature type to use for filtering annotations",
+    in  map       min_word_sizes               "dict of min word sizes by feature type to use for filtering annotations",
+    out pickle    chunked_reporter,
+    out bam[]     chunked_consensus_bams,
+    out bam[]     chunked_concat_ref_bams,
+    out bam       consensus_bam,
+    out bam.bai   consensus_bam_bai,
+    out bam       concat_ref_bam,
+    out bam.bai   concat_ref_bam_bai,
+    out json      consensus_annotations_json,
+    out json      concat_ref_annotations_json,
+    out fasta     consensus_fasta,
+    out fastq     consensus_fastq,
+    out fasta.fai consensus_fasta_fai,
+    out fasta     concat_ref_fasta,
+    out fasta.fai concat_ref_fasta_fai,
+    out csv       consensus_annotations_csv,
+    out json      summary,
+    out csv       clonotypes                   "info about clonotypes",
+    src py        "stages/vdj/assemble_consensus",
+) split (
+    in  string[]  chunk_clonotypes,
+    in  json      chunk_annotations,
+) using (
+    vmem_gb = 15,
+)
+
+stage GROUP_CLONOTYPES(
+    in  path   vdj_reference_path,
+    in  json   cell_barcodes,
+    in  json   annotations,
+    in  bool   use_non_productive               "use non-productive CDR sequences in clonotype definitions",
+    in  bool   use_non_full_len                 "use CDR3s from non-full-length contigs",
+    out json   summary,
+    out json   clonotype_assignments            "info about clonotypes",
+    out json   contig_annotations               "input annotations updated with clonotype assignment info",
+    out csv    contig_annotations_csv           "input annotations updated with clonotype assignment info (CSV)",
+    out pickle contig_annotations_pickle        "input annotations updated with clonotype assignment info (pickle)",
+    out csv    filtered_contig_annotations_csv  "high-confidence contig annotations w/ clonotype info",
+    src py     "stages/vdj/group_clonotypes",
+) split (
+)
+
+#
+# @include "sc_vdj_assembler.mro"
+#
+
+pipeline SC_VDJ_ASSEMBLER(
+    in  map[]     sample_def,
+    in  string    sample_id,
+    in  string    sample_desc,
+    in  string    chemistry_name,
+    in  map       custom_chemistry_def,
+    in  float     barcode_confidence_threshold,
+    in  int       force_cells,
+    in  map[]     primers,
+    in  map       align,
+    in  int       initial_reads,
+    in  float     subsample_rate,
+    in  bool      skip_metrics,
+    in  int       r1_length,
+    in  int       r2_length,
+    in  bool      retain_fastqs,
+    in  path      vdj_reference_path,
+    in  bool      denovo,
+    in  map       min_anno_score_ratios,
+    in  map       min_anno_word_sizes,
+    in  path      inner_enrichment_primers,
+    out json      metrics_summary_json,
+    out csv       metrics_summary_csv,
+    out html      web_summary,
+    out fasta     all_contig_fasta                 "All-contig FASTA (for IGV)"  "all_contig.fasta",
+    out fasta.fai all_contig_fasta_fai             "All-contig FASTA index (for IGV)"  "all_contig.fasta.fai",
+    out fastq     all_contig_fastq                 "All-contig FASTQ"       "all_contig.fastq",
+    out bam       all_contig_bam                   "Read-contig alignments BAM"  "all_contig.bam",
+    out bam.bai   all_contig_bam_bai               "Read-contig alignments BAM index"  "all_contig.bam.bai",
+    out json      all_contig_annotations_json      "Annotations of all contigs (JSON)"  "all_contig_annotations.json",
+    out bed       all_contig_annotations_bed       "Annotations of all contigs (BED)"  "all_contig_annotations.bed",
+    out csv       all_contig_annotations_csv       "Annotations of all contigs (CSV)"  "all_contig_annotations.csv",
+    out fasta     filtered_contig_fasta            "Filtered contig FASTA"  "filtered_contig.fasta",
+    out fastq     filtered_contig_fastq            "Filtered contig FASTQ"  "filtered_contig.fastq",
+    out csv       filtered_contig_annotations_csv  "Annotations of filtered contigs (CSV)"  "filtered_contig_annotations.csv",
+    out json      consensus_annotations_json       "Annotations of consensus sequences (JSON)"  "consensus_annotations.json",
+    out csv       consensus_annotations_csv        "Annotations of consensus sequences (CSV)"  "consensus_annotations.csv",
+    out json      concat_ref_annotations_json      "Annotations of concatenated reference (JSON)"  "concat_ref_annotations.json",
+    out csv       clonotypes                       "Clonotype info",
+    out json      clonotype_assignments            "Assignments of barcodes to clonotypes",
+    out fastq     consensus_fastq                  "Clonotype consensus sequences and qualities"  "consensus.fastq",
+    out fasta     consensus_fasta                  "Clonotype consensus sequences"  "consensus.fasta",
+    out fasta.fai consensus_fasta_fai              "Clonotype consensus sequences index"  "consensus.fasta.fai",
+    out fasta     concat_ref_fasta                 "Clonotype concatenated reference sequences"  "concat_ref.fasta",
+    out fasta.fai concat_ref_fasta_fai             "Clonotype concatenated reference sequences index"  "concat_ref.fasta.fai",
+    out bam       consensus_bam                    "Alignment of contigs to clonotype consensus"  "consensus.bam",
+    out bam.bai   consensus_bam_bai                "Alignment of contigs to clonotype consensus index"  "consensus.bam.bai",
+    out bam       concat_ref_bam                   "Alignment of contigs to concatenated reference"  "concat_ref.bam",
+    out bam.bai   concat_ref_bam_bai               "Alignment of contigs to concatenated reference index"  "concat_ref.bam.bai",
+    out json      cell_barcodes                    "Barcodes that are declared to be targetted cells",
+    out h5        barcode_summary,
+    out json[]    barcodes_in_chunks               "Internal",
+    out fastq[]   read1s                           "Internal",
+    out fastq[]   read2s                           "Internal",
+    out tsv[]     corrected_bcs                    "Internal",
+    out int[]     gem_groups                       "Internal",
+    out string[]  read_groups                      "Internal",
+    out json      barcode_counts                   "Internal",
+    out json      extract_reads_summary            "Internal",
+    out string[]  bam_comments                     "Internal",
+    out map       align                            "Internal",
+    out map[]     fastq_chunks                     "Internal",
+    out map       chemistry_def                    "Internal",
+    out string    barcode_whitelist                "Internal",
+    out tsv       contig_summary                   "Internal",
+    out tsv       umi_summary                      "Internal",
+    out csv       barcode_support                  "Internal",
+    out h5        umi_info                         "Internal",
+    out string    chain_type                       "Internal - Inferred chain type",
+)
+{
+    call VDJ_PREFLIGHT(
+        sample_def               = self.sample_def,
+        chemistry_name           = self.chemistry_name,
+        custom_chemistry_def     = self.custom_chemistry_def,
+        vdj_reference_path       = self.vdj_reference_path,
+        denovo                   = self.denovo,
+        check_executables        = true,
+        force_cells              = self.force_cells,
+        inner_enrichment_primers = self.inner_enrichment_primers,
+    ) using (
+        preflight = true,
+    )
+
+    call VDJ_PREFLIGHT_LOCAL(
+        sample_def               = self.sample_def,
+        chemistry_name           = self.chemistry_name,
+        custom_chemistry_def     = self.custom_chemistry_def,
+        vdj_reference_path       = self.vdj_reference_path,
+        denovo                   = self.denovo,
+        check_executables        = false,
+        force_cells              = self.force_cells,
+        inner_enrichment_primers = self.inner_enrichment_primers,
+    ) using (
+        local     = true,
+        preflight = true,
+    )
+
+    call CHEMISTRY_DETECTOR(
+        sample_id           = self.sample_id,
+        sample_def          = self.sample_def,
+        reference_path      = null,
+        vdj_reference_path  = null,
+        chemistry_name_spec = self.chemistry_name,
+        allowed_chems       = [
+            "SCVDJ_auto",
+            "custom",
+            "SCVDJ",
+            "SCVDJ-R2",
+            "SCVDJ-R1",
+        ],
+        r1_length           = self.r1_length,
+        r2_length           = self.r2_length,
+    )
+
+    call SETUP_CHUNKS(
+        sample_id            = self.sample_id,
+        sample_def           = self.sample_def,
+        chemistry_name       = CHEMISTRY_DETECTOR.chemistry_type,
+        custom_chemistry_def = self.custom_chemistry_def,
+        library_type_filter  = null,
+        default_library_type = "VDJ",
+    ) using (
+        local    = true,
+        volatile = true,
+    )
+
+    call CHUNK_READS(
+        chunks         = SETUP_CHUNKS.chunks,
+        reads_per_file = 3000000,
+    ) using (
+        volatile = true,
+    )
+
+    call EXTRACT_READS(
+        chunks            = CHUNK_READS.out_chunks,
+        chemistry_def     = SETUP_CHUNKS.chemistry_def,
+        barcode_whitelist = SETUP_CHUNKS.barcode_whitelist,
+        reads_per_file    = 3000000,
+        subsample_rate    = self.subsample_rate,
+        initial_reads     = self.initial_reads,
+        primers           = self.primers,
+        align             = self.align,
+        r1_length         = self.r1_length,
+        r2_length         = self.r2_length,
+        skip_metrics      = self.skip_metrics,
+        reference_path    = null,
+        feature_reference = null,
+        augment_fastq     = true,
+        library_info      = SETUP_CHUNKS.library_info,
+    ) using (
+        volatile = true,
+    )
+
+    call CORRECT_BARCODES(
+        read1s                       = EXTRACT_READS.reads,
+        read2s                       = EXTRACT_READS.read2s,
+        gem_groups                   = EXTRACT_READS.gem_groups,
+        barcode_counts               = EXTRACT_READS.barcode_counts,
+        barcode_confidence_threshold = self.barcode_confidence_threshold,
+        barcode_whitelist            = SETUP_CHUNKS.barcode_whitelist,
+        initial_reads                = self.initial_reads,
+        chemistry_def                = SETUP_CHUNKS.chemistry_def,
+        library_types                = EXTRACT_READS.library_types,
+    ) using (
+        volatile = true,
+    )
+
+    call TRIM_READS(
+        read1s        = EXTRACT_READS.reads,
+        read2s        = EXTRACT_READS.read2s,
+        primers       = self.primers,
+        chemistry_def = SETUP_CHUNKS.chemistry_def,
+    ) using (
+        volatile = true,
+    )
+
+    call SUMMARIZE_VDJ_READ_REPORTS(
+        extract_reads_summary    = EXTRACT_READS.summary,
+        correct_barcodes_summary = CORRECT_BARCODES.summary,
+        raw_barcode_counts       = EXTRACT_READS.barcode_counts,
+        corrected_barcode_counts = CORRECT_BARCODES.corrected_barcode_counts,
+        barcode_summary          = CORRECT_BARCODES.barcode_summary,
+        gem_groups               = EXTRACT_READS.gem_groups,
+        read_groups              = EXTRACT_READS.read_groups,
+        align                    = EXTRACT_READS.align,
+        bam_comments             = EXTRACT_READS.bam_comments,
+        read1s                   = EXTRACT_READS.reads,
+        read2s                   = EXTRACT_READS.read2s,
+        corrected_bcs            = CORRECT_BARCODES.corrected_bcs,
+        retain_fastqs            = self.retain_fastqs,
+        trim_reads_summary       = TRIM_READS.summary,
+        chemistry_def            = SETUP_CHUNKS.chemistry_def,
+    ) using (
+        volatile = true,
+    )
+
+    call BUCKET_FASTQ_BY_BC(
+        read1s              = TRIM_READS.read1s,
+        read2s              = TRIM_READS.read2s,
+        corrected_bcs       = CORRECT_BARCODES.corrected_bcs,
+        gem_groups          = SUMMARIZE_VDJ_READ_REPORTS.gem_groups,
+        reads_summary       = SUMMARIZE_VDJ_READ_REPORTS.summary,
+        readpairs_per_chunk = 250000,
+        chemistry_def       = SETUP_CHUNKS.chemistry_def,
+        library_info        = SETUP_CHUNKS.library_info,
+    ) using (
+        volatile = true,
+    )
+
+    call GROUP_FASTQ_BY_BC(
+        buckets       = BUCKET_FASTQ_BY_BC.buckets,
+        chemistry_def = SETUP_CHUNKS.chemistry_def,
+    ) using (
+        volatile = true,
+    )
+
+    call ASSEMBLY_PREP(
+        read1s             = GROUP_FASTQ_BY_BC.read1s,
+        read2s             = GROUP_FASTQ_BY_BC.read2s,
+        vdj_reference_path = self.vdj_reference_path,
+    )
+
+    call ASSEMBLE_VDJ(
+        chemistry_def            = SETUP_CHUNKS.chemistry_def,
+        read1s                   = GROUP_FASTQ_BY_BC.read1s,
+        read2s                   = GROUP_FASTQ_BY_BC.read2s,
+        vdj_reference_path       = self.vdj_reference_path,
+        n50_n50_rpu              = ASSEMBLY_PREP.n50_n50_rpu,
+        npairs                   = ASSEMBLY_PREP.npairs,
+        is_tcr                   = ASSEMBLY_PREP.is_tcr,
+        is_bcr                   = ASSEMBLY_PREP.is_bcr,
+        denovo                   = self.denovo,
+        force_cells              = self.force_cells,
+        inner_enrichment_primers = self.inner_enrichment_primers,
+        extract_reads_summary    = EXTRACT_READS.summary,
+    )
+
+    call REPORT_CONTIG_ALIGNMENTS(
+        contig_bam         = ASSEMBLE_VDJ.contig_bam,
+        barcodes_in_chunks = ASSEMBLE_VDJ.barcodes_in_chunks,
+        chemistry_def      = SETUP_CHUNKS.chemistry_def,
+    ) using (
+        volatile = true,
+    )
+
+    call GROUP_CLONOTYPES(
+        vdj_reference_path = self.vdj_reference_path,
+        cell_barcodes      = ASSEMBLE_VDJ.cell_barcodes,
+        annotations        = ASSEMBLE_VDJ.contig_annotations,
+        use_non_productive = false,
+        use_non_full_len   = false,
+    )
+
+    call ASSEMBLE_CONSENSUS(
+        vdj_reference_path    = self.vdj_reference_path,
+        primers               = self.primers,
+        metric_prefix         = "raw",
+        clonotype_assignments = GROUP_CLONOTYPES.clonotype_assignments,
+        annotations_json      = GROUP_CLONOTYPES.contig_annotations,
+        umi_summary_tsv       = ASSEMBLE_VDJ.umi_summary_tsv,
+        contigs_fastq         = ASSEMBLE_VDJ.contig_fastq,
+        contig_bam            = ASSEMBLE_VDJ.contig_bam,
+        min_score_ratios      = self.min_anno_score_ratios,
+        min_word_sizes        = self.min_anno_word_sizes,
+    )
+
+    call REPORT_CONTIGS(
+        vdj_reference_path       = self.vdj_reference_path,
+        cell_barcodes            = ASSEMBLE_VDJ.cell_barcodes,
+        contigs                  = ASSEMBLE_VDJ.contig_fasta,
+        annotations              = GROUP_CLONOTYPES.contig_annotations,
+        filter_summary           = null,
+        contig_summary           = ASSEMBLE_VDJ.summary_tsv,
+        umi_summary              = ASSEMBLE_VDJ.umi_summary_tsv,
+        assemble_metrics_summary = ASSEMBLE_VDJ.metrics_summary_json,
+        reads_summary            = SUMMARIZE_VDJ_READ_REPORTS.summary,
+    ) using (
+        volatile = true,
+    )
+
+    call SUMMARIZE_VDJ_REPORTS(
+        sample_id                = self.sample_id,
+        sample_desc              = self.sample_desc,
+        vdj_reference_path       = null,
+        barcode_whitelist        = SETUP_CHUNKS.barcode_whitelist,
+        barcode_support          = ASSEMBLE_VDJ.barcode_support,
+        gem_groups               = SUMMARIZE_VDJ_READ_REPORTS.gem_groups,
+        reads_summary            = SUMMARIZE_VDJ_READ_REPORTS.summary,
+        trim_reads_summary       = null,
+        filter_reads_summary     = ASSEMBLE_VDJ.summary,
+        assemble_vdj_summary     = ASSEMBLE_VDJ.summary,
+        assemble_vdj_summary2    = ASSEMBLE_VDJ.metrics_summary_json,
+        report_contigs_summary   = REPORT_CONTIGS.summary,
+        report_contig_alignments_summary = REPORT_CONTIG_ALIGNMENTS.summary,
+        group_clonotypes_summary = GROUP_CLONOTYPES.summary,
+        raw_consensus_summary    = ASSEMBLE_CONSENSUS.summary,
+        barcode_summary          = SUMMARIZE_VDJ_READ_REPORTS.barcode_summary,
+        cell_barcodes            = ASSEMBLE_VDJ.cell_barcodes,
+        umi_info                 = ASSEMBLE_VDJ.umi_info,
+        clonotype_summary        = ASSEMBLE_CONSENSUS.clonotypes,
+        chain_type_auto          = REPORT_CONTIGS.chain_type,
+    )
+
+    return (
+        all_contig_fasta            = ASSEMBLE_VDJ.contig_fasta,
+        all_contig_fasta_fai        = ASSEMBLE_VDJ.contig_fasta_fai,
+        all_contig_fastq            = ASSEMBLE_VDJ.contig_fastq,
+        all_contig_bam              = ASSEMBLE_VDJ.contig_bam,
+        all_contig_bam_bai          = ASSEMBLE_VDJ.contig_bam_bai,
+        all_contig_annotations_json = GROUP_CLONOTYPES.contig_annotations,
+        all_contig_annotations_bed  = ASSEMBLE_VDJ.annotations_bed,
+        all_contig_annotations_csv  = GROUP_CLONOTYPES.contig_annotations_csv,
+        filtered_contig_fasta       = ASSEMBLE_VDJ.filtered_contig_fasta,
+        filtered_contig_fastq       = ASSEMBLE_VDJ.filtered_contig_fastq,
+        filtered_contig_annotations_csv = GROUP_CLONOTYPES.filtered_contig_annotations_csv,
+        consensus_annotations_json  = ASSEMBLE_CONSENSUS.consensus_annotations_json,
+        consensus_annotations_csv   = ASSEMBLE_CONSENSUS.consensus_annotations_csv,
+        concat_ref_annotations_json = ASSEMBLE_CONSENSUS.concat_ref_annotations_json,
+        consensus_fastq             = ASSEMBLE_CONSENSUS.consensus_fastq,
+        clonotypes                  = ASSEMBLE_CONSENSUS.clonotypes,
+        clonotype_assignments       = GROUP_CLONOTYPES.clonotype_assignments,
+        metrics_summary_json        = SUMMARIZE_VDJ_REPORTS.metrics_summary_json,
+        metrics_summary_csv         = SUMMARIZE_VDJ_REPORTS.metrics_summary_csv,
+        web_summary                 = SUMMARIZE_VDJ_REPORTS.web_summary,
+        barcode_summary             = SUMMARIZE_VDJ_REPORTS.barcode_summary,
+        barcodes_in_chunks          = ASSEMBLE_VDJ.barcodes_in_chunks,
+        read1s                      = SUMMARIZE_VDJ_READ_REPORTS.read1s,
+        read2s                      = SUMMARIZE_VDJ_READ_REPORTS.read2s,
+        cell_barcodes               = ASSEMBLE_VDJ.cell_barcodes,
+        corrected_bcs               = SUMMARIZE_VDJ_READ_REPORTS.corrected_bcs,
+        consensus_fasta             = ASSEMBLE_CONSENSUS.consensus_fasta,
+        consensus_fasta_fai         = ASSEMBLE_CONSENSUS.consensus_fasta_fai,
+        concat_ref_fasta            = ASSEMBLE_CONSENSUS.concat_ref_fasta,
+        concat_ref_fasta_fai        = ASSEMBLE_CONSENSUS.concat_ref_fasta_fai,
+        consensus_bam               = ASSEMBLE_CONSENSUS.consensus_bam,
+        consensus_bam_bai           = ASSEMBLE_CONSENSUS.consensus_bam_bai,
+        concat_ref_bam              = ASSEMBLE_CONSENSUS.concat_ref_bam,
+        concat_ref_bam_bai          = ASSEMBLE_CONSENSUS.concat_ref_bam_bai,
+        gem_groups                  = SUMMARIZE_VDJ_READ_REPORTS.gem_groups,
+        read_groups                 = SUMMARIZE_VDJ_READ_REPORTS.read_groups,
+        barcode_counts              = SUMMARIZE_VDJ_READ_REPORTS.raw_barcode_counts,
+        extract_reads_summary       = SUMMARIZE_VDJ_READ_REPORTS.summary,
+        bam_comments                = SUMMARIZE_VDJ_READ_REPORTS.bam_comments,
+        align                       = SUMMARIZE_VDJ_READ_REPORTS.align,
+        fastq_chunks                = SETUP_CHUNKS.chunks,
+        chemistry_def               = SETUP_CHUNKS.chemistry_def,
+        barcode_whitelist           = SETUP_CHUNKS.barcode_whitelist,
+        contig_summary              = ASSEMBLE_VDJ.summary_tsv,
+        umi_summary                 = ASSEMBLE_VDJ.umi_summary_tsv,
+        barcode_support             = SUMMARIZE_VDJ_REPORTS.barcode_support,
+        umi_info                    = SUMMARIZE_VDJ_REPORTS.umi_info,
+        chain_type                  = REPORT_CONTIGS.chain_type,
+    )
+}
+
+#
+# @include "_vloupe_stages.mro"
+#
+
+stage VLOUPE_PREPROCESS(
+    in  string    pipestance_type,
+    in  string    sample_id,
+    in  string    sample_desc,
+    in  bam       concat_ref_bam,
+    in  bam.bai   concat_ref_bam_bai,
+    in  fasta     concat_ref_fasta,
+    in  fasta.fai concat_ref_fasta_fai,
+    in  json      concat_ref_annotations_json,
+    in  csv       clonotypes_csv,
+    in  bam       consensus_bam,
+    in  bam.bai   consensus_bam_bai,
+    in  json      consensus_annotations_json,
+    in  fasta     consensus_fasta,
+    in  fasta.fai consensus_fasta_fai,
+    in  string    contig_bam_relative_path,
+    in  bam.bai   contig_bam_bai,
+    in  json      contig_annotations_json,
+    in  bed       contig_annotations_bed,
+    in  fasta     contig_fasta,
+    in  fasta.fai contig_fasta_fai,
+    in  csv       metrics_csv,
+    out vloupe    output_for_vloupe,
+    src py        "stages/vloupe/vloupe_preprocess",
+) split (
+)
+
+#
+# @include "sc_vdj_assembler_cs.mro"
+#
+
+pipeline SC_VDJ_ASSEMBLER_CS(
+    in  string    sample_id,
+    in  map[]     sample_def,
+    in  string    sample_desc,
+    in  path      vdj_reference_path,
+    in  bool      denovo,
+    in  int       force_cells,
+    in  path      inner_enrichment_primers,
+    out html      web_summary                      "Run summary HTML",
+    out csv       metrics_summary_csv              "Run summary CSV"           "metrics_summary.csv",
+    out csv       clonotypes                       "Clonotype info",
+    out fasta     filtered_contig_fasta            "Filtered contig sequences FASTA"  "filtered_contig.fasta",
+    out fastq     filtered_contig_fastq            "Filtered contig sequences FASTQ"  "filtered_contig.fastq",
+    out csv       filtered_contig_annotations_csv  "Filtered contigs (CSV)"    "filtered_contig_annotations.csv",
+    out fasta     all_contig_fasta                 "All-contig FASTA"          "all_contig.fasta",
+    out fasta.fai all_contig_fasta_fai             "All-contig FASTA index"    "all_contig.fasta.fai",
+    out fastq     all_contig_fastq                 "All-contig FASTQ"          "all_contig.fastq",
+    out bam       all_contig_bam                   "Read-contig alignments"    "all_contig.bam",
+    out bam.bai   all_contig_bam_bai               "Read-contig alignment index"  "all_contig.bam.bai",
+    out json      all_contig_annotations_json      "All contig annotations (JSON)"  "all_contig_annotations.json",
+    out bed       all_contig_annotations_bed       "All contig annotations (BED)"  "all_contig_annotations.bed",
+    out csv       all_contig_annotations_csv       "All contig annotations (CSV)"  "all_contig_annotations.csv",
+    out json      cell_barcodes                    "Barcodes that are declared to be targetted cells",
+    out fasta     consensus_fasta                  "Clonotype consensus FASTA"  "consensus.fasta",
+    out fasta.fai consensus_fasta_fai              "Clonotype consensus FASTA index"  "consensus.fasta.fai",
+    out fastq     consensus_fastq                  "Clonotype consensus FASTQ"  "consensus.fastq",
+    out bam       consensus_bam                    "Contig-consensus alignments"  "consensus.bam",
+    out bam.bai   consensus_bam_bai                "Contig-consensus alignment index"  "consensus.bam.bai",
+    out json      consensus_annotations_json       "Clonotype consensus annotations (JSON)"  "consensus_annotations.json",
+    out csv       consensus_annotations_csv        "Clonotype consensus annotations (CSV)"  "consensus_annotations.csv",
+    out fasta     concat_ref_fasta                 "Concatenated reference sequences"  "concat_ref.fasta",
+    out fasta.fai concat_ref_fasta_fai             "Concatenated reference index"  "concat_ref.fasta.fai",
+    out bam       concat_ref_bam                   "Contig-reference alignments"  "concat_ref.bam",
+    out bam.bai   concat_ref_bam_bai               "Contig-reference alignment index"  "concat_ref.bam.bai",
+    out vloupe    vloupe                           "Loupe V(D)J Browser file"  "vloupe.vloupe",
+)
+{
+    call SC_VDJ_ASSEMBLER(
+        sample_id                    = self.sample_id,
+        sample_def                   = self.sample_def,
+        sample_desc                  = self.sample_desc,
+        chemistry_name               = "SCVDJ_auto",
+        custom_chemistry_def         = null,
+        barcode_confidence_threshold = 0.975,
+        align                        = null,
+        primers                      = [
+            {
+                "name": "P5",
+                "seq": "AATGATACGGCGACCACCGAGATCT",
+            },
+            {
+                "name": "P7",
+                "seq": "CAAGCAGAAGACGGCATACGAGAT",
+            },
+            {
+                "name": "R1",
+                "seq": "ACACTCTTTCCCTACACGACGCTCTTCCGATCT",
+            },
+            {
+                "name": "R2",
+                "seq": "GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT",
+            },
+            {
+                "name": "polyA",
+                "seq": "AAAAAAAAAAAAAAAAAAAA",
+            },
+            {
+                "name": "rt_primer",
+                "seq": "AAGCAGTGGTATCAACGCAGAGTACAT",
+            },
+            {
+                "name": "spacer",
+                "seq": "TTTCTTATATGGG",
+            },
+        ],
+        force_cells                  = self.force_cells,
+        subsample_rate               = 1,
+        initial_reads                = null,
+        vdj_reference_path           = self.vdj_reference_path,
+        denovo                       = self.denovo,
+        skip_metrics                 = false,
+        retain_fastqs                = false,
+        r1_length                    = null,
+        r2_length                    = null,
+        min_anno_score_ratios        = {
+            "5U": 0.7,
+            "C": 0.7,
+            "D": 0.4,
+            "J": 0.65,
+            "V": 0.4,
+        },
+        min_anno_word_sizes          = {
+            "5U": 15,
+            "C": 15,
+            "D": 5,
+            "J": 15,
+            "V": 15,
+        },
+        inner_enrichment_primers     = self.inner_enrichment_primers,
+    )
+
+    call VLOUPE_PREPROCESS(
+        pipestance_type             = "SC_VDJ_ASSEMBLER_CS",
+        sample_id                   = self.sample_id,
+        sample_desc                 = self.sample_desc,
+        concat_ref_bam              = SC_VDJ_ASSEMBLER.concat_ref_bam,
+        concat_ref_bam_bai          = SC_VDJ_ASSEMBLER.concat_ref_bam_bai,
+        concat_ref_fasta            = SC_VDJ_ASSEMBLER.concat_ref_fasta,
+        concat_ref_fasta_fai        = SC_VDJ_ASSEMBLER.concat_ref_fasta_fai,
+        concat_ref_annotations_json = SC_VDJ_ASSEMBLER.concat_ref_annotations_json,
+        clonotypes_csv              = SC_VDJ_ASSEMBLER.clonotypes,
+        consensus_bam               = SC_VDJ_ASSEMBLER.consensus_bam,
+        consensus_bam_bai           = SC_VDJ_ASSEMBLER.consensus_bam_bai,
+        consensus_annotations_json  = SC_VDJ_ASSEMBLER.consensus_annotations_json,
+        consensus_fasta             = SC_VDJ_ASSEMBLER.consensus_fasta,
+        consensus_fasta_fai         = SC_VDJ_ASSEMBLER.consensus_fasta_fai,
+        contig_bam_relative_path    = "./all_contig.bam",
+        contig_bam_bai              = SC_VDJ_ASSEMBLER.all_contig_bam_bai,
+        contig_annotations_json     = SC_VDJ_ASSEMBLER.all_contig_annotations_json,
+        contig_annotations_bed      = SC_VDJ_ASSEMBLER.all_contig_annotations_bed,
+        contig_fasta                = SC_VDJ_ASSEMBLER.all_contig_fasta,
+        contig_fasta_fai            = SC_VDJ_ASSEMBLER.all_contig_fasta_fai,
+        metrics_csv                 = SC_VDJ_ASSEMBLER.metrics_summary_csv,
+    )
+
+    return (
+        web_summary                 = SC_VDJ_ASSEMBLER.web_summary,
+        metrics_summary_csv         = SC_VDJ_ASSEMBLER.metrics_summary_csv,
+        all_contig_fasta            = SC_VDJ_ASSEMBLER.all_contig_fasta,
+        all_contig_fasta_fai        = SC_VDJ_ASSEMBLER.all_contig_fasta_fai,
+        all_contig_fastq            = SC_VDJ_ASSEMBLER.all_contig_fastq,
+        all_contig_annotations_json = SC_VDJ_ASSEMBLER.all_contig_annotations_json,
+        all_contig_annotations_csv  = SC_VDJ_ASSEMBLER.all_contig_annotations_csv,
+        all_contig_annotations_bed  = SC_VDJ_ASSEMBLER.all_contig_annotations_bed,
+        all_contig_bam              = SC_VDJ_ASSEMBLER.all_contig_bam,
+        all_contig_bam_bai          = SC_VDJ_ASSEMBLER.all_contig_bam_bai,
+        filtered_contig_fasta       = SC_VDJ_ASSEMBLER.filtered_contig_fasta,
+        filtered_contig_fastq       = SC_VDJ_ASSEMBLER.filtered_contig_fastq,
+        filtered_contig_annotations_csv = SC_VDJ_ASSEMBLER.filtered_contig_annotations_csv,
+        cell_barcodes               = SC_VDJ_ASSEMBLER.cell_barcodes,
+        consensus_fasta             = SC_VDJ_ASSEMBLER.consensus_fasta,
+        consensus_fasta_fai         = SC_VDJ_ASSEMBLER.consensus_fasta_fai,
+        consensus_fastq             = SC_VDJ_ASSEMBLER.consensus_fastq,
+        concat_ref_fasta            = SC_VDJ_ASSEMBLER.concat_ref_fasta,
+        concat_ref_fasta_fai        = SC_VDJ_ASSEMBLER.concat_ref_fasta_fai,
+        consensus_bam               = SC_VDJ_ASSEMBLER.consensus_bam,
+        consensus_bam_bai           = SC_VDJ_ASSEMBLER.consensus_bam_bai,
+        concat_ref_bam              = SC_VDJ_ASSEMBLER.concat_ref_bam,
+        concat_ref_bam_bai          = SC_VDJ_ASSEMBLER.concat_ref_bam_bai,
+        consensus_annotations_json  = SC_VDJ_ASSEMBLER.consensus_annotations_json,
+        consensus_annotations_csv   = SC_VDJ_ASSEMBLER.consensus_annotations_csv,
+        clonotypes                  = SC_VDJ_ASSEMBLER.clonotypes,
+        vloupe                      = VLOUPE_PREPROCESS.output_for_vloupe,
+    )
+}
+
+#
+# @include "__sc5p_v2_hs_PBMC_1k_b_BCR_CellRanger.mro"
+#
+
+call SC_VDJ_ASSEMBLER_CS(
+    sample_id                = "sc5p_v2_hs_PBMC_1k_b_BCR_CellRanger",
+    sample_def               = [{
+        "fastq_mode": "ILMN_BCL2FASTQ",
+        "gem_group": null,
+        "lanes": null,
+        "read_path": "/WORKDIR/mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Results/fastq",
+        "sample_indices": ["any"],
+        "sample_names": ["sc5p_v2_hs_PBMC_1k_b_BCR"],
+    }],
+    sample_desc              = "",
+    vdj_reference_path       = "/WORKDIR//mnt/beegfs/database/bioinfo/single-cell/TCR_REFERENCES/refdata-cellranger-vdj-GRCh38-alts-ensembl-3.1.0",
+    denovo                   = false,
+    force_cells              = null,
+    inner_enrichment_primers = null,
+)
