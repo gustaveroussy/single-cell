@@ -110,6 +110,7 @@ Alignment_countTable_ADT:
 
 
 Adding_ADT:
+  sample.name.adt : 
   input.rda.ge:
   input.dir.adt:
   author.name:

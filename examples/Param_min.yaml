@@ -26,6 +26,7 @@ Alignment_countTable_ADT:
   tr2g.file.adt : '/mnt/beegfs/userdata/m_aglave/ADT/kallisto_index/project_CITEseq_tr2gs.txt'
 
 Adding_ADT:
+  sample.name.adt : ["0732M_ADT"]
   gene.names: "CD3G,CD4,CTLA4,IL2RA,PDCD1,DPP4,MS4A1,CD24,SDC1,CR2,CD38,CD19"
 
 ############################################ TCR/BCR ############################################

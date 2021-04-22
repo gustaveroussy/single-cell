@@ -66,7 +66,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
 
     ## Loading data
     source.format <- ""
-    if(file.exists(paste0(data.path, "/matrix.mtx.gz"))) { ### Cell Ranger
+    if(file.exists(paste0(data.path, "/matrix.mtx"))) { ### Cell Ranger
       source.format <- "CellRanger"
       scmat <- Seurat::Read10X(data.path)
       if ('Gene Expression' %in% names (scmat)) {
