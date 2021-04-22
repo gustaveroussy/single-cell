@@ -1,0 +1,13 @@
+{
+	"n_targets": 0,
+	"n_bootstraps": 0,
+	"n_processed": 11043775,
+	"n_pseudoaligned": 10520338,
+	"n_unique": 10520338,
+	"p_pseudoaligned": 95.3,
+	"p_unique": 95.3,
+	"kallisto_version": "0.46.2",
+	"index_version": 0,
+	"start_time": "Fri Apr 16 18:52:01 2021",
+	"call": "kallisto bus -i /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/INDEX_ADT/ADT.kidx -o /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Results/sc5p_v2_hs_PBMC_1k_5fb_ADT/KALLISTOBUS -x 10xv2 -t 1 /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Results/fastq/sc5p_v2_hs_PBMC_1k_5fb_ADT_S1_L001_R1_001.fastq.gz /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Results/fastq/sc5p_v2_hs_PBMC_1k_5fb_ADT_S1_L001_R2_001.fastq.gz /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Results/fastq/sc5p_v2_hs_PBMC_1k_5fb_ADT_S1_L002_R1_001.fastq.gz /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Results/fastq/sc5p_v2_hs_PBMC_1k_5fb_ADT_S1_L002_R2_001.fastq.gz"
+}
