@@ -460,7 +460,7 @@ if "Adding_BCR" in STEPS:
     if 'Adding_BCR' in config and 'input.rda' in config['Adding_BCR'] :
         ADD_BCR_INPUT_RDA_GE = config['Adding_BCR']['input.rda']
     elif "Adding_TCR" in STEPS:
-        sys.stderr.write("Note: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_TCR step for Adding_BCR step!\n")
+        sys.stderr.write("Note: No input.rda.ge find in Adding_BCR section of configfile; input.rda.ge will be determine from Adding_TCR step for Adding_BCR step!\n")
         ADD_BCR_INPUT_RDA_GE = [ x + "_TCR.rda" for x in ADD_TCR_OUTPUT]
     elif "Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Adding_BCR section of configfile; input.rda will be determine from Adding_ADT step for Adding_BCR step!\n")
@@ -495,7 +495,7 @@ if "Alignment_annotations_TCR_BCR" in STEPS or "Adding_TCR" in STEPS or "Adding_
 
 if "Cerebro" in STEPS:
     ### Sample/Project
-    if 'Cerebro' in config and 'input.rda.ge' in config['Cerebro'] :
+    if 'Cerebro' in config and 'input.rda' in config['Cerebro'] :
         CEREBRO_INPUT_RDA = config['Cerebro']['input.rda']
     elif "Adding_BCR" in STEPS:
         sys.stderr.write("Note: No input.rda.ge find in Cerebro section of configfile; input.rda.ge will be determine from Adding_BCR_GE step for Cerebro step!\n")

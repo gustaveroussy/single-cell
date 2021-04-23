@@ -42,8 +42,8 @@ rule norm_dimred_ge:
     threads:
         4
     resources:
-        mem_mb = (lambda wildcards, attempt: min(6144 + attempt * 2048, 20480)),
-        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
+        mem_mb = (lambda wildcards, attempt: min(5120 + attempt * 3072, 30720)),
+        time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
     shell:
         """
         singularity exec --no-home {params.sing_bind} \

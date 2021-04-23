@@ -44,7 +44,7 @@ rule clust_markers_annot_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 1024, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 1024, 20480)),
         time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """

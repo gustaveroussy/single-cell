@@ -196,6 +196,7 @@ if(doublets.filter.method == 'none'){
   message("Saving stat...\n")
   sobj@misc$excel$Final_Cells_Quality$nb_genes <- dim(sobj)[1]
   sobj@misc$excel$Final_Cells_Quality$nb_cells <- dim(sobj)[2]
+  sobj@misc$params$doublets$method_filtering ="none"
   save_stat(sobj = sobj, sample.name = sample.name.GE, title = sample.name.GE, out.dir = doublet.kept.dir)
   ### Materials and Methods
   sobj@misc$Materials_and_Methods$part2_Filtering_droplets <- paste0("The count matrix was filtered to exclude genes detected in less than ",min.cells," cells, cells with less than ",min.counts," UMIs or less than ",min.features," detected genes, as well as cells with mitochondrial transcripts proportion higher than ",pcmito.range[2]*100,"%",

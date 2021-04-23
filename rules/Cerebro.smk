@@ -45,8 +45,8 @@ rule cerebro:
         {SINGULARITY_ENV_CEREBRO} \
         Rscript {params.pipeline_folder}/scripts/pipeline_CEREBRO.R \
         --input.rda.ge {params.input_rda} \
-        --author.name {CMA_AUTHOR_NAME} \
-        --author.mail {CMA_AUTHOR_MAIL} \
+        --author.name {CEREBRO_AUTHOR_NAME} \
+        --author.mail {CEREBRO_AUTHOR_MAIL} \
         --nthreads {threads} \
         --pipeline.path {params.pipeline_folder} \
         --version {CEREBRO_VERSION} \
