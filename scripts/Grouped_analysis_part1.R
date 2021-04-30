@@ -127,7 +127,6 @@ if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr 
 
 ## Sourcing functions
 source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
-# source(paste0(pipeline.path, "/scripts/Grouped_analysis_part1_function_added.R"))
 
 ## RUN
 ######

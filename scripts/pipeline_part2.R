@@ -22,6 +22,8 @@ option_list <- list(
   # Doublets
   make_option("--doublets.filter.method", help="Method used to filter doublets (scDblFinder, scds, all). To not filter set the parameter to none."),
   ### Databases
+  ##Metadata
+  make_option("--metadata.file", help="csv file with the metadata to add in the seurat object"),
   # QC
   make_option("--cc.seurat.file", help="RDS file with list of cell cycle genes for seurat"),
   make_option("--cc.cyclone.file", help="RDS file with list of cell cycle genes for cyclone"),
@@ -62,6 +64,8 @@ min.cells <- if (!is.null(args$options$min.cells)) as.numeric(args$options$min.c
 # Doublets
 doublets.filter.method <- args$options$doublets.filter.method
 ### Databases
+## Metadata
+metadata.file <-  if (!is.null(args$options$metadata.file)) unlist(stringr::str_split(args$options$metadata.file, ","))
 ## Gene lists loading
 cc.seurat.file <- args$options$cc.seurat.file
 cc.cyclone.file <- args$options$cc.cyclone.file
@@ -156,6 +160,9 @@ print("###########################################")
 
 ### Creating parallel instance
 cl <- create.parallel.instance(nthreads = nthreads)
+
+### Add metadata
+if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file = metadata.file)
 
 ### Filtering cells
 cat("\nFiltering cells...\n")

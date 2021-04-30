@@ -60,7 +60,7 @@ create.parallel.instance <- function(nthreads = 1) {
 # 4) Remove empty droplets
 # 5) Plotting saturation and Kneeplot
 # 6) Creation of the Seurat object
-load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, translation = FALSE, translation.file = NULL, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE) {
+load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, translation = FALSE, translation.file = NULL, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE, metadata.file = NULL) {
   if (file.exists(data.path) && !is.null(sample.name)) {
     message("Loading data ...")
 
@@ -203,7 +203,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     #return matrix
     if (return.matrix) return(scmat)
 
-    ## Creation of the Seurat object and save parameters
+    ## Creation of the Seurat object
     sobj <- Seurat::CreateSeuratObject(counts = scmat, project = sample.name, assay = assay)
     rm(scmat)
     sobj[[paste0('log_nCount_', assay)]] <- log(sobj[[paste0('nCount_', assay)]])
@@ -2376,6 +2376,31 @@ save_stat <- function(sobj = NULL, sample.names = NULL, title = NULL, out.dir = 
     stat_tot=cbind(stat_tot, stat)
   }
   write.table(stat_tot, file = paste0(out.dir, title, '_stat.txt'), sep = ";", row.names = TRUE, col.names = TRUE, quote = FALSE)
+}
+
+## Add metadata.file information into @meta.data slot of seurat object
+add_metadata_sobj <- function(sobj=NULL, metadata.file = NULL){
+  if (!is.null(metadata.file)){
+    for (i in metadata.file){
+      metadata <-read.table(i, header = TRUE, sep=";")
+      if(any(duplicated(colnames(metadata)))) stop(paste0("There are duplicated column names in your file (",i,")!"))
+      if (!is.null(metadata$barcodes)){
+        if(length(setdiff(rownames(sobj@meta.data),metadata$barcodes)) != 0) stop("Missing barcodes in your metadata file!")
+        rownames(metadata) <- metadata$barcodes
+        metadata <- subset(metadata, select = -barcodes)
+        sobj <- Seurat::AddMetaData(sobj, metadata, col.name = colnames(metadata))
+      } else if (!is.null(metadata$orig.ident)){
+        if(any(duplicated(metadata$orig.ident))) stop(paste0("There are duplicated orig.ident (",paste0(metadata$orig.ident, collapse = ", "),") in metadata.file!"))
+        if(length(setdiff(levels(sobj@meta.data$orig.ident),unique(sort(metadata$orig.ident)))) != 0) stop(paste0("Missing orig.ident in your metadata file! (seurat: ",paste0(levels(sobj@meta.data$orig.ident), collapse = ", "),"; metadata: ",paste0(unique(sort(metadata$orig.ident)), collapse = ", "),")"))
+        df <- data.frame(orig.ident = sobj@meta.data$orig.ident, barcodes = rownames(sobj@meta.data))
+        df <- merge(df, metadata, by ="orig.ident")
+        rownames(df) <- df$barcodes
+        df$barcodes <- NULL
+        sobj <- Seurat::AddMetaData(sobj, df, col.name = colnames(df))
+      } else message("metadata.file doesn't have an orig.ident or barcodes column. metadata not added!")
+    }
+  }
+  return(sobj)
 }
 
 ## Loading TCR data and filter barcode according to sobj

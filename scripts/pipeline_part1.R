@@ -28,6 +28,8 @@ option_list <- list(
   # QC gene
   make_option("--min.cells", help="Include genes expressed in at least this many cells (minimum cells covering)"),
   ### Databases
+  ##Metadata
+  make_option("--metadata.file", help="csv file with the metadata to add in the seurat object"),
   # QC
   make_option("--mt.genes.file", help="RDS file with list of mitochondrial genes"),
   make_option("--crb.genes.file", help="RDS file with list of ribosomal genes"),
@@ -77,6 +79,8 @@ min.counts <- if (!is.null(args$options$min.counts) && (args$options$min.counts 
 # QC gene
 min.cells <- if (!is.null(args$options$min.cells) && (args$options$min.cells != "NULL")) as.numeric(args$options$min.cells)
 ### Databases
+## Metadata
+metadata.file <-  if (!is.null(args$options$metadata.file)) unlist(stringr::str_split(args$options$metadata.file, ","))
 ## Gene lists loading
 mt.genes.file <- args$options$mt.genes.file
 crb.genes.file <- args$options$crb.genes.file
@@ -190,6 +194,9 @@ dir.create(path = unfiltred.dir, recursive = TRUE, showWarnings = FALSE)
 
 ### Loading raw count matrix + Filtering duplicated cell barcodes + Removing empty droplets
 sobj <- load.sc.data(data.path = input.dir.ge, sample.name = sample.name.GE, assay = assay, droplets.limit = droplets.limit, emptydrops.fdr = emptydrops.fdr, emptydrops.retain = emptydrops.retain, translation = translation, translation.file = translation.file, BPPARAM = cl, my.seed = my.seed, out.dir = unfiltred.dir)
+
+### Add metadata
+if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file = metadata.file)
 
 ### Save project parameters
 sobj@misc$params$sample.name.GE <- sample.name.GE

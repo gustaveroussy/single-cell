@@ -23,6 +23,8 @@ option_list <- list(
   make_option("--res.max", help="Number max of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
   make_option("--res.min", help="Number min of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
   make_option("--res.steps", help="Steps for resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  ### Metadata
+  make_option("--metadata.file", help="csv file with the metadata to add in the seurat object"),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
@@ -61,6 +63,8 @@ dims.steps <- if (!is.null(args$options$dims.steps)) as.numeric(args$options$dim
 res.max <- if (!is.null(args$options$res.max)) as.numeric(args$options$res.max)
 res.min <- if (!is.null(args$options$res.min)) as.numeric(args$options$res.min)
 res.steps <- if (!is.null(args$options$res.steps)) as.numeric(args$options$res.steps)
+### Metadata
+metadata.file <-  if (!is.null(args$options$metadata.file)) unlist(stringr::str_split(args$options$metadata.file, ","))
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
@@ -143,6 +147,9 @@ print("###########################################")
 
 ### Creating parallel instance
 cl <- create.parallel.instance(nthreads = nthreads)
+
+### Add metadata
+if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file = metadata.file)
 
 ### Normalization and dimension reduction
 cat("\nNormalization...\n")
