@@ -185,6 +185,14 @@ if(dimred.method == 'pca'){
   if(norm.method == 'SCTransform') paste0(" Person residuals from this regression were used for dimension reduction by Principal Component Analysis (PCA).")
   if(norm.method == 'LogNormalize') paste0(" HVG were scaled and and centered, providing person residuals used for dimension reduction by Principal Component Analysis (PCA).")
 },
+if(dimred.method == 'ica'){
+  if(norm.method == 'SCTransform') paste0(" Person residuals from this regression were used for dimension reduction by Independent Component Analysis (ICA).")
+  if(norm.method == 'LogNormalize') paste0(" HVG were scaled and and centered, providing person residuals used for dimension reduction by Independent Component Analysis (ICA).")
+},
+if(dimred.method == 'mds'){
+  if(norm.method == 'SCTransform') paste0(" Person residuals from this regression were used for dimension reduction by Multidimensional Scaling (MDS).")
+  if(norm.method == 'LogNormalize') paste0(" HVG were scaled and and centered, providing person residuals used for dimension reduction by Multidimensional Scaling (MDS).")
+},
 if(dimred.method == 'scbfa') paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3),
 "The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."
 )

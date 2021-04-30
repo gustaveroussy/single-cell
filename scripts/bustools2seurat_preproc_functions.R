@@ -1685,13 +1685,13 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
 
   ## Restriction to the provided reduction, if requested
   if(remove.other.reductions) {
-    message("Removing other reductions ...")
+    cat("\nRemoving other reductions...\n")
     keep.red <- grep(pattern = umap.name, x = names(sobj@reductions), value = TRUE)
     sobj@reductions <- sobj@reductions[keep.red]
   }
   ## Restriction to the provided ident, if requested
   if(remove.other.idents) {
-    message("Removing other idents ...")
+    cat("\nRemoving other idents...\n")
     idents.idx <- grep(pattern = '\\_res\\.', x = colnames(sobj@meta.data))
     cur.ident.idx <- grep(pattern = paste0("^",ident), x = colnames(sobj@meta.data))
     out.idents <- idents.idx[idents.idx != cur.ident.idx]
@@ -1867,7 +1867,6 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
     sobj$sample <- false_sample
   }
   tryCatch( { 
-    print("Perform Enrichment...")
     sobj <- cerebroApp::getEnrichedPathways(object = sobj)
   },
   error=function(error_message) { message("Error in cerebroApp::getEnrichedPathways function.")} )
@@ -1886,19 +1885,18 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   if (!is.null(sobj@misc$params$analysis_type)) sobj@misc$parameters$analysis_type <- sobj@misc$params$analysis_type
   sobj@misc$parameters$seed <- sobj@misc$params$seed
   if (!is.null(sobj@assays$RNA@misc$params$sobj_creation)) sobj@misc$parameters$sobj_creation <- sobj@assays$RNA@misc$params$sobj_creation[1:5]
-  if (!is.null(sobj@assays$RNA@misc$params$ctrl.genes)) sobj@misc$parameters$ctrl.genes <- list(names = paste0(sobj@assays$RNA@misc$params$ctrl.genes, collapse = ", "),
-                                                                                                min.counts = sobj@assays$RNA@misc$params$ctrl.min.counts)
   if (!is.null(sobj@misc$params$analysis_type) && sobj@misc$params$analysis_type == "Individual analysis"){
-    sobj@misc$parameters$QC <- list(filter.droplets_percentage.mito.min = paste0(sobj@misc$params$QC$pcmito.range[1]*100, " %"),
-                                    filter.droplets_percentage.mito.max = paste0(sobj@misc$params$QC$pcmito.range[2]*100, " %"),
-                                    filter.droplets_percentage.ribo.min = paste0(sobj@misc$params$QC$pcribo.range[1]*100, " %"),
-                                    filter.droplets_percentage.ribo.max = paste0(sobj@misc$params$QC$pcribo.range[2]*100, " %"),
-                                    filter.droplets_features.min = paste0(sobj@misc$params$QC$min.features, " genes"),
-                                    filter.droplets_transcript.min = paste0(sobj@misc$params$QC$min.counts, " UMIs"),
-                                    filter.genes_cell.min = paste0(sobj@misc$params$QC$min.cells, " cells"),
-                                    filter.doublets_method = if (sobj@misc$params$doublets$method_filtering == "all") "scDblFinder, scds" else sobj@misc$params$doublets$method_filtering)
-    sobj@misc$gene_lists$cyclone.cell.cycle.genes <- paste0(sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes, collapse = ", ")
-    sobj@misc$gene_lists$seurat.cell.cycle.genes <- paste0(sobj@misc$params$QC$cell.cycle$seurat.cell.cycle.genes, collapse = ", ")
+    if(!is.null(sobj@misc$params$QC)) sobj@misc$parameters$QC <- list()
+    if(!is.null(sobj@misc$params$QC$pcmito.range[1])) sobj@misc$parameters$QC$filter.droplets_percentage.mito.min <- paste0(sobj@misc$params$QC$pcmito.range[1]*100, " %")
+    if(!is.null(sobj@misc$params$QC$pcmito.range[2])) sobj@misc$parameters$QC$filter.droplets_percentage.mito.max <- paste0(sobj@misc$params$QC$pcmito.range[2]*100, " %")
+    if(!is.null(sobj@misc$params$QC$pcribo.range[1])) sobj@misc$parameters$QC$filter.droplets_percentage.ribo.min <- paste0(sobj@misc$params$QC$pcribo.range[1]*100, " %")
+    if(!is.null(sobj@misc$params$QC$pcribo.range[2])) sobj@misc$parameters$QC$filter.droplets_percentage.ribo.max <- paste0(sobj@misc$params$QC$pcribo.range[2]*100, " %")
+    if(!is.null(sobj@misc$params$QC$min.features)) sobj@misc$parameters$QC$filter.droplets_features.min <- paste0(sobj@misc$params$QC$min.features, " genes")
+    if(!is.null(sobj@misc$params$QC$min.counts)) sobj@misc$parameters$QC$filter.droplets_transcript.min <- paste0(sobj@misc$params$QC$min.counts, " UMIs")
+    if(!is.null(sobj@misc$params$QC$min.cells)) sobj@misc$parameters$QC$filter.genes_cell.min <- paste0(sobj@misc$params$QC$min.cells, " cells")
+    if(!is.null(sobj@misc$params$doublets$method_filtering)) sobj@misc$parameters$QC$filter.doublets_method <- if (sobj@misc$params$doublets$method_filtering == "all") "scDblFinder, scds" else sobj@misc$params$doublets$method_filtering
+    #sobj@misc$gene_lists$cyclone.cell.cycle.genes <- sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes
+    #sobj@misc$gene_lists$seurat.cell.cycle.genes <- sobj@misc$params$QC$cell.cycle$seurat.cell.cycle.genes
   }
   if (!is.null(sobj@assays[[assay]]@misc$params$normalization)){
     sobj@misc$parameters$normalization <- c(list(method = sobj@assays[[assay]]@misc$params$normalization$normalization.method),
@@ -1906,32 +1904,41 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
                                             list(High_Variable_Genes_used = sobj@assays[[assay]]@misc$params$normalization$features.used,
                                                  regressed_variables = paste0(sobj@assays[[assay]]@misc$scaling$vtr, collapse = ", ")))
   }
-  sobj@misc$parameters$reductions <- c(method = sobj@assays[[assay]]@misc$params$reductions$method,
-                                       dims.max = sobj@assays[[assay]]@misc$params$reductions$max.dims,
-                                       regressed_variables = sobj@reductions[[reduction]]@misc$vtr,
-                                       scale_regressed_variables = sobj@reductions[[reduction]]@misc$vtr.scale)
-  sobj@misc$parameters$clustering <- list( method = sobj@misc$params$clustering$method,
-                                           algorithm = sobj@misc$params$clustering$algorithm,
-                                           dimensions = sobj@misc$params$clustering$dimensions,
-                                           resolution = sobj@misc$params$clustering$resolution,
-                                           umap = sobj@misc$params$clustering$umap,
-                                           name = sobj@misc$params$clustering$ident )
-  sobj@misc$parameters$annotation <- list( clustering = sobj@misc$params$annot$ident,
-                                           singleR_references = paste0(sobj@misc$params$annot$singler.setnames, collapse = ", "),
-                                           clustifyr_references = paste0(sobj@misc$params$annot$clustifyr.setnames, collapse = ", "),
-                                           singleR_threshold.minscore = sobj@misc$params$annot$sr.minscore,
-                                           clustifyr_threshold.minscore = sobj@misc$params$annot$cfr.minscore )
-  sobj@misc$parameters$classical_markers <- list( clustering = sobj@misc$params$find.markers.quick$ident,
-                                                  method = sobj@misc$params$find.markers.quick$method,
-                                                  min.pct = sobj@misc$params$find.markers.quick$min.pct,
-                                                  logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
-                                                  adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max )
+  if (!is.null(sobj@assays[[assay]]@misc$params$reductions$method)){
+    sobj@misc$parameters$reductions <- list( method = sobj@assays[[assay]]@misc$params$reductions$method,
+                                             dims.max = sobj@assays[[assay]]@misc$params$reductions$max.dims,
+                                             regressed_variables = sobj@reductions[[reduction]]@misc$vtr,
+                                             scale_regressed_variables = sobj@reductions[[reduction]]@misc$vtr.scale )
+  }
+  if (!is.null(sobj@misc$params$clustering$method)){
+    sobj@misc$parameters$clustering <- list( method = sobj@misc$params$clustering$method,
+                                             algorithm = sobj@misc$params$clustering$algorithm,
+                                             dimensions = sobj@misc$params$clustering$dimensions,
+                                             resolution = sobj@misc$params$clustering$resolution,
+                                             umap = sobj@misc$params$clustering$umap,
+                                             name = sobj@misc$params$clustering$ident )
+  }
+  if (!is.null(sobj@misc$params$annot)){
+    sobj@misc$parameters$annotation <- list( clustering = sobj@misc$params$annot$ident,
+                                             singleR_references = paste0(sobj@misc$params$annot$singler.setnames, collapse = ", "),
+                                             clustifyr_references = paste0(sobj@misc$params$annot$clustifyr.setnames, collapse = ", "),
+                                             singleR_threshold.minscore = sobj@misc$params$annot$sr.minscore,
+                                             clustifyr_threshold.minscore = sobj@misc$params$annot$cfr.minscore )
+  }
+  if (!is.null(sobj@misc$params$find.markers.quick)){
+    sobj@misc$parameters$classical_markers <- list( clustering = sobj@misc$params$find.markers.quick$ident,
+                                                    method = sobj@misc$params$find.markers.quick$method,
+                                                    min.pct = sobj@misc$params$find.markers.quick$min.pct,
+                                                    logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
+                                                    adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max )
+  }
   if(!remove.custom.DE && length(names_misc_DE)>0){
     sobj@misc$parameters$custom_markers <- list( logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
                                                  adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max,
                                                  only_positive_logFC = only_pos_DE )
   }
-  sobj@misc$parameters$cerebro <- list( clusters.colnames = clusters.colnames,
+  if(!is.null(sobj@misc$params$ADT)) sobj@misc$parameters$ADT <- sobj@misc$params$ADT
+  sobj@misc$parameters$cerebro <- list( groups = paste0(groups, collapse = ", "),
                                         remove.other.reductions = remove.other.reductions,
                                         remove.other.idents = remove.other.idents,
                                         remove.mt.genes = remove.mt.genes,
@@ -1940,6 +1947,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
                                         gmt.file = gmt.file )
   sobj@misc$technical_info$R <- sobj@misc$params$sobj_creation$Rsession
   sobj@misc$technical_info$cerebroApp <- utils::packageVersion('cerebroApp')
+  #if (!is.null(sobj@misc$parameters$Materials_and_Methods$packages_references)) sobj@misc$parameters$Materials_and_Methods$References_packages <- sobj@misc$parameters$Materials_and_Methods$packages_references
 
   ## Conversion in cerebro objet
   cat("\nConversion in cerebro objet...\n")
@@ -2141,19 +2149,18 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   if (!is.null(sobj@misc$params$analysis_type)) sobj@misc$parameters$analysis_type <- sobj@misc$params$analysis_type
   sobj@misc$parameters$seed <- sobj@misc$params$seed
   if (!is.null(sobj@assays$RNA@misc$params$sobj_creation)) sobj@misc$parameters$sobj_creation <- sobj@assays$RNA@misc$params$sobj_creation[1:5]
-  if (!is.null(sobj@assays$RNA@misc$params$ctrl.genes)) sobj@misc$parameters$ctrl.genes <- list(names = paste0(sobj@assays$RNA@misc$params$ctrl.genes, collapse = ", "),
-                                                                                                min.counts = sobj@assays$RNA@misc$params$ctrl.min.counts)
   if (!is.null(sobj@misc$params$analysis_type) && sobj@misc$params$analysis_type == "Individual analysis"){
-    sobj@misc$parameters$QC <- list(filter.droplets_percentage.mito.min = paste0(sobj@misc$params$QC$pcmito.range[1]*100, " %"),
-                                    filter.droplets_percentage.mito.max = paste0(sobj@misc$params$QC$pcmito.range[2]*100, " %"),
-                                    filter.droplets_percentage.ribo.min = paste0(sobj@misc$params$QC$pcribo.range[1]*100, " %"),
-                                    filter.droplets_percentage.ribo.max = paste0(sobj@misc$params$QC$pcribo.range[2]*100, " %"),
-                                    filter.droplets_features.min = paste0(sobj@misc$params$QC$min.features, " genes"),
-                                    filter.droplets_transcript.min = paste0(sobj@misc$params$QC$min.counts, " UMIs"),
-                                    filter.genes_cell.min = paste0(sobj@misc$params$QC$min.cells, " cells"),
-                                    filter.doublets_method = if (sobj@misc$params$doublets$method_filtering == "all") "scDblFinder, scds" else sobj@misc$params$doublets$method_filtering)
-    sobj@misc$gene_lists$cyclone.cell.cycle.genes <- sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes
-    sobj@misc$gene_lists$seurat.cell.cycle.genes <- sobj@misc$params$QC$cell.cycle$seurat.cell.cycle.genes
+    if(!is.null(sobj@misc$params$QC)) sobj@misc$parameters$QC <- list()
+    if(!is.null(sobj@misc$params$QC$pcmito.range[1])) sobj@misc$parameters$QC$filter.droplets_percentage.mito.min <- paste0(sobj@misc$params$QC$pcmito.range[1]*100, " %")
+    if(!is.null(sobj@misc$params$QC$pcmito.range[2])) sobj@misc$parameters$QC$filter.droplets_percentage.mito.max <- paste0(sobj@misc$params$QC$pcmito.range[2]*100, " %")
+    if(!is.null(sobj@misc$params$QC$pcribo.range[1])) sobj@misc$parameters$QC$filter.droplets_percentage.ribo.min <- paste0(sobj@misc$params$QC$pcribo.range[1]*100, " %")
+    if(!is.null(sobj@misc$params$QC$pcribo.range[2])) sobj@misc$parameters$QC$filter.droplets_percentage.ribo.max <- paste0(sobj@misc$params$QC$pcribo.range[2]*100, " %")
+    if(!is.null(sobj@misc$params$QC$min.features)) sobj@misc$parameters$QC$filter.droplets_features.min <- paste0(sobj@misc$params$QC$min.features, " genes")
+    if(!is.null(sobj@misc$params$QC$min.counts)) sobj@misc$parameters$QC$filter.droplets_transcript.min <- paste0(sobj@misc$params$QC$min.counts, " UMIs")
+    if(!is.null(sobj@misc$params$QC$min.cells)) sobj@misc$parameters$QC$filter.genes_cell.min <- paste0(sobj@misc$params$QC$min.cells, " cells")
+    if(!is.null(sobj@misc$params$doublets$method_filtering)) sobj@misc$parameters$QC$filter.doublets_method <- if (sobj@misc$params$doublets$method_filtering == "all") "scDblFinder, scds" else sobj@misc$params$doublets$method_filtering
+    #sobj@misc$gene_lists$cyclone.cell.cycle.genes <- sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes
+    #sobj@misc$gene_lists$seurat.cell.cycle.genes <- sobj@misc$params$QC$cell.cycle$seurat.cell.cycle.genes
   }
   if (!is.null(sobj@assays[[assay]]@misc$params$normalization)){
     sobj@misc$parameters$normalization <- c(list(method = sobj@assays[[assay]]@misc$params$normalization$normalization.method),
@@ -2161,31 +2168,40 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
                                             list(High_Variable_Genes_used = sobj@assays[[assay]]@misc$params$normalization$features.used,
                                                  regressed_variables = paste0(sobj@assays[[assay]]@misc$scaling$vtr, collapse = ", ")))
   }
-  sobj@misc$parameters$reductions <- list( method = sobj@assays[[assay]]@misc$params$reductions$method,
+  if (!is.null(sobj@assays[[assay]]@misc$params$reductions$method)){
+    sobj@misc$parameters$reductions <- list( method = sobj@assays[[assay]]@misc$params$reductions$method,
                                        dims.max = sobj@assays[[assay]]@misc$params$reductions$max.dims,
                                        regressed_variables = sobj@reductions[[reduction]]@misc$vtr,
                                        scale_regressed_variables = sobj@reductions[[reduction]]@misc$vtr.scale )
-  sobj@misc$parameters$clustering <- list( method = sobj@misc$params$clustering$method,
+  }
+  if (!is.null(sobj@misc$params$clustering$method)){
+    sobj@misc$parameters$clustering <- list( method = sobj@misc$params$clustering$method,
                                           algorithm = sobj@misc$params$clustering$algorithm,
                                           dimensions = sobj@misc$params$clustering$dimensions,
                                           resolution = sobj@misc$params$clustering$resolution,
                                           umap = sobj@misc$params$clustering$umap,
                                           name = sobj@misc$params$clustering$ident )
-  sobj@misc$parameters$annotation <- list( clustering = sobj@misc$params$annot$ident,
+  }
+  if (!is.null(sobj@misc$params$annot)){
+    sobj@misc$parameters$annotation <- list( clustering = sobj@misc$params$annot$ident,
                                            singleR_references = paste0(sobj@misc$params$annot$singler.setnames, collapse = ", "),
                                            clustifyr_references = paste0(sobj@misc$params$annot$clustifyr.setnames, collapse = ", "),
                                            singleR_threshold.minscore = sobj@misc$params$annot$sr.minscore,
                                            clustifyr_threshold.minscore = sobj@misc$params$annot$cfr.minscore )
-  sobj@misc$parameters$classical_markers <- list( clustering = sobj@misc$params$find.markers.quick$ident,
+  }
+  if (!is.null(sobj@misc$params$find.markers.quick)){
+    sobj@misc$parameters$classical_markers <- list( clustering = sobj@misc$params$find.markers.quick$ident,
                                                   method = sobj@misc$params$find.markers.quick$method,
                                                   min.pct = sobj@misc$params$find.markers.quick$min.pct,
                                                   logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
                                                   adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max )
+  }
   if(!remove.custom.DE && length(names_misc_DE)>0){
     sobj@misc$parameters$custom_markers <- list( logfs.threshold = sobj@misc$params$find.markers.quick$logfc.threshold,
                                                  adj.pval.threshold = sobj@misc$params$find.markers.quick$adjp.p.max,
                                                  only_positive_logFC = only_pos_DE )
   }
+  if(!is.null(sobj@misc$params$ADT)) sobj@misc$parameters$ADT <- sobj@misc$params$ADT
   sobj@misc$parameters$cerebro <- list( groups = paste0(groups, collapse = ", "),
                                         remove.other.reductions = remove.other.reductions,
                                         remove.other.idents = remove.other.idents,
@@ -2195,15 +2211,15 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
                                         gmt.file = gmt.file )
   sobj@misc$technical_info$R <- sobj@misc$params$sobj_creation$Rsession
   sobj@misc$technical_info$cerebroApp <- utils::packageVersion('cerebroApp')
-  if (!is.null(sobj@misc$parameters$Materials_and_Methods$packages_references)) sobj@misc$parameters$Materials_and_Methods$References_packages <- sobj@misc$parameters$Materials_and_Methods$packages_references
-  sobj@misc$parameters$Materials_and_Methods$packages_references <- NULL
+  #if (!is.null(sobj@misc$parameters$Materials_and_Methods$packages_references)) sobj@misc$parameters$Materials_and_Methods$References_packages <- sobj@misc$parameters$Materials_and_Methods$packages_references
 
   ## Restriction to the provided reduction, if requested
-  if(!remove.other.reductions) {
+  if(remove.other.reductions) {
     cat("\nRemoving other reductions ...\n")
     keep.red <- grep(pattern = umap.name, x = names(sobj@reductions), value = TRUE)
     sobj@reductions <- sobj@reductions[keep.red]
   }
+
   ## Restriction to the provided ident, if requested
   if(remove.other.idents) {
     cat("\nRemoving other idents ...\n")
