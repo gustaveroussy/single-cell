@@ -1290,7 +1290,7 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
         mytop.k <- mytop[mytop$cluster == k,]
         if (nrow(mytop.k) > 0) {
           fm.list <- sapply(seq_len(nrow(mytop.k)), function(g) { Seurat::VlnPlot(sobj, assay = assay, features = mytop.k$gene[g]) + Seurat::NoLegend() + ggplot2::ggtitle(mytop.k$gene[g], subtitle = paste0(avg_name, ' = ', format(mytop.k[[avg_name]][g], digits= 3), ' ; adj.p = ', format(mytop.k$p_val_adj[g], digits = 2, scientific = TRUE))) }, simplify = FALSE)
-          png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_cluster', k, '_vln.png'), width = 1800, height = 1000)
+          png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_cluster', k, '_vln.png'), width = 2000, height = 1000)
           print(patchwork::wrap_plots(fm.list) + patchwork::plot_layout(ncol = 5))
           dev.off()
         }
@@ -1302,13 +1302,14 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
   Seurat::Idents(sobj) <- ori.ident
 
   ## Save table
-  write.table(fmark, file = paste0(fmark.dir, '/', sample.name, '_', ident, '_findmarkers_all.txt'), sep = "\t", row.names = FALSE, quote = FALSE)
-
+  df_res=data.frame(genes = fmark$gene, logFC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All", min.pct = min.pct)
+  write.table(df_res,file = paste0(fmark.dir, '/', sample.name, '_', ident, '_findmarkers_all.txt'), sep = "\t",quote = FALSE, row.names = FALSE, col.names = TRUE, dec = ",")
+  
   ## Cleaning
   sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
 
   ## Save results and parameters
-  sobj@misc$find.markers.quick <- fmark
+  sobj@misc$find.markers.quick <- df_res
   sobj@misc$params$find.markers.quick <- list(ident = ident,
                                               method = test.use,
                                               min.pct = min.pct,
