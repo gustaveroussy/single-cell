@@ -33,7 +33,8 @@ rule cerebro:
         sing_bind = cerebro_params_sing,
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
-        SING_CEREBRO_GMT_FILE = os.path.normpath("/WORKDIR/" + CEREBRO_GMT_FILE) if CEREBRO_GMT_FILE != "NULL" else "NULL"
+        SING_CEREBRO_GMT_FILE = os.path.normpath("/WORKDIR/" + CEREBRO_GMT_FILE) if CEREBRO_GMT_FILE != "NULL" else "NULL",
+        SING_CEREBRO_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CEREBRO_MMETADATA_FILE.split(',')]) if CEREBRO_METADATA_FILE != "NULL" else "NULL"
     threads:
         1
     resources:
@@ -58,5 +59,6 @@ rule cerebro:
         --remove.str.genes {CEREBRO_REMOVE_STR} \
         --only.pos.DE {CEREBRO_ONLY_POS_DE} \
         --remove.custom.DE {CEREBRO_REMOVE_CUSTOM_DE} \
-        --gmt.file {params.SING_CEREBRO_GMT_FILE}
+        --gmt.file {params.SING_CEREBRO_GMT_FILE} \
+        --metadata.file {params.SING_CEREBRO_METADATA_FILE}
         """

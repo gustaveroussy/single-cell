@@ -40,7 +40,8 @@ rule clust_markers_annot_ge:
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         output_folder = os.path.normpath("/WORKDIR/" + "{output_clust_markers_annot_dir_ge}") + "/",
-        SING_CMA_MARKFILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_MARKFILE.split(',')]) if CMA_MARKFILE != "NULL" else "NULL"
+        SING_CMA_MARKFILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_MARKFILE.split(',')]) if CMA_MARKFILE != "NULL" else "NULL",
+        SING_CMA_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_METADATA_FILE.split(',')]) if CMA_METADATA_FILE != "NULL" else "NULL"
     threads:
         1
     resources:
@@ -61,5 +62,6 @@ rule clust_markers_annot_ge:
         --keep.dims {CMA_KEEP_DIM} \
         --keep.res {CMA_KEEP_RES} \
         --cfr.minscore {CMA_CFR_MINSCORE} \
-        --sr.minscore {CMA_SR_MINSCORE}
+        --sr.minscore {CMA_SR_MINSCORE} \
+        --metadata.file {params.SING_CMA_METADATA_FILE}
         """

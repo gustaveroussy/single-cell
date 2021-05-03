@@ -44,7 +44,8 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
             output_folder = os.path.normpath("/WORKDIR/" + "{output_filtering_dir_ge}") + "/",
             SING_FILERING_CC_SEURAT_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_SEURAT_FILE) if FILERING_CC_SEURAT_FILE != "NULL" else "NULL",
-            SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL"
+            SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL",
+            SING_FILERING_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in FILERING_METADATA_FILE.split(',')]) if FILERING_METADATA_FILE != "NULL" else "NULL"
         threads:
             4
         resources:
@@ -70,7 +71,8 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             --min.cells {FILERING_MIN_CELLS} \
             --doublets.filter.method {FILERING_DOUBLET_FILTER_METHOD} \
             --cc.seurat.file {params.SING_FILERING_CC_SEURAT_FILE} \
-            --cc.cyclone.file {params.SING_FILERING_CC_CYCLONE_FILE}
+            --cc.cyclone.file {params.SING_FILERING_CC_CYCLONE_FILE} \
+            --metadata.file {params.SING_FILERING_METADATA_FILE}
             """
 
 """
@@ -91,7 +93,8 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
             output_folder = os.path.normpath("/WORKDIR/" + "{output_filtering_dir_ge}") + "/",
             SING_FILERING_CC_SEURAT_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_SEURAT_FILE) if FILERING_CC_SEURAT_FILE != "NULL" else "NULL",
-            SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL"
+            SING_FILERING_CC_CYCLONE_FILE = os.path.normpath("/WORKDIR/" + FILERING_CC_CYCLONE_FILE) if FILERING_CC_CYCLONE_FILE != "NULL" else "NULL",
+            SING_FILERING_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in FILERING_METADATA_FILE.split(',')]) if FILERING_METADATA_FILE != "NULL" else "NULL"
         threads:
             4
         resources:
@@ -117,5 +120,6 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             --min.cells {FILERING_MIN_CELLS} \
             --doublets.filter.method {FILERING_DOUBLET_FILTER_METHOD} \
             --cc.seurat.file {params.SING_FILERING_CC_SEURAT_FILE} \
-            --cc.cyclone.file {params.SING_FILERING_CC_CYCLONE_FILE}
+            --cc.cyclone.file {params.SING_FILERING_CC_CYCLONE_FILE} \
+            --metadata.file {params.SING_FILERING_METADATA_FILE}
             """

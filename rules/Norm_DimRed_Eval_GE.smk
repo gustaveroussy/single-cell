@@ -38,7 +38,8 @@ rule norm_dimred_ge:
         sing_bind = norm_dimred_params_sing,
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
-        output_folder = os.path.normpath("/WORKDIR/" + "{output_norm_dimred_dir_ge}") + "/"
+        output_folder = os.path.normpath("/WORKDIR/" + "{output_norm_dimred_dir_ge}") + "/",
+        SING_NDRE_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in NDRE_METADATA_FILE.split(',')]) if NDRE_METADATA_FILE != "NULL" else "NULL"
     threads:
         4
     resources:
@@ -66,5 +67,6 @@ rule norm_dimred_ge:
         --dims.steps {NDRE_DIM_STEPS} \
         --res.max {NDRE_RES_MAX} \
         --res.min {NDRE_RES_MIN} \
-        --res.steps {NDRE_RES_STEPS}
+        --res.steps {NDRE_RES_STEPS} \
+        --metadata.file {params.SING_NDRE_METADATA_FILE}
         """

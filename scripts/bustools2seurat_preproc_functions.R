@@ -1302,7 +1302,7 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
   Seurat::Idents(sobj) <- ori.ident
 
   ## Save table
-  df_res=data.frame(genes = fmark$gene, logFC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All", min.pct = min.pct)
+  df_res=data.frame(genes = fmark$gene, log2FC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All", min.pct = min.pct)
   write.table(df_res,file = paste0(fmark.dir, '/', sample.name, '_', ident, '_findmarkers_all.txt'), sep = "\t",quote = FALSE, row.names = FALSE, col.names = TRUE, dec = ",")
   
   ## Cleaning
@@ -2237,53 +2237,44 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   message("Cerebro file done!")
 }
 
-
 ## Computing correlations between two assays with corresponding features (ex: RNA and ADT)
 ### assay features must be in the same order !
-feature.cor <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.features = NULL, assay2.features = NULL, slot = 'data', cor.method = 'spearman', zero.filter = TRUE, gene.names = NULL) {
-  #selecting cells with no zero expression
-  cell.idx.list <- sapply(
-    seq_along(gene.names),
-    function(k) {
-      if (zero.filter) zerocells.get(sobj = sobj, assay1 = assay1, assay2 = assay2, assay1.feature = assay1.features[k], assay2.feature = assay2.features[k], slot = slot) else rep(TRUE, ncol(sobj@assays[[assay1]]))
-    },
-    simplify = FALSE
-  )
+feature.cor <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.features = NULL, assay2.features = NULL, slot = 'data', cor.method = 'spearman', zero.filter = TRUE, gene.names = NULL, min.cutoff = NULL, max.cutoff = NULL) {
+  #max and min assay2 cutoff
+  if(is.null(min.cutoff)) min.cutoff = rep(0,length(gene.names))
+  if(is.null(max.cutoff)) max.cutoff = rep("q100",length(gene.names))
+  min.cutoff <- as.numeric(stringr::str_replace_all(min.cutoff, "q", ""))/100
+  max.cutoff <- as.numeric(stringr::str_replace_all(max.cutoff, "q", ""))/100
+  #selecting cells with no zero expression in assay1 and assay2 for each corresponding feature
+  cell.idx.list <- sapply(seq_along(gene.names),function(k) {
+                      if (zero.filter) zerocells.get(sobj = sobj, assay1 = assay1, assay2 = assay2, assay1.feature = assay1.features[k], assay2.feature = assay2.features[k], slot = slot) else rep(TRUE, ncol(sobj@assays[[assay1]]))
+                   }, simplify = FALSE)
   #correlation
-  corvec <- vapply(
-    seq_along(gene.names),
-    function(k) {
-      cell.idx <- cell.idx.list[[k]]
-      if(length(which(cell.idx)) < 2) return(NA) # must to get at least 2 cells with RNA and protein expressions to compute correlation
-      return(
-        tryCatch({
-          cor.test(slot(sobj@assays[[assay1]], slot)[rownames(slot(sobj@assays[[assay1]], slot)) == assay1.features[k],cell.idx],
-                   slot(sobj@assays[[assay2]], slot)[rownames(slot(sobj@assays[[assay2]], slot)) == assay2.features[k],cell.idx],
-                   method = cor.method)$estimate
-          }, error=function(cond) {
-             return(NA)
-          })
-      )
-    },
-    .1)
-  out.df <- if (zero.filter) {
-    data.frame(vapply(cell.idx.list, function(x) { length(which(x)) }, 1L),  corvec, stringsAsFactors = FALSE)
-  } else {
-    data.frame(corvec, stringsAsFactors = FALSE)
-  }
-  colnames(out.df) <- if (zero.filter) {
-    c(paste(c(slot, 'non0'), collapse = '_'), paste(c('cor', slot, cor.method, '0filt'), collapse = '_'))
-  } else {
-    c(paste(c('cor', slot, cor.method), collapse = '_'))
-  }
-  return(out.df)
-  # if (zero.filter) {
-  #   out.df <- data.frame(vapply(cell.idx.list, function(x) { length(which(x)) }, 1L),  corvec, stringsAsFactors = FALSE)
-  #   colnames(out.df) <- c(paste(c('cor', slot, 'non0'), collapse = '_'), paste(c('cor', slot, cor.method, '0filt'), collapse = '_'))
-  # } else {
-  #   out.df <-data.frame(corvec, stringsAsFactors = FALSE)
-  #   colnames(out.df) <- c(paste(c('cor', slot, cor.method, '0filt'), collapse = '_'))
-  # }
+  res_cor <- t(sapply(seq_along(gene.names), function(k) {
+    cell.idx <- cell.idx.list[[k]]
+    if(length(which(cell.idx)) < 2) return(NA) # must to get at least 2 cells with RNA and protein expressions to compute correlation
+    tryCatch({
+      library(dplyr)
+      data_ADT <- slot(sobj@assays[[assay2]], slot)[rownames(slot(sobj@assays[[assay2]], slot)) == assay2.features[k],cell.idx]
+      data_ADT <- data_ADT[data_ADT >= quantile(data_ADT, min.cutoff[k]) & data_ADT <= quantile(data_ADT, max.cutoff[k])]
+      data_RNA <- slot(sobj@assays[[assay1]], slot)[rownames(slot(sobj@assays[[assay1]], slot)) == assay1.features[k],names(data_ADT)]
+      res <- cor.test(data_RNA, data_ADT, method = cor.method, exact = FALSE)
+      res_pval <- as.numeric(format(res$p.value, scientific=TRUE, digits=3))
+      res_cor <- as.numeric(format(res$estimate, scientific=FALSE, digits=3))
+      res_cor_filter <- if(!is.na(res_pval) && res_pval<0.05) res_cor else NA
+      return(c(res_cor,res_pval,res_cor_filter))
+    }, error = function(cond) {
+      return(c(NA,NA,NA))
+    })
+  }))
+  #add the number of cells and colnames
+  res_cor <- data.frame(vapply(cell.idx.list, function(x) { length(which(x)) }, 1L),  res_cor, stringsAsFactors = FALSE)
+  colnames(res_cor) <- c("nb_cells","cor","pval","significant_cor")
+
+  if(zero.filter) colnames(res_cor) <- paste0(colnames(res_cor), "_0filter")
+  if(any(min.cutoff != 0)) colnames(res_cor) <- paste0(colnames(res_cor), "_qmin")
+  if(any(max.cutoff != 1)) colnames(res_cor) <- paste0(colnames(res_cor), "_qmax")
+  return(res_cor)
 }
 
 ## Make FeaturePlot for a list of genes with exception capture
@@ -2410,7 +2401,7 @@ load.sc.tcr.bcr <- function(x=1, sobj=NULL, vdj.input.file, sample.name=NULL){
   df$barcode <- gsub(pattern = '-1', replacement = '', x = df$barcode)
   if (!is.null(sample.name)) df$barcode=paste0(sample.name[x],"_", df$barcode)
   df <- df[df$barcode %in% colnames(sobj),]
-  if (!is.null(sample.name)) df$barcode=gsub(pattern =paste0(sample.name[x],"_"), replacement = '', x = df$barcode)
+  if (!is.null(sample.name)) df$barcode=gsub(pattern = paste0(sample.name[x],"_"), replacement = '', x = df$barcode)
   return(df)
 }
 

@@ -209,6 +209,8 @@ if "Droplets_QC_GE" in STEPS:
     # QC gene
     QC_MIN_CELLS = config['Droplets_QC_GE']['min.cells'] if ('Droplets_QC_GE' in config and 'min.cells' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['min.cells'] != None) else "NULL"
     ### Databases
+    # Metadata file
+    QC_METADATA_FILE = config['Droplets_QC_GE']['metadata.file'].replace(", ", ",") if ('Droplets_QC_GE' in config and 'metadata.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['metadata.file'] != None) else "NULL"
     # QC
     QC_MT_FILE = config['Droplets_QC_GE']['mt.genes.file'] if ('Droplets_QC_GE' in config and 'mt.genes.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['mt.genes.file'] != None) else "NULL"
     QC_RB_FILE = config['Droplets_QC_GE']['crb.genes.file'] if ('Droplets_QC_GE' in config and 'crb.genes.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['crb.genes.file'] != None) else "NULL"
@@ -264,6 +266,8 @@ if "Filtering_GE" in STEPS:
     # Doublets
     FILERING_DOUBLET_FILTER_METHOD= config['Filtering_GE']['doublets.filter.method'] if ('Filtering_GE' in config and 'doublets.filter.method' in config['Filtering_GE'] and config['Filtering_GE']['doublets.filter.method'] != None) else "NULL"
     ### Databases
+    # Metadata file
+    FILERING_METADATA_FILE = config['Filtering_GE']['metadata.file'].replace(", ", ",") if ('Filtering_GE' in config and 'metadata.file' in config['Filtering_GE'] and config['Filtering_GE']['metadata.file'] != None) else "NULL"
     # QC
     FILERING_CC_SEURAT_FILE = config['Filtering_GE']['cc.seurat.file'] if ('Filtering_GE' in config and 'cc.seurat.file' in config['Filtering_GE'] and config['Filtering_GE']['cc.seurat.file'] != None) else "NULL"
     FILERING_CC_CYCLONE_FILE = config['Filtering_GE']['cc.cyclone.file'] if ('Filtering_GE' in config and 'cc.cyclone.file' in config['Filtering_GE'] and config['Filtering_GE']['cc.cyclone.file'] != None) else "NULL"
@@ -319,6 +323,8 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     NDRE_RES_MAX = config['Norm_DimRed_Eval_GE']['res.max'] if ('Norm_DimRed_Eval_GE' in config and 'res.max' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['res.max'] != None) else 1.2
     NDRE_RES_MIN = config['Norm_DimRed_Eval_GE']['res.min'] if ('Norm_DimRed_Eval_GE' in config and 'res.min' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['res.min'] != None) else 0.1
     NDRE_RES_STEPS = config['Norm_DimRed_Eval_GE']['res.steps'] if ('Norm_DimRed_Eval_GE' in config and 'res.steps' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['res.steps'] != None) else 0.1
+    # Metadata file
+    NDRE_METADATA_FILE = config['Norm_DimRed_Eval_GE']['metadata.file'].replace(", ", ",") if ('Norm_DimRed_Eval_GE' in config and 'metadata.file' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['metadata.file'] != None) else "NULL"
     ### Snakefile parameters
     #Correspondance sample/input/output
     dic_NDRE_INFO = {}
@@ -364,6 +370,8 @@ if "Clust_Markers_Annot_GE" in STEPS:
     CMA_KEEP_RES = config['Clust_Markers_Annot_GE']['keep.res'] if ('Clust_Markers_Annot_GE' in config and 'keep.res' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['keep.res'] != None) else "NULL"
     CMA_CFR_MINSCORE = config['Clust_Markers_Annot_GE']['cfr.minscore'] if ('Clust_Markers_Annot_GE' in config and 'cfr.minscore' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['cfr.minscore'] != None) else "NULL"
     CMA_SR_MINSCORE = config['Clust_Markers_Annot_GE']['sr.minscore'] if ('Clust_Markers_Annot_GE' in config and 'sr.minscore' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['sr.minscore'] != None) else "NULL"
+    # Metadata file
+    CMA_METADATA_FILE = config['Clust_Markers_Annot_GE']['metadata.file'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'metadata.file' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['metadata.file'] != None) else "NULL"
     ### Snakefile parameters
     #check end paths (add "/" if necessary)
     for i in range(0,len(CMA_OUTPUT_DIR_GE),1):
@@ -525,6 +533,8 @@ if "Cerebro" in STEPS:
     CEREBRO_ONLY_POS_DE = config['Cerebro']['only.pos.DE'] if ('Cerebro' in config and 'only.pos.DE' in config['Cerebro'] and config['Cerebro']['only.pos.DE'] != None) else "NULL"
     CEREBRO_REMOVE_CUSTOM_DE = config['Cerebro']['remove.custom.DE'] if ('Cerebro' in config and 'remove.custom.DE' in config['Cerebro'] and config['Cerebro']['remove.custom.DE'] != None) else "NULL"
     CEREBRO_GMT_FILE = config['Cerebro']['gmt.file'] if ('Cerebro' in config and 'gmt.file' in config['Cerebro'] and config['Cerebro']['gmt.file'] != None) else "NULL"
+    # Metadata file
+    CEREBRO_METADATA_FILE = config['Cerebro']['metadata.file'].replace(", ", ",") if ('Cerebro' in config and 'metadata.file' in config['Cerebro'] and config['Cerebro']['metadata.file'] != None) else "NULL"
     ### Snakefile parameters
     #Creation output complement + extention:
     CEREBRO_COMPLEMENT = ""

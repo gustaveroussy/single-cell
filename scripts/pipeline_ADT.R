@@ -172,23 +172,25 @@ sobj <- Seurat::NormalizeData(sobj, assay = 'ADT', normalization.method = norm.m
 ### Computing correlations
 cat("\nComputing correlations...\n")
 cor.df <- data.frame(RNA_feature = gene.names, ADT_feature = rownames(sobj@assays[['ADT']]@counts), stringsAsFactors = FALSE)
-suppressWarnings(cor.unfiltered <- feature.cor(sobj = sobj, assay1 = assay, assay2 = 'ADT', assay1.features = gene.names, assay2.features = rownames(sobj@assays[['ADT']]@counts), slot = slot, cor.method = cor.method, zero.filter = FALSE, gene.names = gene.names))
-suppressWarnings(cor.filtered <- feature.cor(sobj = sobj, assay1 = assay, assay2 = 'ADT', assay1.features = gene.names, assay2.features = rownames(sobj@assays[['ADT']]@counts), slot = slot, cor.method = cor.method, zero.filter = TRUE, gene.names = gene.names))
-cor.df <- cbind(cor.df, cor.unfiltered, cor.filtered)
+cor.unfiltered <- feature.cor(sobj = sobj, assay1 = assay, assay2 = 'ADT', assay1.features = gene.names, assay2.features = rownames(sobj@assays[['ADT']]@counts), slot = slot, cor.method = cor.method, zero.filter = FALSE, gene.names = gene.names, min.cutoff = NULL, max.cutoff = NULL)
+cor.filtered <- feature.cor(sobj = sobj, assay1 = assay, assay2 = 'ADT', assay1.features = gene.names, assay2.features = rownames(sobj@assays[['ADT']]@counts), slot = slot, cor.method = cor.method, zero.filter = TRUE, gene.names = gene.names, min.cutoff = NULL, max.cutoff = NULL)
+cor.quantile <- feature.cor(sobj = sobj, assay1 = assay, assay2 = 'ADT', assay1.features = gene.names, assay2.features = rownames(sobj@assays[['ADT']]@counts), slot = slot, cor.method = cor.method, zero.filter = FALSE, gene.names = gene.names, min.cutoff = ADT.min.cutoff, max.cutoff = ADT.max.cutoff)
+cor.df <- cbind(cor.df, cor.unfiltered, cor.filtered,cor.quantile)
 sobj@assays[['ADT']]@misc$cor <- cor.df
+write.table(cor.df, file = paste0(output_path_ADT,'/ADT_correlations.csv'),sep = ";", row.names = FALSE, quote = FALSE)
 rm(cor.df,cor.unfiltered,cor.filtered)
 
 ### Co-plot gene expression and ADT protein level
 cat("\nCo-plot gene expression and ADT protein level...\n")
 #### withtout customized cutoff
-RNA_data_plot <- feature_plots(sobj, assay = assay, features = gene.names, slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(gene.names)), max.cutoff = rep("q95",length(gene.names)))
-ADT_data_plot <- feature_plots(sobj, assay = 'ADT', features = rownames(sobj@assays[['ADT']]@counts), slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(rownames(sobj@assays[['ADT']]@counts))), max.cutoff = rep("q95",length(rownames(sobj@assays[['ADT']]@counts))))
+RNA_data_plot <- feature_plots(sobj, assay = assay, features = gene.names, slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(gene.names)), max.cutoff = rep("q100",length(gene.names)))
+ADT_data_plot <- feature_plots(sobj, assay = 'ADT', features = rownames(sobj@assays[['ADT']]@counts), slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(rownames(sobj@assays[['ADT']]@counts))), max.cutoff = rep("q100",length(rownames(sobj@assays[['ADT']]@counts))))
 png(paste0(output_path_ADT,'/ADT_dimplot.png'), width = 1200, height = 600 * length(gene.names))
 wrap_elements(RNA_data_plot) + wrap_elements(ADT_data_plot)
 dev.off()
 #### with customized cutoff
 cat("\nCo-plot gene expression and ADT protein level with customized cutoff...\n")
-RNA_data_plot <- feature_plots(sobj, assay = assay, features = gene.names, slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(gene.names)), max.cutoff = rep("q95",length(gene.names)))
+RNA_data_plot <- feature_plots(sobj, assay = assay, features = gene.names, slot = slot, reduction = RNA.reduction, min.cutoff = rep(0,length(gene.names)), max.cutoff = rep("q100",length(gene.names)))
 ADT_data_plot <- feature_plots(sobj, assay = 'ADT', features = rownames(sobj@assays[['ADT']]@counts), slot = slot, reduction = RNA.reduction, min.cutoff = ADT.min.cutoff, max.cutoff = ADT.max.cutoff)
 png(paste0(output_path_ADT,'/ADT_dimplot_legend_cutoff.png'), width = 1200, height = 600 * length(gene.names))
 wrap_elements(RNA_data_plot) + wrap_elements(ADT_data_plot)
