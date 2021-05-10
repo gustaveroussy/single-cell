@@ -11,6 +11,8 @@ option_list <- list(
   make_option("--nthreads", help="Number of threads to use"),
   make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),
   ### Analysis Parameters
+  # Metadata
+  make_option("--metadata.file", help="csv file with the metadata to add in the seurat objects"),
   # Clustering
   make_option("--keep.dims", help="Number of dimension to keep for clustering (from 0 to keep.dims)"),
   make_option("--keep.res", help="Resolution value for clustering"),
@@ -44,6 +46,8 @@ author.mail <- args$options$author.mail
 nthreads <-  if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
 ### Analysis Parameters
+# Metadata
+metadata.file <- unlist(stringr::str_split(args$options$metadata.file, ","))
 # Clustering
 keep.dims <- if (!is.null(args$options$keep.dims)) as.numeric(args$options$keep.dims)
 keep.res <- if (!is.null(args$options$keep.res)) as.numeric(args$options$keep.res)
@@ -87,7 +91,7 @@ if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params
 
 #### Get Missing Paramaters ####
 ### Project
-sample.name.grp <- sobj@misc$params$sample.name.grp
+name.grp <- sobj@misc$params$name.grp
 species <- sobj@misc$params$species
 ### Computational Parameters
 if (is.null(nthreads)) nthreads <- 4
@@ -96,6 +100,7 @@ if (is.null(nthreads)) nthreads <- 4
 norm.method <- sobj@misc$params$normalization$normalization.method
 assay <- if(norm.method == 'SCTransform') 'SCT' else 'RNA'
 norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL), collapse = '_')
+if(isTRUE(sobj@misc$params$group$keep.norm)) norm_vtr <- "NORMKEPT"
 dimred.method <- sobj@assays[[assay]]@misc$params$reductions$method
 red.name <- paste0(assay, "_", dimred.method)
 dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[red.name]]@misc$vtr[1])) paste(sobj@reductions[[red.name]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
@@ -141,7 +146,7 @@ if (is.null(markfile)){
 source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 print("#####################################")
-print(paste0("Sample: ", sample.name.grp))
+print(paste0("Sample: ", name.grp))
 print(paste0("RDA file: ", input.rda.grp))
 print(paste0("Dimension: ", keep.dims))
 print(paste0("Resolution: ", keep.res))
@@ -156,9 +161,12 @@ cl <- create.parallel.instance(nthreads = nthreads)
 ### load data
 load(input.rda.grp)
 
+### Add metadata
+if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj = sobj, metadata.file = metadata.file)
+
 ### Building clustered output directory
 clust.dir <- paste(output.dir.grp, paste0("dims", keep.dims, "_res", keep.res), sep = '/')
-dir.create(path = clust.dir, recursive = TRUE, showWarnings = TRUE)
+dir.create(path = clust.dir, recursive = TRUE, showWarnings = FALSE)
 
 ### Replotting final clusters
 sobj <- louvain.cluster(sobj = sobj, reduction = red.name, max.dim = keep.dims, resolution = keep.res, out.dir = clust.dir, solo.pt.size = solo.pt.size, algorithm = 1)
@@ -168,11 +176,11 @@ ident.name <- paste0(paste0(assay, "_", dimred.method, ".", keep.dims), '_res.',
 
 ### uMAP plot by sample
 blockpix = 600
-png(filename = paste0(clust.dir, '/', paste(c(sample.name.grp, assay, dimred.method, 'uMAP.png'), collapse = '_')), width = 1000, height = 1000)
+png(filename = paste0(clust.dir, '/', paste(c(name.grp, assay, dimred.method, 'uMAP.png'), collapse = '_')), width = 1000, height = 1000)
 print(Seurat::DimPlot(object = sobj, reduction = paste(c(assay, dimred.method, keep.dims, 'umap'), collapse = '_'), order = sample(x = 1:ncol(sobj), size = ncol(sobj), replace = FALSE), group.by = 'orig.ident', pt.size = solo.pt.size) + ggplot2::ggtitle("uMAP for all samples ") + Seurat::DarkTheme())
 dev.off()
 grid.xy <- grid.scalers(length(unique(sobj@meta.data$orig.ident)))
-png(filename = paste0(clust.dir, '/', paste(c(sample.name.grp, assay, dimred.method, 'split', 'uMAP.png'), collapse = '_')), width = grid.xy[1]*blockpix, height = grid.xy[2]*blockpix)
+png(filename = paste0(clust.dir, '/', paste(c(name.grp, assay, dimred.method, 'split', 'uMAP.png'), collapse = '_')), width = grid.xy[1]*blockpix, height = grid.xy[2]*blockpix)
 print(Seurat::DimPlot(object = sobj, reduction = paste(c(assay, dimred.method, keep.dims, 'umap'), collapse = '_'), group.by = ident.name, split.by = 'orig.ident', pt.size = solo.pt.size, ncol = grid.xy[1]) + ggplot2::ggtitle(paste0("uMAP split on samples")) + Seurat::DarkTheme())
 dev.off()
 
@@ -198,7 +206,7 @@ write_MandM(sobj=sobj, output.dir=clust.dir)
 
 ### Saving final object
 cat("\nSaving object...\n")
-GE_file=paste0(clust.dir, '/', paste(c(sample.name.grp, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = "_"))
+GE_file=paste0(clust.dir, '/', paste(c(name.grp, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = "_"))
 save(sobj, file = paste0(GE_file, '.rda'), compress = "bzip2")
 
 

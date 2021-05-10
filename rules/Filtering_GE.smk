@@ -22,6 +22,10 @@ def filtering_params_sing(wildcards):
     concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + rda_folder + ":" + os.path.normpath("/WORKDIR/" + rda_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder)
     if FILERING_CC_SEURAT_FILE != "NULL": concat = concat + " -B " + os.path.dirname(FILERING_CC_SEURAT_FILE) + ":" + os.path.normpath("/WORKDIR/" + os.path.dirname(FILERING_CC_SEURAT_FILE))
     if FILERING_CC_CYCLONE_FILE != "NULL": concat = concat + " -B " + os.path.dirname(FILERING_CC_CYCLONE_FILE) + ":" + os.path.normpath("/WORKDIR/" + os.path.dirname(FILERING_CC_CYCLONE_FILE))
+    if FILERING_METADATA_FILE != "NULL":
+        for metadatafile in list(dict.fromkeys(FILERING_METADATA_FILE.split(","))):
+            metadatafile = os.path.dirname(metadatafile)
+            concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
     return concat
 
 """
@@ -53,7 +57,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
         shell:
             """
-            singularity exec {params.sing_bind} \
+            singularity exec --no-home {params.sing_bind} \
             {SINGULARITY_ENV} \
             Rscript {params.pipeline_folder}/scripts/pipeline_part2.R \
             --input.rda.ge {params.input_rda} \

@@ -6,7 +6,7 @@ option_list <- list(
   ### Project
   make_option("--input.list.rda", help="List of .rda file with individual analysis"),
   make_option("--output.dir.int", help="Output path"),
-  make_option("--sample.name.int", help="Name of the integration (advice: include integration method name)"),
+  make_option("--name.int", help="Name of the integration (advice: include integration method name)"),
   make_option("--eval.markers", help="Genes to evaluate to check normalization and dimension reduction"),
   make_option("--author.name", help="Name of auhtor of the analysis"),
   make_option("--author.mail", help="Email of auhtor of the analysis"),
@@ -16,6 +16,8 @@ option_list <- list(
   ### Analysis Parameters
   # Load data
   make_option("--min.cells", help="Number minimum of cells to keep a dataset"),
+  # Metadata
+  make_option("--metadata.file", help="csv file with the metadata to add in the seurat objects"),
   # Integration
   make_option("--integration.method", help="Name of integration method (Seurat, scbfa, Harmony or Liger)"),
   make_option("--batch.vtr", help="List of batch effect to regress into Harmony, Liger, scbfa or bpca correction ('orig.ident')"),
@@ -31,8 +33,7 @@ option_list <- list(
   make_option("--res.max", help="Number max of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
   make_option("--res.min", help="Number min of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
   make_option("--res.steps", help="Steps for resolution to compute for evaluation (depends on sample complexity and number of cells)"),
-  
-  # Yaml parameters file to remplace all parameters before (to use R script without snakemake)
+  #### Yaml parameters file to remplace all parameters before (to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
 parser <- OptionParser(usage="Rscript %prog [options]", description = " ", option_list = option_list)
@@ -52,7 +53,7 @@ for (i in names(args$options)){
 ### Project
 input.list.rda <- unlist(stringr::str_split(args$options$input.list.rda, ","))
 output.dir.int <- args$options$output.dir.int
-sample.name.int <- args$options$sample.name.int
+name.int <- args$options$name.int
 eval.markers <- unlist(stringr::str_split(args$options$eval.markers, ","))
 author.name <- args$options$author.name
 author.mail <- args$options$author.mail
@@ -62,6 +63,8 @@ pipeline.path <- args$options$pipeline.path
 ### Analysis Parameters
 # Load data
 min.cells <- if (!is.null(args$options$min.cells)) as.numeric(args$options$min.cells)
+# Metadata
+metadata.file <- unlist(stringr::str_split(args$options$metadata.file, ","))
 # Integration
 integration.method <- args$options$integration.method
 batch.vtr <- unlist(stringr::str_split(args$options$batch.vtr, ","))
@@ -89,7 +92,7 @@ if (!is.null(args$options$yaml)){
     #assign values
     if(i %in% c("nthreads","min.cells", "features.n", "dims.max", "dims.min", "dims.steps", "res.max", "res.min", "res.steps")) assign(i, as.numeric(yaml_options[[i]])) else assign(i, yaml_options[[i]])
   }
-  sample.name.INT <- sample.name.int
+  name.int <- name.int
   rm(yaml_options, i)
 }
 ### Clean
@@ -164,12 +167,12 @@ source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 print("#########################")
 print(paste0("integration.method: ",integration.method))
-print(paste0("sample.name.int: ",sample.name.int))
+print(paste0("name.int: ",name.int))
 if (!is.null(norm.method)) print(paste0("norm.method: ",norm.method))
 if (!is.null(dimred.method)) print(paste0("dimred.method: ",dimred.method))
 print("#########################")
 
-data.path <- paste0(output.dir.int,'/GROUPED_ANALYSIS/INTEGRATED/',sample.name.int ,'/')
+data.path <- paste0(output.dir.int,'/GROUPED_ANALYSIS/INTEGRATED/',name.int ,'/')
 dir.create(data.path, recursive = TRUE, showWarnings = FALSE)
 
 ## Creating parallel instance
@@ -182,6 +185,8 @@ sobj.list <- sapply(seq_along(input.list.rda), function(x) {
   ## Cleaning reductions and graphs
   sobj@reductions <- list()
   sobj@graphs <- list()
+  ## Add metadata
+  if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file = metadata.file)
   return(sobj)
 })
 names(sobj.list) <- vapply(sobj.list, Seurat::Project, 'a')
@@ -210,7 +215,7 @@ if(integration.method %in% c("Seurat","Liger")) { #keep normalisation
 
 ### Add prefix for colnames of sample clustering and clean TCR/BCR
 for (i in names(sobj.list)){
-  # add prefix for colnames of sample clustering 
+  # add prefix for colnames of sample clustering
   to_rename=grep("_res\\.",colnames(sobj.list[[i]]@meta.data), value = TRUE)
   for (j in to_rename){
     sobj.list[[i]]@meta.data[[paste0(i,'_',j)]]=sobj.list[[i]]@meta.data[[j]]
@@ -225,7 +230,7 @@ for (i in names(sobj.list)){
 if((integration.method == "Seurat") || (integration.method == 'Liger')){
   ## Get scale.data for each sample
   message("Get scale.data for each sample:")
-  sobj.list <- sapply(seq_along(sobj.list), function(x) {
+  for (x in seq_along(sobj.list)){
     ## Scaling if necessary
     if (sum(dim(sobj.list[[x]]@assays[[assay]]@scale.data)) < 3) {
       #Check vtr
@@ -237,17 +242,16 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
       #Scaling
       Seurat::DefaultAssay(sobj.list[[x]]) <- assay
       if(assay == 'SCT') {
-        sobj <- Seurat::ScaleData(object = sobj.list[[x]],
+        sobj.list[[x]] <- Seurat::ScaleData(object = sobj.list[[x]],
                                   vars.to.regress = scale.vtr.all,
                                   do.scale = FALSE, scale.max = Inf, block.size = 750)
       } else {
-        sobj <- Seurat::ScaleData(object = sobj.list[[x]],
+        sobj.list[[x]] <- Seurat::ScaleData(object = sobj.list[[x]],
                                   vars.to.regress = scale.vtr.all,
                                   do.scale = if(integration.method == 'Liger') FALSE else TRUE, scale.max = 10, block.size = 1000)
       }
     }
-    return(sobj)
-  })
+  }
   ## Integration
   if(integration.method == "Seurat"){
     message(paste0(integration.method," integration..."))
@@ -257,7 +261,7 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     sobj.anchors <- Seurat::FindIntegrationAnchors(object.list = sobj.list, normalization.method = int.norm.method, anchor.features = sobj.features) #CCA + L2normalisation; puis KNN; puis MNNs : identification des paires de cellules; filtrage des anchors; calcul des scores
     sobj <- Seurat::IntegrateData(anchorset = sobj.anchors, normalization.method = int.norm.method) #Calcul des poids; application des poids sur la matrice d'expression: intégration
     # Params
-    Seurat::Project(sobj) <- sample.name.int
+    Seurat::Project(sobj) <- name.int
     sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
     DefaultAssay(sobj) <- "integrated"
     sobj@assays[["integrated"]]@misc$scaling$vtr = NA
@@ -273,11 +277,11 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     ## Dimensions reduction
     red.name <- paste(c("integrated", dimred.method, integration.method), collapse = '_')
     sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = "integrated", max.dims = dims.max, vtr = reduction.vtr, vtr.scale = vtr.scale, red.name = red.name)
-    
+
   } else if(integration.method == 'Liger'){
     ## Merge data
-    sobj <- merge(x = sobj.list[[1]], y = sobj.list[-1], add.cell.ids = names(sobj.list), project = sample.name.int, merge.data = TRUE)
-    Seurat::Project(sobj) <- sample.name.int
+    sobj <- merge(x = sobj.list[[1]], y = sobj.list[-1], add.cell.ids = names(sobj.list), project = name.int, merge.data = TRUE)
+    Seurat::Project(sobj) <- name.int
     sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
     ## Cleaning
     rm(sobj.list)
@@ -306,8 +310,8 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
 ## scbfa/bpca (or Harmony integration beging)
 if((integration.method %in% raw.methods) || (integration.method == 'Harmony')){
   ## Merge data
-  sobj <- merge(x = sobj.list[[1]], y = sobj.list[-1], add.cell.ids = names(sobj.list), project = sample.name.int, merge.data = TRUE)
-  Seurat::Project(sobj) <- sample.name.int
+  sobj <- merge(x = sobj.list[[1]], y = sobj.list[-1], add.cell.ids = names(sobj.list), project = name.int, merge.data = TRUE)
+  Seurat::Project(sobj) <- name.int
   sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
   ## Cleaning
   rm(sobj.list)
@@ -428,13 +432,13 @@ sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM
 sobj@misc$params$analysis_type <- paste0("Integrated analysis; Method: ", integration.method)
 sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
 sobj@misc$params$species <- species
-sobj@misc$params$sample.name.int <- sample.name.int
+sobj@misc$params$name.int <- name.int
 if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
 if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
-save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(sample.name.int, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")
+save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(name.int, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")
 
 ### Correlating reduction dimensions with biases and markers expression
-dimensions.eval(sobj = sobj, reduction = red.name, eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
+dimensions.eval(sobj = sobj, reduction = red.name, eval.markers = eval.markers, meta.names = c('orig.ident','nCount_RNA', 'nFeature_RNA', 'percent_mt', 'MTscore', 'percent_rb', 'RBscore', 'percent_st', 'STscore', "Cyclone.S.Score", "Cyclone.G1.Score", "Cyclone.G2M.Score", "Cyclone.SmG2M.Score"), slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
 gc()
 
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)

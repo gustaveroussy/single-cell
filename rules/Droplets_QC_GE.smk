@@ -39,6 +39,10 @@ def QC_params_sing(wildcards):
     if QC_RB_FILE != "NULL": concat = concat + " -B " + QC_RB_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_RB_FILE)
     if QC_ST_FILE != "NULL": concat = concat + " -B " + QC_ST_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_ST_FILE)
     if QC_TRANSLATION_FILE != "NULL": concat = concat + " -B " + QC_TRANSLATION_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_TRANSLATION_FILE)
+    if QC_METADATA_FILE != "NULL":
+        for metadatafile in list(dict.fromkeys(QC_METADATA_FILE.split(","))):
+            metadatafile = os.path.dirname(metadatafile)
+            concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
     return concat
 
 """
@@ -54,7 +58,7 @@ rule QC_droplets_ge:
         unfiltred_non_norm_rda = os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_QC_NON-NORMALIZED.rda") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_QC_NON-NORMALIZED.rda")
     params:
         sing_bind = QC_params_sing,
-        pipeline_folder = PIPELINE_FOLDER,
+        pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
         # input_folder = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]) + "/",
         input_folder = QC_params_input_folder,
         output_folder = os.path.normpath("/WORKDIR/" + "{outputqc_droplets_dir_ge}") + "/",
@@ -72,7 +76,7 @@ rule QC_droplets_ge:
         """
         singularity exec --no-home {params.sing_bind} \
         {SINGULARITY_ENV} \
-        Rscript /WORKDIR/{params.pipeline_folder}/scripts/pipeline_part1.R \
+        Rscript {params.pipeline_folder}/scripts/pipeline_part1.R \
         --input.dir.ge {params.input_folder} \
         --output.dir.ge {params.output_folder} \
         --sample.name.ge {wildcards.sample_name_ge} \
@@ -80,7 +84,7 @@ rule QC_droplets_ge:
         --author.name {QC_AUTHOR_NAME} \
         --author.mail {QC_AUTHOR_MAIL} \
         --nthreads {threads} \
-        --pipeline.path /WORKDIR/{params.pipeline_folder} \
+        --pipeline.path {params.pipeline_folder} \
         --emptydrops.fdr {QC_EMPTYDROPS_FDR} \
         --droplets.limit {QC_DROPLETS_LIMIT} \
         --emptydrops.retain {QC_EMPTYDROPS_RETAIN} \

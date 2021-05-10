@@ -85,4 +85,24 @@ def get_targets(STEPS):
         targets["Cerebro"]=[
         expand("{cerebro_input_rda_no_extention}{cerebro_complement}", cerebro_input_rda_no_extention = CEREBRO_INPUT_RDA_NO_EXTENTION, cerebro_complement = CEREBRO_COMPLEMENT_CRB)
         ]
+    if "Int_Norm_DimRed_Eval_GE" in STEPS:
+        targets["Int_Norm_DimRed_Eval_GE"]=[
+        expand(os.path.normpath("{output_int_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/INTEGRATED/{name_int}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/" + "{name_int}_" + INT_NDRE_NORM_VTR + "_" + INT_NDRE_DIMRED_VTR + ".rda"), zip, output_int_norm_dimred_dir_ge=INT_NDRE_OUTPUT_DIR_GE, name_int=INT_NDRE_NAME_INT),
+        expand(os.path.normpath("{output_int_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/INTEGRATED/{name_int}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/" + "{name_int}_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "_dims.bias.cor.png"), zip, output_int_norm_dimred_dir_ge=INT_NDRE_OUTPUT_DIR_GE, name_int=INT_NDRE_NAME_INT),
+        expand(os.path.normpath("{output_int_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/INTEGRATED/{name_int}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/clustree_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "/dimensions/{name_int}_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "{dims}.png"), zip, output_int_norm_dimred_dir_ge=INT_NDRE_OUTPUT_DIR_GE*len(INT_POSSIBLE_DIM), name_int=INT_NDRE_NAME_INT*len(INT_POSSIBLE_DIM), dims=INT_POSSIBLE_DIM*len(INT_NDRE_NAME_INT)),
+        expand(os.path.normpath("{output_int_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/INTEGRATED/{name_int}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/clustree_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "/louvain_resolution/{name_int}_" + INT_ASSAY + "_res{res}.png"), zip, output_int_norm_dimred_dir_ge=INT_NDRE_OUTPUT_DIR_GE*len(INT_POSSIBLE_DIM), name_int=INT_NDRE_NAME_INT*len(INT_POSSIBLE_DIM), res=INT_POSSIBLE_RES*len(INT_NDRE_NAME_INT)),
+        expand(os.path.normpath("{output_int_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/INTEGRATED/{name_int}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/clustree_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "/uMAPs/{name_int}_uMAPs_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "{dims}_ALLres.png"), zip, output_int_norm_dimred_dir_ge=INT_NDRE_OUTPUT_DIR_GE*len(INT_POSSIBLE_DIM), name_int=INT_NDRE_NAME_INT*len(INT_POSSIBLE_DIM), dims=INT_POSSIBLE_DIM*len(INT_NDRE_NAME_INT))
+        ]
+    if "Int_Clust_Markers_Annot_GE" in STEPS:
+        targets["Int_Clust_Markers_Annot_GE"]=[
+        expand(os.path.normpath("{output_int_clust_markers_annot_dir_ge}" + "/" + INT_CMA_CLUST_FOLDER + "/" + "{name_int}" + "{int_complement}" + "_" + str(INT_CMA_KEEP_DIM) + "_" + str(INT_CMA_KEEP_RES) + ".rda"), zip, output_int_clust_markers_annot_dir_ge = INT_CMA_OUTPUT_DIR_GE, name_int = INT_CMA_NAME_INT, int_complement = INT_CMA_COMPLEMENT)
+        ]
+    if "Grp_Norm_DimRed_Eval_GE" in STEPS:
+        targets["Grp_Norm_DimRed_Eval_GE"]=[
+        expand(os.path.normpath("{output_grp_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/NO_INTEGRATED/{name_grp}/" + GRP_NDRE_NORM_VTR + "/" + GRP_NDRE_DIMRED_VTR + "/" + "{name_grp}_" + GRP_NDRE_NORM_VTR + "_" + GRP_NDRE_DIMRED_VTR + ".rda"), zip, output_grp_norm_dimred_dir_ge=GRP_NDRE_OUTPUT_DIR_GE, name_grp=GRP_NDRE_NAME_GRP)
+        ]
+    if "Grp_Clust_Markers_Annot_GE" in STEPS:
+        targets["Grp_Clust_Markers_Annot_GE"]=[
+        expand(os.path.normpath("{output_grp_clust_markers_annot_dir_ge}" + "/" + GRP_CMA_CLUST_FOLDER + "/" + "{name_grp}" + "{grp_complement}" + "_" + str(GRP_CMA_KEEP_DIM) + "_" + str(GRP_CMA_KEEP_RES) + ".rda"), zip, output_grp_clust_markers_annot_dir_ge = GRP_CMA_OUTPUT_DIR_GE, name_grp = GRP_CMA_NAME_GRP, grp_complement = GRP_CMA_COMPLEMENT)
+        ]
     return targets

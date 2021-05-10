@@ -14,6 +14,8 @@ option_list <- list(
   make_option("--nthreads", help="Number of threads to use"),
   make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),
   ### Analysis Parameters
+  # Metadata
+  make_option("--metadata.file", help="csv file with the metadata to add in the seurat objects"),
   # Clustering
   make_option("--keep.dims", help="Number of dimension to keep for clustering (from 0 to keep.dims)"),
   make_option("--keep.res", help="Resolution value for clustering"),
@@ -47,6 +49,8 @@ author.mail <- args$options$author.mail
 nthreads <-  if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
 ### Analysis Parameters
+# Metadata
+metadata.file <- unlist(stringr::str_split(args$options$metadata.file, ","))
 # Clustering
 keep.dims <- if (!is.null(args$options$keep.dims)) as.numeric(args$options$keep.dims)
 keep.res <- if (!is.null(args$options$keep.res)) as.numeric(args$options$keep.res)
@@ -90,7 +94,7 @@ if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params
 
 #### Get Missing Paramaters ####
 ### Project
-sample.name.int <- sobj@misc$params$sample.name.int
+name.int <- sobj@misc$params$name.int
 species <- sobj@misc$params$species
 ### Computational Parameters
 if (is.null(nthreads)) nthreads <- 4
@@ -152,7 +156,7 @@ source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 ######
 
 print("#####################################")
-print(paste0("Sample: ", sample.name.int))
+print(paste0("Sample: ", name.int))
 print(paste0("RDA file: ", input.rda.int))
 print(paste0("Dimension: ", keep.dims))
 print(paste0("Resolution: ", keep.res))
@@ -160,6 +164,9 @@ print("#####################################")
 
 ### Creating parallel instance
 cl <- create.parallel.instance(nthreads = nthreads)
+
+### Add metadata
+if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file = metadata.file)
 
 ### Building clustered output directory
 clust.dir <- paste(output.dir.int, paste0("dims", keep.dims, "_res", keep.res), sep = '/')
@@ -177,11 +184,11 @@ INT.reduction <- paste(c(red.name, keep.dims, 'umap'), collapse = '_')
 ### uMAP plot by sample
 cat("\nuMAP plot by sample...\n")
 blockpix = 600
-png(filename = paste0(clust.dir, '/', paste(c(sample.name.int, red.name, 'uMAP.png'), collapse = '_')), width = 1000, height = 1000)
+png(filename = paste0(clust.dir, '/', paste(c(name.int, red.name, 'uMAP.png'), collapse = '_')), width = 1000, height = 1000)
 print(Seurat::DimPlot(object = sobj, reduction = paste(c(red.name, keep.dims, 'umap'), collapse = '_'), order = sample(x = 1:ncol(sobj), size = ncol(sobj), replace = FALSE), group.by = 'orig.ident', pt.size = solo.pt.size) + ggplot2::ggtitle("uMAP for all samples ") + Seurat::DarkTheme())
 dev.off()
 grid.xy <- grid.scalers(length(unique(sobj@meta.data$orig.ident)))
-png(filename = paste0(clust.dir, '/', paste(c(sample.name.int, red.name, 'split', 'uMAP.png'), collapse = '_')), width = grid.xy[1]*blockpix, height = grid.xy[2]*blockpix)
+png(filename = paste0(clust.dir, '/', paste(c(name.int, red.name, 'split', 'uMAP.png'), collapse = '_')), width = grid.xy[1]*blockpix, height = grid.xy[2]*blockpix)
 print(Seurat::DimPlot(object = sobj, reduction = paste(c(red.name, keep.dims, 'umap'), collapse = '_'), group.by = ident.name, split.by = 'orig.ident', pt.size = solo.pt.size, ncol = grid.xy[1]) + ggplot2::ggtitle(paste0("uMAP split on samples")) + Seurat::DarkTheme())
 dev.off()
 
@@ -211,7 +218,7 @@ write_MandM(sobj=sobj, output.dir=clust.dir)
 
 ### Saving final object
 cat("\nSaving object...\n")
-GE_file=paste0(clust.dir, '/', paste(c(sample.name.int, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = "_"))
+GE_file=paste0(clust.dir, '/', paste(c(name.int, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = "_"))
 save(sobj, file = paste0(GE_file, '.rda'), compress = "bzip2")
 
 # #TCR view

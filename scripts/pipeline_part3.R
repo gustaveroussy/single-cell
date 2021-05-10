@@ -215,4 +215,4 @@ dimensions.eval(sobj = sobj, reduction = paste0(assay, "_", dimred.method), eval
 
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)
 cat("\nEvaluation of multiple clustering parameters...\n")
-clustering.eval.mt(sobj = sobj, reduction = paste0(assay, "_", dimred.method), dimsvec = seq.int(dims.min, dims.max, 2), resvec = seq(res.min,res.max,.1), out.dir = norm.dim.red.dir, solo.pt.size = 3L, BPPARAM = cl)
+clustering.eval.mt(sobj = sobj, reduction = paste0(assay, "_", dimred.method), dimsvec = seq.int(dims.min, dims.max, dims.steps), resvec = seq(res.min,res.max,res.steps), out.dir = norm.dim.red.dir, solo.pt.size = 3L, BPPARAM = cl)

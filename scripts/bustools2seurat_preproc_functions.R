@@ -132,7 +132,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
 
     ## df for plot saturation and Kneeplot beging
     if(draw_plots){
-      library(dplyr)
+      suppressMessages(library(dplyr))
       nb_umi_genes_by_barcode <- data.frame(nb_genes=Matrix::colSums(scmat>0), nb_umi=Matrix::colSums(scmat), barcodes=colnames(scmat))
       nb_umi_genes_by_barcode <- nb_umi_genes_by_barcode %>% arrange(desc(nb_umi,nb_genes)) %>% dplyr::mutate(num_barcode=seq.int(ncol(scmat)))
     }
@@ -1302,7 +1302,7 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
   Seurat::Idents(sobj) <- ori.ident
 
   ## Save table
-  df_res=data.frame(genes = fmark$gene, log2FC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All", min.pct = min.pct)
+  df_res=data.frame(genes = fmark$gene, logFC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All", min.pct = min.pct)
   write.table(df_res,file = paste0(fmark.dir, '/', sample.name, '_', ident, '_findmarkers_all.txt'), sep = "\t",quote = FALSE, row.names = FALSE, col.names = TRUE, dec = ",")
   
   ## Cleaning
@@ -1998,10 +1998,10 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   cat("\nTranslation names...\n")
   sample.name <- Seurat::Project(sobj)
   sobj@meta.data$sample <- as.factor(sobj@meta.data[[sample.colname]])
-  Seurat::Idents(sobj) <- sobj@meta.data[[ident]]
+  if(length(setdiff(Seurat::Idents(sobj), sobj@meta.data[[ident]])) !=0) Seurat::Idents(sobj) <- sobj@meta.data[[ident]]
   sobj@meta.data$nUMI <- if(paste0('nCount_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nCount_', assay)]] else sobj@meta.data$nCount_RNA
   sobj@meta.data$nGene <- if(paste0('nFeature_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nFeature_', assay)]] else sobj@meta.data$nFeature_RNA
-  if('percent_rb' %in% colnames(sobj@meta.data)) sobj@meta.data$percent_ribo <- sobj$percent_rb
+  if('percent_rb' %in% colnames(sobj@meta.data)) sobj$percent_ribo <- sobj$percent_rb
   projections_available <- names(sobj@reductions)
   if(length(projections_available) >= 1){
     projections_available_pca <- projections_available[grep(projections_available, pattern = 'pca', ignore.case = TRUE, invert = FALSE)]
@@ -2254,7 +2254,7 @@ feature.cor <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.feat
     cell.idx <- cell.idx.list[[k]]
     if(length(which(cell.idx)) < 2) return(NA) # must to get at least 2 cells with RNA and protein expressions to compute correlation
     tryCatch({
-      library(dplyr)
+      suppressMessages(library(dplyr))
       data_ADT <- slot(sobj@assays[[assay2]], slot)[rownames(slot(sobj@assays[[assay2]], slot)) == assay2.features[k],cell.idx]
       data_ADT <- data_ADT[data_ADT >= quantile(data_ADT, min.cutoff[k]) & data_ADT <= quantile(data_ADT, max.cutoff[k])]
       data_RNA <- slot(sobj@assays[[assay1]], slot)[rownames(slot(sobj@assays[[assay1]], slot)) == assay1.features[k],names(data_ADT)]
@@ -2388,7 +2388,7 @@ add_metadata_sobj <- function(sobj=NULL, metadata.file = NULL){
         rownames(df) <- df$barcodes
         df$barcodes <- NULL
         sobj <- Seurat::AddMetaData(sobj, df, col.name = colnames(df))
-      } else message("metadata.file doesn't have an orig.ident or barcodes column. metadata not added!")
+      } else message("metadata.file doesn't have an orig.ident or barcodes column. Metadata not added!")
     }
   }
   return(sobj)

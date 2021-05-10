@@ -1,4 +1,4 @@
-genes	log2FC	p_val	adj.P.Val	pct.1	pct.2	tested_cluster	control_cluster	min.pct
+genes	logFC	p_val	adj.P.Val	pct.1	pct.2	tested_cluster	control_cluster	min.pct
 RPL30	0.916508905160442	8.12479701874232e-74	1.37959053378245e-69	1	1	0	All	0.75
 RPS14	0.872106380074094	1.54261075374736e-71	2.61935305986301e-67	1	0.998	0	All	0.75
 RPS15A	0.919787852083529	3.12110760111916e-70	5.29964070670034e-66	1	0.998	0	All	0.75

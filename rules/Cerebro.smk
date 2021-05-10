@@ -19,6 +19,10 @@ def cerebro_params_sing(wildcards):
     if CEREBRO_GMT_FILE != "NULL":
         gmt_folder = os.path.dirname(CEREBRO_GMT_FILE)
         concat = concat + " -B " + gmt_folder + ":" + os.path.normpath("/WORKDIR/" + gmt_folder)
+    if CEREBRO_METADATA_FILE != "NULL":
+        for metadatafile in list(dict.fromkeys(CEREBRO_METADATA_FILE.split(","))):
+            metadatafile = os.path.dirname(metadatafile)
+            concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
     return concat
 
 """
@@ -34,7 +38,7 @@ rule cerebro:
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         SING_CEREBRO_GMT_FILE = os.path.normpath("/WORKDIR/" + CEREBRO_GMT_FILE) if CEREBRO_GMT_FILE != "NULL" else "NULL",
-        SING_CEREBRO_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CEREBRO_MMETADATA_FILE.split(',')]) if CEREBRO_METADATA_FILE != "NULL" else "NULL"
+        SING_CEREBRO_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CEREBRO_METADATA_FILE.split(',')]) if CEREBRO_METADATA_FILE != "NULL" else "NULL"
     threads:
         1
     resources:
@@ -42,7 +46,8 @@ rule cerebro:
         time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
-        singularity exec {params.sing_bind} \
+        mkdir -p $HOME/.sc_cache && \
+        singularity exec --contain --home $HOME/.sc_cache:$HOME {params.sing_bind} \
         {SINGULARITY_ENV_CEREBRO} \
         Rscript {params.pipeline_folder}/scripts/pipeline_CEREBRO.R \
         --input.rda.ge {params.input_rda} \

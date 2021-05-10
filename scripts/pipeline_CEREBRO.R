@@ -20,6 +20,8 @@ option_list <- list(
   make_option("--only.pos.DE", help="Keep only positive DE genes from customized differential expression analysis (for genes markers identification is always only positive)."),
   make_option("--remove.custom.DE", help="Remove results from customized differential expression analysis."),
   ### Databases
+  # Metadata
+  make_option("--metadata.file", help="csv file with the metadata to add in the seurat object"),
   # Cerebro
   make_option("--gmt.file", help="GMT file for cerebro"),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
@@ -57,6 +59,8 @@ remove.str.genes <- args$options$remove.str.genes
 only.pos.DE <- args$options$only.pos.DE
 remove.custom.DE <- args$options$remove.custom.DE
 ### Databases
+# Metadata
+metadata.file <-  if (!is.null(args$options$metadata.file)) unlist(stringr::str_split(args$options$metadata.file, ","))
 # Cerebro
 gmt.file <- args$options$gmt.file
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
@@ -142,7 +146,9 @@ print(paste0("input.rda.ge : ", input.rda.ge))
 print(paste0("clustering : ", ident.name))
 print("###########################################")
 
-sobj@misc$params$analysis_type = "Individual analysis"
+### Add metadata
+if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file = metadata.file)
+
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$Cerebro <- paste0("Cerebro (version ",utils::packageVersion('cerebroApp'),"), cell report browser, is an AppShiny which allows users to interactively visualize various parts of single cell transcriptomics analysis without requiring bioinformatics expertise. This package is also used to identify most expressed genes, and to compute pathway enrichment on marker genes (based on the Enrichr API) and Gene Set Enrichment Analysis (uses the Gene Set Variation Analysis method in combination with additional statistics as published by Diaz-Mejia et. al.(Diaz-Mejia JJ, Meng EC, Pico AR et al. Evaluation of methods to assign cell type labels to cell clusters from single-cell RNA-sequencing data [version 3; peer review: 2 approved, 1 approved with reservations]. F1000Research 2019, 8(ISCB Comm J):296 (https://doi.org/10.12688/f1000research.18490.3))) from the MSigDB (H collection: hallmark gene sets).")
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)

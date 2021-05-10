@@ -28,7 +28,7 @@ option_list <- list(
   # QC gene
   make_option("--min.cells", help="Include genes expressed in at least this many cells (minimum cells covering)"),
   ### Databases
-  ##Metadata
+  # Metadata
   make_option("--metadata.file", help="csv file with the metadata to add in the seurat object"),
   # QC
   make_option("--mt.genes.file", help="RDS file with list of mitochondrial genes"),

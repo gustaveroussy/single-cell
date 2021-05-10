@@ -12,6 +12,7 @@ Alignment_countTable_GE:
   tr2g.file.ge :
   reference.txt:
   fastqscreen_index :
+  metadata.file :
 
 Droplets_QC_GE:
   sample.name.ge :
@@ -35,6 +36,7 @@ Droplets_QC_GE:
   crb.genes.file :
   str.genes.file :
   translation.file :
+  metadata.file :
 
 Filtering_GE:
   sample.name.ge :
@@ -52,6 +54,7 @@ Filtering_GE:
   doublets.filter.method :
   cc.seurat.file :
   cc.cyclone.file :
+  metadata.file :
 
 
 Norm_DimRed_Eval_GE:
@@ -72,6 +75,7 @@ Norm_DimRed_Eval_GE:
   res.max :
   res.min :
   res.steps :
+  metadata.file :
 
 Clust_Markers_Annot_GE:
   sample.name.ge :
@@ -84,6 +88,7 @@ Clust_Markers_Annot_GE:
   keep.res :
   cfr.minscore :
   sr.minscore :
+  metadata.file :
 
 Cerebro:
   input.rda :
@@ -97,6 +102,7 @@ Cerebro:
   only.pos.DE:
   remove.custom.DE:
   gmt.file :
+  metadata.file :
 
 ############################################ ADT ############################################
 
@@ -110,7 +116,7 @@ Alignment_countTable_ADT:
 
 
 Adding_ADT:
-  sample.name.adt : 
+  sample.name.adt :
   input.rda.ge:
   input.dir.adt:
   author.name:

@@ -1,0 +1,88 @@
+BootStrap: docker
+From: ubuntu:20.04
+
+#build image
+#sudo singularity build single_cell_integration.simg single_cell_integration.def
+#using image
+#sudo singularity shell -B local_folder:/WORKDIR/container_folder single_cell_integration.simg
+#sudo singularity shell single_cell_integration.simg
+
+%environment
+    export PATH=/opt/tools/bin:$PATH
+    export RETICULATE_MINICONDA_ENABLED=FALSE
+    LANG=en_US.UTF-8
+    LC_ALL=en_US.UTF-8
+    LC_TIME=en_US.UTF-8
+    LC_MONETARY=en_US.UTF-8
+    LC_PAPER=en_US.UTF-8
+    LC_MEASUREMENT=en_US.UTF-8
+
+%post
+    echo "Ubuntu version ######################"
+    cat /etc/lsb-release
+    apt-get -y update && apt-get -y upgrade
+    apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgsl-dev libgit2-dev libhdf5-dev
+    apt-get install -y dirmngr gnupg apt-transport-https ca-certificates software-properties-common
+    apt-get -y update && apt-get -y upgrade
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/'
+    apt-get -y update && apt-get -y upgrade
+    apt-get install -y r-base r-base-dev #apt-cache policy r-base r-base-dev pour connaître les versions
+    apt install -y default-jre
+    echo "java version ######################"
+    java --version
+    echo "R version ######################"
+    R --version
+    echo "Install R packages ######################"
+
+    echo "Install Global packages ######################"
+    R -e 'install.packages("devtools")'
+    R -e 'install.packages("BiocManager")'
+    R -e 'install.packages("rsvd", dependencies = TRUE)' # for seurat
+    R -e 'remove.packages(grep("spatstat", installed.packages(), value = T))' # for seurat
+    R -e 'devtools::install_github("spatstat/spatstat@v1.64-2")' # for seurat
+    R -e 'install.packages("Seurat", dependencies = TRUE)'
+    R -e 'library(Seurat)'
+    R -e 'devtools::install_github("thomasp85/patchwork")'
+    R -e 'install.packages("optparse")'
+    R -e 'install.packages("Matrix")'
+    R -e 'install.packages("doParallel")'
+    R -e 'BiocManager::install("BiocParallel")'
+    R -e 'install.packages("dplyr")'
+    R -e 'install.packages("ggplot2")'
+    R -e 'install.packages("stringr")'
+    R -e 'install.packages("future")'
+    R -e 'install.packages("openxlsx")' #launch
+    R -e 'install.packages("utils")' #launch
+    R -e 'install.packages("readxl")' #launch
+    R -e 'install.packages("readr")'
+    R -e 'install.packages("testthat", dependencies = TRUE)'
+
+    echo "Install Integration packages ######################"
+    R -e 'install.packages("remotes")'
+    R -e 'install.packages("rliger")'
+    R -e 'remotes::install_github("satijalab/seurat-wrappers")'
+    R -e 'devtools::install_github("immunogenomics/harmony")'
+
+    echo "Install params packages ######################"
+    R -e 'install.packages("rjson")' #load
+
+    echo "Install Normalization + dimension reduction + correction of bias + evaluation of bias and clustering parameters packages ######################"
+    R -e 'devtools::install_github("quon-titative-biology/scBFA")' # red dim + eval_red_dim
+    R -e 'install.packages("matrixStats")' # red dim
+    R -e 'install.packages("scales")' # eval.redim
+    R -e 'install.packages("RColorBrewer")' # eval.redim ################### nécessaire ailleurs???
+    R -e 'install.packages("foreach")' # clustering.eval.mt
+    R -e 'install.packages("clustree")' # clustering.eval.mt
+
+    echo "Install Clustering + Annotations + Markers + Plots ######################"
+    R -e 'install.packages("methods")' # annotation
+    R -e 'BiocManager::install("celldex")' # annotation
+    R -e 'BiocManager::install("scRNAseq")' # annotation
+    R -e 'BiocManager::install("SingleR")' # annotation
+    R -e 'devtools::install_github("rnabioco/clustifyr")' # annotation
+    R -e 'devtools::install_github("rnabioco/clustifyrdata")' # annotation
+    R -e 'install.packages("UpSetR")' # Markers
+
+%labels
+    Author Marine AGLAVE

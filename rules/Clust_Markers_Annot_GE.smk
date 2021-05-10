@@ -25,6 +25,10 @@ def clust_markers_annot_params_sing(wildcards):
         for markfile in CMA_MARKFILE_LIST:
             markfile = os.path.dirname(markfile)
             concat = concat + " -B " + markfile + ":" + os.path.normpath("/WORKDIR/" + markfile)
+    if CMA_METADATA_FILE != "NULL":
+        for metadatafile in list(dict.fromkeys(CMA_METADATA_FILE.split(","))):
+            metadatafile = os.path.dirname(metadatafile)
+            concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
     return concat
 
 """

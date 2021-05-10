@@ -20,6 +20,10 @@ def norm_dimred_params_sing(wildcards):
     rda_folder = os.path.dirname(dic_NDRE_INFO[wildcards.sample_name_ge]['NDRE_INPUT_RDA'])
     output_folder = wildcards.output_norm_dimred_dir_ge
     concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + rda_folder + ":" + os.path.normpath("/WORKDIR/" + rda_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder)
+    if NDRE_METADATA_FILE != "NULL":
+        for metadatafile in list(dict.fromkeys(NDRE_METADATA_FILE.split(","))):
+            metadatafile = os.path.dirname(metadatafile)
+            concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
     return concat
 
 """
