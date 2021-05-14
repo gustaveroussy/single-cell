@@ -636,7 +636,6 @@ if "Int_Adding_ADT" in STEPS:
         dic_INT_ADD_ADT_INFO[INT_ADD_ADT_OUTPUT[i]]['INT_ADD_ADT_INPUT_RDA'] = INT_ADD_ADT_INPUT_RDA[i]
         dic_INT_ADD_ADT_INFO[INT_ADD_ADT_OUTPUT[i]]['INT_ADD_ADT_INPUT_DIR_ADT'] = INT_ADD_ADT_INPUT_DIR_ADT[i]
         dic_INT_ADD_ADT_INFO[INT_ADD_ADT_OUTPUT[i]]['INT_ADD_ADT_SAMPLE_NAME_ADT'] = INT_ADD_ADT_SAMPLE_NAME_ADT[i]
-        sys.stderr.write(INT_ADD_ADT_OUTPUT[i] + str("\n"))
 
 if "Int_Adding_TCR" in STEPS:
     ### Sample/Project
@@ -821,7 +820,6 @@ if "Grp_Adding_ADT" in STEPS:
         dic_GRP_ADD_ADT_INFO[GRP_ADD_ADT_OUTPUT[i]]['GRP_ADD_ADT_INPUT_RDA'] = GRP_ADD_ADT_INPUT_RDA[i]
         dic_GRP_ADD_ADT_INFO[GRP_ADD_ADT_OUTPUT[i]]['GRP_ADD_ADT_INPUT_DIR_ADT'] = GRP_ADD_ADT_INPUT_DIR_ADT[i]
         dic_GRP_ADD_ADT_INFO[GRP_ADD_ADT_OUTPUT[i]]['GRP_ADD_ADT_SAMPLE_NAME_ADT'] = GRP_ADD_ADT_SAMPLE_NAME_ADT[i]
-        sys.stderr.write(GRP_ADD_ADT_OUTPUT[i] + str("\n"))
 
 if "Grp_Adding_TCR" in STEPS:
     ### Sample/Project

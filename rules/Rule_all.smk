@@ -129,9 +129,5 @@ def get_targets(STEPS):
         targets["Grp_Adding_BCR"]=[
         expand("{grp_add_bcr_output}_BCR.rda", grp_add_bcr_output = GRP_ADD_BCR_OUTPUT)
         ]
-    for s in targets["Grp_Adding_ADT"]:
-        sys.stderr.write(str(s)+"\n")
-    for s in GRP_ADD_ADT_OUTPUT:
-        sys.stderr.write(str(s)+"\n")
 
     return targets

@@ -11,7 +11,6 @@ wildcard_constraints:
 This function allows to determine the input .rda ge file and kallisto adt folder.
 """
 def grp_add_adt_input(wildcards):
-    sys.stderr.write(str(wildcards.grp_add_adt_output)+"\n")
     ge_rda_file = dic_GRP_ADD_ADT_INFO[wildcards.grp_add_adt_output]['GRP_ADD_ADT_INPUT_RDA']
     kallisto_folder = list(dict.fromkeys(dic_GRP_ADD_ADT_INFO[wildcards.grp_add_adt_output]['GRP_ADD_ADT_INPUT_DIR_ADT'].split(",")))
     kallisto_folder.insert(0,ge_rda_file)
