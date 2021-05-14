@@ -213,7 +213,7 @@ if(integration.method %in% c("Seurat","Liger")) { #keep normalisation
   norm.method <- unique(n.meth)
 }
 
-### Add prefix for colnames of sample clustering and clean TCR/BCR
+### Add prefix for colnames of sample clustering and clean ADT/TCR/BCR
 for (i in names(sobj.list)){
   # add prefix for colnames of sample clustering
   to_rename=grep("_res\\.",colnames(sobj.list[[i]]@meta.data), value = TRUE)
@@ -221,8 +221,8 @@ for (i in names(sobj.list)){
     sobj.list[[i]]@meta.data[[paste0(i,'_',j)]]=sobj.list[[i]]@meta.data[[j]]
     sobj.list[[i]]@meta.data[[j]]=NULL
   }
-  # cleaning sobj for TCR and BCR part
-  TCR_BCR_col=grep("^TCR|^BCR", colnames(sobj.list[[i]]@meta.data), value = TRUE)
+  # cleaning sobj for ADT, TCR and BCR part
+  TCR_BCR_col=grep("^ADT|^TCR|^BCR", colnames(sobj.list[[i]]@meta.data), value = TRUE)
   if(length(TCR_BCR_col) > 0) sobj.list[[i]]@meta.data[TCR_BCR_col] <- NULL
 }
 
@@ -255,17 +255,24 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
   ## Integration
   if(integration.method == "Seurat"){
     message(paste0(integration.method," integration..."))
+    sobj.list <- sapply(seq_along(sobj.list), function(x) { #Rename cells
+      new_cells_name <- paste0(names(sobj.list)[x],"_",colnames(sobj.list[[x]]))
+      sobj.list[[x]] <- Seurat::RenameCells(sobj.list[[x]], new.names = new_cells_name)
+      return(sobj.list[[x]])
+    })
     if(assay == 'SCT') int.norm.method <- 'SCT' else  int.norm.method <- 'LogNormalize'
     sobj.features <- Seurat::SelectIntegrationFeatures(object.list = sobj.list, nfeatures = features.n) #Sélection des marqueurs biologiques partagés
     sobj.list <- Seurat::PrepSCTIntegration(object.list = sobj.list, anchor.features = sobj.features) #Verifie que les résidus de Pearson ont bien été calculés
     sobj.anchors <- Seurat::FindIntegrationAnchors(object.list = sobj.list, normalization.method = int.norm.method, anchor.features = sobj.features) #CCA + L2normalisation; puis KNN; puis MNNs : identification des paires de cellules; filtrage des anchors; calcul des scores
     sobj <- Seurat::IntegrateData(anchorset = sobj.anchors, normalization.method = int.norm.method) #Calcul des poids; application des poids sur la matrice d'expression: intégration
+
     # Params
     Seurat::Project(sobj) <- name.int
     sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
     DefaultAssay(sobj) <- "integrated"
     sobj@assays[["integrated"]]@misc$scaling$vtr = NA
     sobj@assays[["integrated"]]@misc$params$normalization$normalization.method <- norm.method
+    sobj@misc$params$normalization$normalization.method <- norm.method
     sobj@misc$params$integration$method <- integration.method
     sobj@misc$params$integration$orig.assay <- assay
     sobj@misc$params$integration$out.assay <- "integrated"
@@ -433,12 +440,13 @@ sobj@misc$params$analysis_type <- paste0("Integrated analysis; Method: ", integr
 sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
 sobj@misc$params$species <- species
 sobj@misc$params$name.int <- name.int
+Seurat::Project(sobj) <- name.int
 if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
 if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
 save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(name.int, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")
 
 ### Correlating reduction dimensions with biases and markers expression
-dimensions.eval(sobj = sobj, reduction = red.name, eval.markers = eval.markers, meta.names = c('orig.ident','nCount_RNA', 'nFeature_RNA', 'percent_mt', 'MTscore', 'percent_rb', 'RBscore', 'percent_st', 'STscore', "Cyclone.S.Score", "Cyclone.G1.Score", "Cyclone.G2M.Score", "Cyclone.SmG2M.Score"), slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
+dimensions.eval(sobj = sobj, reduction = red.name, eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
 gc()
 
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)

@@ -110,7 +110,7 @@ set.seed(sobj@misc$params$seed)
 ## GLOBAL ANALYSIS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 cat("\nGlobal Analysis >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n")
 global_output <- paste0(output_path_BCR, "Global_analysis")
-dir.create(path = global_output, recursive = TRUE, showWarnings = TRUE)
+dir.create(path = global_output, recursive = TRUE, showWarnings = FALSE)
 
 ## Loading input data and Combining contigs
 cat("\nLoading input data and Combining contigs...\n")

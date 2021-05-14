@@ -2250,9 +2250,9 @@ feature.cor <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.feat
                       if (zero.filter) zerocells.get(sobj = sobj, assay1 = assay1, assay2 = assay2, assay1.feature = assay1.features[k], assay2.feature = assay2.features[k], slot = slot) else rep(TRUE, ncol(sobj@assays[[assay1]]))
                    }, simplify = FALSE)
   #correlation
-  res_cor <- t(sapply(seq_along(gene.names), function(k) {
+  res_cor <- t(cbind(sapply(seq_along(gene.names), function(k) {
     cell.idx <- cell.idx.list[[k]]
-    if(length(which(cell.idx)) < 2) return(NA) # must to get at least 2 cells with RNA and protein expressions to compute correlation
+    if(length(which(cell.idx)) < 2) return(c(NA,NA,NA)) # must to get at least 2 cells with RNA and protein expressions to compute correlation
     tryCatch({
       suppressMessages(library(dplyr))
       data_ADT <- slot(sobj@assays[[assay2]], slot)[rownames(slot(sobj@assays[[assay2]], slot)) == assay2.features[k],cell.idx]
@@ -2266,7 +2266,7 @@ feature.cor <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.feat
     }, error = function(cond) {
       return(c(NA,NA,NA))
     })
-  }))
+  })))
   #add the number of cells and colnames
   res_cor <- data.frame(vapply(cell.idx.list, function(x) { length(which(x)) }, 1L),  res_cor, stringsAsFactors = FALSE)
   colnames(res_cor) <- c("nb_cells","cor","pval","significant_cor")
@@ -2287,7 +2287,8 @@ feature_plots <- function(sobj, assay, features, slot, reduction, min.cutoff, ma
       Seurat::FeaturePlot(sobj, features = features[k], slot = slot, reduction = reduction, ncol = 1, pt.size = 2, order = TRUE, min.cutoff = min.cutoff[k], max.cutoff = max.cutoff[k])
     },
     warning=function(cond) {
-      if(grepl("All cells have the same value", as.character(cond)) ) tmp_plot = Seurat::FeaturePlot(sobj, features = features[k], slot = slot, reduction = reduction, ncol = 1, pt.size = 2, order = TRUE, min.cutoff = min.cutoff[k], max.cutoff = max.cutoff[k])
+      if(grepl("NAs introduced by coercion", as.character(cond)) ) tmp_plot = suppressWarnings(Seurat::FeaturePlot(sobj, features = features[k], slot = slot, reduction = reduction, ncol = 1, pt.size = 2, order = TRUE, min.cutoff = min.cutoff[k], max.cutoff = max.cutoff[k]))
+      if(grepl("All cells have the same value", as.character(cond)) ) tmp_plot = suppressWarnings(Seurat::FeaturePlot(sobj, features = features[k], slot = slot, reduction = reduction, ncol = 1, pt.size = 2, order = TRUE, min.cutoff = min.cutoff[k], max.cutoff = max.cutoff[k]))
       if(grepl("The following requested variables were not found", as.character(cond)) ) tmp_plot = patchwork::wrap_elements(patchwork::plot_spacer() + patchwork::plot_annotation(title = features[k], theme = ggplot2::theme(plot.title = ggplot2::element_text(size=18, hjust=0.5, face="bold"))))
       if(grepl("Could not find", as.character(cond)) ) tmp_plot = patchwork::wrap_elements(patchwork::plot_spacer() + patchwork::plot_annotation(title = features[k], theme = ggplot2::theme(plot.title = ggplot2::element_text(size=18, hjust=0.5, face="bold"))))
       return(tmp_plot)

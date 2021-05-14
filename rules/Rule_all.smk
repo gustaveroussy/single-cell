@@ -78,7 +78,7 @@ def get_targets(STEPS):
         expand("{add_tcr_output}_TCR.rda", add_tcr_output = ADD_TCR_OUTPUT)
         ]
     if "Adding_BCR" in STEPS:
-        targets["Adding_BCT"]=[
+        targets["Adding_BCR"]=[
         expand("{add_bcr_output}_BCR.rda", add_bcr_output = ADD_BCR_OUTPUT)
         ]
     if "Cerebro" in STEPS:
@@ -97,6 +97,18 @@ def get_targets(STEPS):
         targets["Int_Clust_Markers_Annot_GE"]=[
         expand(os.path.normpath("{output_int_clust_markers_annot_dir_ge}" + "/" + INT_CMA_CLUST_FOLDER + "/" + "{name_int}" + "{int_complement}" + "_" + str(INT_CMA_KEEP_DIM) + "_" + str(INT_CMA_KEEP_RES) + ".rda"), zip, output_int_clust_markers_annot_dir_ge = INT_CMA_OUTPUT_DIR_GE, name_int = INT_CMA_NAME_INT, int_complement = INT_CMA_COMPLEMENT)
         ]
+    if "Int_Adding_ADT" in STEPS:
+        targets["Int_Adding_ADT"]=[
+        expand("{int_add_adt_output}_ADT.rda", int_add_adt_output = INT_ADD_ADT_OUTPUT)
+        ]
+    if "Int_Adding_TCR" in STEPS:
+        targets["Int_Adding_TCR"]=[
+        expand("{int_add_tcr_output}_TCR.rda", int_add_tcr_output = INT_ADD_TCR_OUTPUT)
+        ]
+    if "Int_Adding_BCR" in STEPS:
+        targets["Int_Adding_BCR"]=[
+        expand("{int_add_bcr_output}_BCR.rda", int_add_bcr_output = INT_ADD_BCR_OUTPUT)
+        ]
     if "Grp_Norm_DimRed_Eval_GE" in STEPS:
         targets["Grp_Norm_DimRed_Eval_GE"]=[
         expand(os.path.normpath("{output_grp_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/NO_INTEGRATED/{name_grp}/" + GRP_NDRE_NORM_VTR + "/" + GRP_NDRE_DIMRED_VTR + "/" + "{name_grp}_" + GRP_NDRE_NORM_VTR + "_" + GRP_NDRE_DIMRED_VTR + ".rda"), zip, output_grp_norm_dimred_dir_ge=GRP_NDRE_OUTPUT_DIR_GE, name_grp=GRP_NDRE_NAME_GRP)
@@ -105,4 +117,21 @@ def get_targets(STEPS):
         targets["Grp_Clust_Markers_Annot_GE"]=[
         expand(os.path.normpath("{output_grp_clust_markers_annot_dir_ge}" + "/" + GRP_CMA_CLUST_FOLDER + "/" + "{name_grp}" + "{grp_complement}" + "_" + str(GRP_CMA_KEEP_DIM) + "_" + str(GRP_CMA_KEEP_RES) + ".rda"), zip, output_grp_clust_markers_annot_dir_ge = GRP_CMA_OUTPUT_DIR_GE, name_grp = GRP_CMA_NAME_GRP, grp_complement = GRP_CMA_COMPLEMENT)
         ]
+    if "Grp_Adding_ADT" in STEPS:
+        targets["Grp_Adding_ADT"]=[
+        expand("{grp_add_adt_output}_ADT.rda", grp_add_adt_output = GRP_ADD_ADT_OUTPUT)
+        ]
+    if "Grp_Adding_TCR" in STEPS:
+        targets["Grp_Adding_TCR"]=[
+        expand("{grp_add_tcr_output}_TCR.rda", grp_add_tcr_output = GRP_ADD_TCR_OUTPUT)
+        ]
+    if "Grp_Adding_BCR" in STEPS:
+        targets["Grp_Adding_BCR"]=[
+        expand("{grp_add_bcr_output}_BCR.rda", grp_add_bcr_output = GRP_ADD_BCR_OUTPUT)
+        ]
+    for s in targets["Grp_Adding_ADT"]:
+        sys.stderr.write(str(s)+"\n")
+    for s in GRP_ADD_ADT_OUTPUT:
+        sys.stderr.write(str(s)+"\n")
+
     return targets

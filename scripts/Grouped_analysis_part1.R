@@ -91,7 +91,7 @@ if (!is.null(args$options$yaml)){
 rm(option_list,parser,args)
 
 #### Get path if snakemake/singularity/local ####
-if(is.null(pipeline.path)) stop("--pipeline.path parameter must be set!")
+if(is.null(pipeline.path)) stop("pipeline.path parameter must be set!")
 
 #### Check non-optional parameters ####
 if (is.null(input.list.rda[1])) stop("input.list.rda parameter can't be empty!")
@@ -189,7 +189,7 @@ if(keep.norm) { #keep normalisation
   norm.method <- unique(n.meth)
 }else assay <- 'RNA' # redo normalisation
 
-### Add prefix for colnames of sample clustering and clean TCR/BCR
+### Add prefix for colnames of sample clustering and clean ADT/TCR/BCR
 for (i in names(sobj.list)){
   # add prefix for colnames of sample clustering
   to_rename=grep("_res\\.",colnames(sobj.list[[i]]@meta.data), value = TRUE)
@@ -197,8 +197,8 @@ for (i in names(sobj.list)){
     sobj.list[[i]]@meta.data[[paste0(i,'_',j)]]=sobj.list[[i]]@meta.data[[j]]
     sobj.list[[i]]@meta.data[[j]]=NULL
   }
-  # cleaning sobj for TCR and BCR part
-  TCR_BCR_col=grep("^TCR|^BCR", colnames(sobj.list[[i]]@meta.data), value = TRUE)
+  # cleaning sobj for ADT, TCR and BCR part
+  TCR_BCR_col=grep("^ADT|^TCR|^BCR", colnames(sobj.list[[i]]@meta.data), value = TRUE)
   if(length(TCR_BCR_col) > 0) sobj.list[[i]]@meta.data[TCR_BCR_col] <- NULL
 }
 
@@ -281,25 +281,25 @@ if(!is.null(vtr)){
 
   MM_tmp2 <- if(norm.method == 'SCTransform') paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") else NULL
   MM_tmp3 <- if(dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
-}else {
+}else{
   MM_tmp2 <- NULL
   MM_tmp3 <- NULL
 }
-sobj@misc$parameters$Materials_and_Methods$Grouped_analysis_Norm_DimRed_Eval <- paste0("Seurat (version ",sobj@misc$technical_info$Seurat,") was applied for further data processing. ",
+MM_tmp4 <- paste0("Seurat (version ",sobj@misc$technical_info$Seurat,") was applied for further data processing. ")
 if(keep.norm){
-  paste0("Each dataset was normalized independently by ",norm.method,", as described in the Individual Analysis section, then data were merged using the merge() function from Seurat and a common dimension reduction was performed by ",MM_tmp,".")
+  MM_tmp4 <- paste0(MM_tmp4, paste0("Each dataset was normalized independently by ",norm.method,", as described in the Individual Analysis section, then data were merged using the merge() function from Seurat and a common dimension reduction was performed by ",MM_tmp,"."))
 }else{
-  paste0("Datasets were merged using the merge() function from Seurat and a common normalization and dimension reduction were performed. ")
-  if(norm.method == 'SCTransform') paste0("The SCTransform normalization method (Hafemeister C, Satija R. Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression. Genome Biol. 2019;20 10.1186/s13059-019-1874-1.) was used to normalize, scale, select ",features.n," Highly Variable Genes", MM_tmp2,".")
-  if(norm.method == 'LogNormalize') paste0(features.n," Highly Variable Genes (HVG) were identified using the FindVariableFeatures() method from Seurat applied on data transformed by its LogNormalize method.")
-  if(dimred.method == 'pca'){
-    if(norm.method == 'SCTransform') paste0(" Person residuals from this regression were used for dimension reduction by Principal Component Analysis (PCA).")
-    if(norm.method == 'LogNormalize') paste0(" HVG were scaled and and centered, providing person residuals used for dimension reduction by Principal Component Analysis (PCA).")
-  }
-},
-if(dimred.method == 'scbfa') paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3),
-"The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."
-)
+ paste0("Datasets were merged using the merge() function from Seurat and a common normalization and dimension reduction were performed. ")
+ if(norm.method == 'SCTransform') MM_tmp4 <- paste0(MM_tmp4, paste0("The SCTransform normalization method (Hafemeister C, Satija R. Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression. Genome Biol. 2019;20 10.1186/s13059-019-1874-1.) was used to normalize, scale, select ",features.n," Highly Variable Genes", MM_tmp2,"."))
+ if(norm.method == 'LogNormalize') MM_tmp4 <- paste0(MM_tmp4, paste0(features.n," Highly Variable Genes (HVG) were identified using the FindVariableFeatures() method from Seurat applied on data transformed by its LogNormalize method."))
+ if(dimred.method == 'pca'){
+   if(norm.method == 'SCTransform') MM_tmp4 <- paste0(MM_tmp4, paste0(" Person residuals from this regression were used for dimension reduction by Principal Component Analysis (PCA)."))
+   if(norm.method == 'LogNormalize') MM_tmp4 <- paste0(MM_tmp4, paste0(" HVG were scaled and and centered, providing person residuals used for dimension reduction by Principal Component Analysis (PCA)."))
+ }
+}
+if(dimred.method == 'scbfa') MM_tmp4 <- paste0(MM_tmp4, paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3))
+MM_tmp4 <- paste0(MM_tmp4, paste0("The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."))
+sobj@misc$parameters$Materials_and_Methods$Grouped_analysis_Norm_DimRed_Eval <- MM_tmp4
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 
 ### Saving reduced normalized object
@@ -307,15 +307,16 @@ cat("\nSaving object...\n")
 sobj@misc$params$analysis_type <- paste0("Grouped analysis; Keep individual normalization: ", keep.norm)
 sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
 sobj@misc$params$species <- species
-sobj@misc$params$name.grp <- name.grp
 sobj@misc$params$group$keep.norm <- keep.norm
+sobj@misc$params$name.grp <- name.grp
+Seurat::Project(sobj) <- name.grp
 if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
 if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
 save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(name.grp, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")
 
 ### Correlating reduction dimensions with biases and markers expression
 cat("\nCorrelation of dimensions...\n")
-dimensions.eval(sobj = sobj, reduction = paste0(assay, "_", dimred.method), eval.markers = eval.markers, meta.names = c('orig.ident','nCount_RNA', 'nFeature_RNA', 'percent_mt', 'MTscore', 'percent_rb', 'RBscore', 'percent_st', 'STscore', "Cyclone.S.Score", "Cyclone.G1.Score", "Cyclone.G2M.Score", "Cyclone.SmG2M.Score"), slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
+dimensions.eval(sobj = sobj, reduction = paste0(assay, "_", dimred.method), eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
 gc()
 
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)

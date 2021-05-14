@@ -12,13 +12,16 @@ __author__ = "Marine AGLAVE"
 
 #using: snakemake --profile /mnt/beegfs/pipelines/single-cell/profiles/slurm -s /mnt/beegfs/pipelines/single-cell/Snakefile --configfile /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Params.yaml
 
-### parameters ###################################################################################################################################
+sys.stderr.write("\n############################################################# \n")
+sys.stderr.write("\n\n\t Single-cell RNA-seq pipeline \n\n")
+sys.stderr.write("\n############################################################# \n\n")
 
-#### Pipeline ####
+### parameters ###################################################################################################################################
+sys.stderr.write("\n#################### Setting Parameters ####################\n\n")
+
 STEPS = config['Steps']
 PIPELINE_FOLDER = workflow.snakefile
 PIPELINE_FOLDER = PIPELINE_FOLDER.replace("/Snakefile", "")
-#CONDA_ENV_SING =  PIPELINE_FOLDER + "/envs/conda/Singularity.yml"
 
 if "Alignment_countTable_GE" in STEPS:
     ### Sample/Project
@@ -339,7 +342,7 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_RES_MIN*10,NDRE_RES_MAX*10+1,NDRE_RES_STEPS*10)/10] #*10 then /10 because numpy.arange doesn't handle floats well
     ASSAY = "RNA" if NDRE_NORM_METHOD == "LogNormalize" else "SCT"
 
-if "Clust_Markers_Annot_GE" in STEPS:
+if "Clust_Markers_Annot_GE" in STEPS: #alias CMA
     ### Sample/Project
     if ('Clust_Markers_Annot_GE' in config) and ('sample.name.ge' in config['Clust_Markers_Annot_GE']) and ('input.rda.ge' in config['Clust_Markers_Annot_GE']) :
         CMA_SAMPLE_NAME_GE_RAW = config['Clust_Markers_Annot_GE']['sample.name.ge']
@@ -495,9 +498,6 @@ if "Adding_BCR" in STEPS:
         dic_ADD_BCR_INFO[ADD_BCR_OUTPUT[i]]['ADD_BCR_INPUT_RDA_GE'] = ADD_BCR_INPUT_RDA_GE[i]
         dic_ADD_BCR_INFO[ADD_BCR_OUTPUT[i]]['ADD_BCR_INPUT_CSV_BCR'] = ADD_BCR_INPUT_CSV_BCR[i]
 
-if "Alignment_annotations_TCR_BCR" in STEPS or "Adding_TCR" in STEPS or "Adding_BCR" in STEPS:
-    SINGULARITY_ENV_TCR_BCR = PIPELINE_FOLDER + "/envs/singularity/single_cell_TCR_BCR.simg"
-
 if "Int_Norm_DimRed_Eval_GE" in STEPS:
     ### Sample/Project
     if ('Int_Norm_DimRed_Eval_GE' in config) and ('name.int' in config['Int_Norm_DimRed_Eval_GE']) and ('input.list.rda' in config['Int_Norm_DimRed_Eval_GE']) :
@@ -607,6 +607,96 @@ if "Int_Clust_Markers_Annot_GE" in STEPS:
     #Names
     INT_CMA_CLUST_FOLDER = "dims" + str(INT_CMA_KEEP_DIM) + "_res" + str(INT_CMA_KEEP_RES)
 
+if "Int_Adding_ADT" in STEPS:
+    ### Sample/Project
+    if 'Int_Adding_ADT' in config and 'input.rda' in config['Int_Adding_ADT']:
+        INT_ADD_ADT_INPUT_RDA = config['Int_Adding_ADT']['input.rda']
+    elif "Int_Clust_Markers_Annot_GE" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Int_Adding_ADT section of configfile; input.rda will be determine from Int_Clust_Markers_Annot_GE step for Int_Adding_ADT step!\n")
+        INT_ADD_ADT_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_INT_CMA_INFO[INT_CMA_NAME_INT[x]]['INT_CMA_INPUT_RDA']) + "/" + INT_CMA_CLUST_FOLDER + "/" + INT_CMA_NAME_INT[x] + INT_CMA_COMPLEMENT[x] + "_" + str(INT_CMA_KEEP_DIM) + "_" + str(INT_CMA_KEEP_RES) + ".rda") for x in range(len(INT_CMA_NAME_INT))]
+    else:
+        sys.exit("Error: No input.rda in configfile!\n")
+    if 'Int_Adding_ADT' in config and 'samples.name.adt' in config['Int_Adding_ADT'] and 'input.dirs.adt' in config['Int_Adding_ADT'] :
+        INT_ADD_ADT_INPUT_DIR_ADT = [ x.replace(", ", ",") for x in config['Int_Adding_ADT']['input.dirs.adt']]
+        INT_ADD_ADT_SAMPLE_NAME_ADT = [ x.replace(", ", ",") for x in config['Int_Adding_ADT']['samples.name.adt']]
+    else:
+        sys.exit("Error: No samples.name.adt or input.dirs.adt in configfile!\n")
+    ### Analysis Parameters
+    INT_ADD_ADT_AUTHOR_NAME = config['Int_Adding_ADT']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Adding_ADT' in config and 'author.name' in config['Int_Adding_ADT'] and config['Int_Adding_ADT']['author.name'] != None) else "NULL"
+    INT_ADD_ADT_AUTHOR_MAIL = config['Int_Adding_ADT']['author.mail'].replace(", ", ",") if ('Int_Adding_ADT' in config and 'author.mail' in config['Int_Adding_ADT'] and config['Int_Adding_ADT']['author.mail'] != None) else "NULL"
+    INT_ADD_ADT_GENE_NAMES = config['Int_Adding_ADT']['gene.names'].replace(", ", ",") if ('Int_Adding_ADT' in config and 'gene.names' in config['Int_Adding_ADT'] and config['Int_Adding_ADT']['gene.names'] != None) else "NULL"
+    INT_ADD_ADT_MAX_CUTOFF = config['Int_Adding_ADT']['ADT.max.cutoff'].replace(", ", ",") if ('Int_Adding_ADT' in config and 'ADT.max.cutoff' in config['Int_Adding_ADT'] and config['Int_Adding_ADT']['ADT.max.cutoff'] != None) else "NULL"
+    INT_ADD_ADT_MIN_CUTOFF = config['Int_Adding_ADT']['ADT.min.cutoff'].replace(", ", ",") if ('Int_Adding_ADT' in config and 'ADT.min.cutoff' in config['Int_Adding_ADT'] and config['Int_Adding_ADT']['ADT.min.cutoff'] != None) else "NULL"
+    ### Snakefile parameters
+    #Correspondance input/output
+    INT_ADD_ADT_OUTPUT = [os.path.splitext(x)[0] for x in INT_ADD_ADT_INPUT_RDA]
+    dic_INT_ADD_ADT_INFO = {}
+    for i in range(0,len(INT_ADD_ADT_OUTPUT),1):
+        dic_INT_ADD_ADT_INFO[INT_ADD_ADT_OUTPUT[i]] = {}
+        dic_INT_ADD_ADT_INFO[INT_ADD_ADT_OUTPUT[i]]['INT_ADD_ADT_INPUT_RDA'] = INT_ADD_ADT_INPUT_RDA[i]
+        dic_INT_ADD_ADT_INFO[INT_ADD_ADT_OUTPUT[i]]['INT_ADD_ADT_INPUT_DIR_ADT'] = INT_ADD_ADT_INPUT_DIR_ADT[i]
+        dic_INT_ADD_ADT_INFO[INT_ADD_ADT_OUTPUT[i]]['INT_ADD_ADT_SAMPLE_NAME_ADT'] = INT_ADD_ADT_SAMPLE_NAME_ADT[i]
+        sys.stderr.write(INT_ADD_ADT_OUTPUT[i] + str("\n"))
+
+if "Int_Adding_TCR" in STEPS:
+    ### Sample/Project
+    if 'Int_Adding_TCR' in config and 'input.rda' in config['Int_Adding_TCR'] :
+        INT_ADD_TCR_INPUT_RDA = config['Int_Adding_TCR']['input.rda']
+    elif "Int_Adding_ADT" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Int_Adding_TCR section of configfile; input.rda will be determine from Int_Adding_ADT step for Int_Adding_TCR step!\n")
+        INT_ADD_TCR_INPUT_RDA = [ x + "_ADT.rda" for x in INT_ADD_ADT_OUTPUT]
+    elif "Int_Clust_Markers_Annot_GE" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Int_Adding_TCR section of configfile; input.rda will be determine from Int_Clust_Markers_Annot_GE step for Int_Adding_TCR step!\n")
+        INT_ADD_TCR_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_INT_CMA_INFO[INT_CMA_NAME_INT[x]]['INT_CMA_INPUT_RDA']) + "/" + INT_CMA_CLUST_FOLDER + "/" + INT_CMA_NAME_INT[x] + INT_CMA_COMPLEMENT[x] + "_" + str(INT_CMA_KEEP_DIM) + "_" + str(INT_CMA_KEEP_RES) + ".rda") for x in range(len(INT_CMA_NAME_INT))]
+    else:
+        sys.exit("Error: No input.rda in configfile!\n")
+    if 'Int_Adding_TCR' in config and 'vdj.input.files.tcr' in config['Int_Adding_TCR'] :
+        INT_ADD_TCR_INPUT_CSV_TCR = [ x.replace(", ", ",") for x in config['Int_Adding_TCR']['vdj.input.files.tcr']]
+    else:
+        sys.exit("Error: No vdj.input.files.tcr in configfile!\n")
+    ### Analysis Parameters
+    INT_ADD_TCR_AUTHOR_NAME = config['Int_Adding_TCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Adding_TCR' in config and 'author.name' in config['Int_Adding_TCR'] and config['Int_Adding_TCR']['author.name'] != None) else "NULL"
+    INT_ADD_TCR_AUTHOR_MAIL = config['Int_Adding_TCR']['author.mail'].replace(", ", ",") if ('Int_Adding_TCR' in config and 'author.mail' in config['Int_Adding_TCR'] and config['Int_Adding_TCR']['author.mail'] != None) else "NULL"
+    ### Snakefile parameters
+    #Correspondance input/output
+    INT_ADD_TCR_OUTPUT = [os.path.splitext(x)[0] for x in INT_ADD_TCR_INPUT_RDA]
+    dic_INT_ADD_TCR_INFO = {}
+    for i in range(0,len(INT_ADD_TCR_OUTPUT),1):
+        dic_INT_ADD_TCR_INFO[INT_ADD_TCR_OUTPUT[i]] = {}
+        dic_INT_ADD_TCR_INFO[INT_ADD_TCR_OUTPUT[i]]['INT_ADD_TCR_INPUT_RDA'] = INT_ADD_TCR_INPUT_RDA[i]
+        dic_INT_ADD_TCR_INFO[INT_ADD_TCR_OUTPUT[i]]['INT_ADD_TCR_INPUT_CSV_TCR'] = INT_ADD_TCR_INPUT_CSV_TCR[i]
+
+if "Int_Adding_BCR" in STEPS:
+    ### Sample/Project
+    if 'Int_Adding_BCR' in config and 'input.rda' in config['Int_Adding_BCR'] :
+        INT_ADD_BCR_INPUT_RDA = config['Int_Adding_BCR']['input.rda']
+    elif "Int_Adding_TCR" in STEPS:
+        sys.stderr.write("Note: No input.rda.ge find in Int_Adding_BCR section of configfile; input.rda.ge will be determine from Int_Adding_TCR step for Int_Adding_BCR step!\n")
+        INT_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in INT_ADD_TCR_OUTPUT]
+    elif "Adding_ADT" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_ADT step for Int_Adding_BCR step!\n")
+        INT_ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in INT_ADD_ADT_OUTPUT]
+    elif "Int_Clust_Markers_Annot_GE" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Int_Adding_BCR step!\n")
+        INT_ADD_BCR_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_INT_CMA_INFO[INT_CMA_NAME_INT[x]]['INT_CMA_INPUT_RDA']) + "/" + INT_CMA_CLUST_FOLDER + "/" + INT_CMA_NAME_INT[x] + INT_CMA_COMPLEMENT[x] + "_" + str(INT_CMA_KEEP_DIM) + "_" + str(INT_CMA_KEEP_RES) + ".rda") for x in range(len(INT_CMA_NAME_INT))]
+    else:
+        sys.exit("Error: No input.rda in configfile!\n")
+    if 'Int_Adding_BCR' in config and 'vdj.input.files.bcr' in config['Int_Adding_BCR'] :
+        INT_ADD_BCR_INPUT_CSV_BCR = [ x.replace(", ", ",") for x in config['Int_Adding_BCR']['vdj.input.files.bcr']]
+    else:
+        sys.exit("Error: No vdj.input.files.bcr in configfile!\n")
+    ### Analysis Parameters
+    INT_ADD_BCR_AUTHOR_NAME = config['Int_Adding_BCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Adding_BCR' in config and 'author.name' in config['Int_Adding_BCR'] and config['Int_Adding_BCR']['author.name'] != None) else "NULL"
+    INT_ADD_BCR_AUTHOR_MAIL = config['Int_Adding_BCR']['author.mail'].replace(", ", ",") if ('Int_Adding_BCR' in config and 'author.mail' in config['Int_Adding_BCR'] and config['Int_Adding_BCR']['author.mail'] != None) else "NULL"
+    ### Snakefile parameters
+    #Correspondance input/output
+    INT_ADD_BCR_OUTPUT = [os.path.splitext(x)[0] for x in INT_ADD_BCR_INPUT_RDA]
+    dic_INT_ADD_BCR_INFO = {}
+    for i in range(0,len(INT_ADD_BCR_OUTPUT),1):
+        dic_INT_ADD_BCR_INFO[INT_ADD_BCR_OUTPUT[i]] = {}
+        dic_INT_ADD_BCR_INFO[INT_ADD_BCR_OUTPUT[i]]['INT_ADD_BCR_INPUT_RDA'] = INT_ADD_BCR_INPUT_RDA[i]
+        dic_INT_ADD_BCR_INFO[INT_ADD_BCR_OUTPUT[i]]['INT_ADD_BCR_INPUT_CSV_BCR'] = INT_ADD_BCR_INPUT_CSV_BCR[i]
+
 if "Grp_Norm_DimRed_Eval_GE" in STEPS:
     ### Sample/Project
     if ('Grp_Norm_DimRed_Eval_GE' in config) and ('name.grp' in config['Grp_Norm_DimRed_Eval_GE']) and ('input.list.rda' in config['Grp_Norm_DimRed_Eval_GE']) :
@@ -702,6 +792,96 @@ if "Grp_Clust_Markers_Annot_GE" in STEPS:
     #Names
     GRP_CMA_CLUST_FOLDER = "dims" + str(GRP_CMA_KEEP_DIM) + "_res" + str(GRP_CMA_KEEP_RES)
 
+if "Grp_Adding_ADT" in STEPS:
+    ### Sample/Project
+    if 'Grp_Adding_ADT' in config and 'input.rda' in config['Grp_Adding_ADT']:
+        GRP_ADD_ADT_INPUT_RDA = config['Grp_Adding_ADT']['input.rda']
+    elif "Grp_Clust_Markers_Annot_GE" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Grp_Adding_ADT section of configfile; input.rda will be determine from Grp_Clust_Markers_Annot_GE step for Grp_Adding_ADT step!\n")
+        GRP_ADD_ADT_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_GRP_CMA_INFO[GRP_CMA_NAME_GRP[x]]['GRP_CMA_INPUT_RDA']) + "/" + GRP_CMA_CLUST_FOLDER + "/" + GRP_CMA_NAME_GRP[x] + GRP_CMA_COMPLEMENT[x] + "_" + str(GRP_CMA_KEEP_DIM) + "_" + str(GRP_CMA_KEEP_RES) + ".rda") for x in range(len(GRP_CMA_NAME_GRP))]
+    else:
+        sys.exit("Error: No input.rda in configfile!\n")
+    if 'Grp_Adding_ADT' in config and 'samples.name.adt' in config['Grp_Adding_ADT'] and 'input.dirs.adt' in config['Grp_Adding_ADT'] :
+        GRP_ADD_ADT_INPUT_DIR_ADT = [ x.replace(", ", ",") for x in config['Grp_Adding_ADT']['input.dirs.adt']]
+        GRP_ADD_ADT_SAMPLE_NAME_ADT = [ x.replace(", ", ",") for x in config['Grp_Adding_ADT']['samples.name.adt']]
+    else:
+        sys.exit("Error: No samples.name.adt or input.dirs.adt in configfile!\n")
+    ### Analysis Parameters
+    GRP_ADD_ADT_AUTHOR_NAME = config['Grp_Adding_ADT']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Adding_ADT' in config and 'author.name' in config['Grp_Adding_ADT'] and config['Grp_Adding_ADT']['author.name'] != None) else "NULL"
+    GRP_ADD_ADT_AUTHOR_MAIL = config['Grp_Adding_ADT']['author.mail'].replace(", ", ",") if ('Grp_Adding_ADT' in config and 'author.mail' in config['Grp_Adding_ADT'] and config['Grp_Adding_ADT']['author.mail'] != None) else "NULL"
+    GRP_ADD_ADT_GENE_NAMES = config['Grp_Adding_ADT']['gene.names'].replace(", ", ",") if ('Grp_Adding_ADT' in config and 'gene.names' in config['Grp_Adding_ADT'] and config['Grp_Adding_ADT']['gene.names'] != None) else "NULL"
+    GRP_ADD_ADT_MAX_CUTOFF = config['Grp_Adding_ADT']['ADT.max.cutoff'].replace(", ", ",") if ('Grp_Adding_ADT' in config and 'ADT.max.cutoff' in config['Grp_Adding_ADT'] and config['Grp_Adding_ADT']['ADT.max.cutoff'] != None) else "NULL"
+    GRP_ADD_ADT_MIN_CUTOFF = config['Grp_Adding_ADT']['ADT.min.cutoff'].replace(", ", ",") if ('Grp_Adding_ADT' in config and 'ADT.min.cutoff' in config['Grp_Adding_ADT'] and config['Grp_Adding_ADT']['ADT.min.cutoff'] != None) else "NULL"
+    ### Snakefile parameters
+    #Correspondance input/output
+    GRP_ADD_ADT_OUTPUT = [os.path.splitext(x)[0] for x in GRP_ADD_ADT_INPUT_RDA]
+    dic_GRP_ADD_ADT_INFO = {}
+    for i in range(0,len(GRP_ADD_ADT_OUTPUT),1):
+        dic_GRP_ADD_ADT_INFO[GRP_ADD_ADT_OUTPUT[i]] = {}
+        dic_GRP_ADD_ADT_INFO[GRP_ADD_ADT_OUTPUT[i]]['GRP_ADD_ADT_INPUT_RDA'] = GRP_ADD_ADT_INPUT_RDA[i]
+        dic_GRP_ADD_ADT_INFO[GRP_ADD_ADT_OUTPUT[i]]['GRP_ADD_ADT_INPUT_DIR_ADT'] = GRP_ADD_ADT_INPUT_DIR_ADT[i]
+        dic_GRP_ADD_ADT_INFO[GRP_ADD_ADT_OUTPUT[i]]['GRP_ADD_ADT_SAMPLE_NAME_ADT'] = GRP_ADD_ADT_SAMPLE_NAME_ADT[i]
+        sys.stderr.write(GRP_ADD_ADT_OUTPUT[i] + str("\n"))
+
+if "Grp_Adding_TCR" in STEPS:
+    ### Sample/Project
+    if 'Grp_Adding_TCR' in config and 'input.rda' in config['Grp_Adding_TCR'] :
+        GRP_ADD_TCR_INPUT_RDA = config['Grp_Adding_TCR']['input.rda']
+    elif "Grp_Adding_ADT" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Grp_Adding_TCR section of configfile; input.rda will be determine from Grp_Adding_ADT step for Grp_Adding_TCR step!\n")
+        GRP_ADD_TCR_INPUT_RDA = [ x + "_ADT.rda" for x in GRP_ADD_ADT_OUTPUT]
+    elif "Grp_Clust_Markers_Annot_GE" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Grp_Adding_TCR section of configfile; input.rda will be determine from Grp_Clust_Markers_Annot_GE step for Grp_Adding_TCR step!\n")
+        GRP_ADD_TCR_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_GRP_CMA_INFO[GRP_CMA_NAME_GRP[x]]['GRP_CMA_INPUT_RDA']) + "/" + GRP_CMA_CLUST_FOLDER + "/" + GRP_CMA_NAME_GRP[x] + GRP_CMA_COMPLEMENT[x] + "_" + str(GRP_CMA_KEEP_DIM) + "_" + str(GRP_CMA_KEEP_RES) + ".rda") for x in range(len(GRP_CMA_NAME_GRP))]
+    else:
+        sys.exit("Error: No input.rda in configfile!\n")
+    if 'Grp_Adding_TCR' in config and 'vdj.input.files.tcr' in config['Grp_Adding_TCR'] :
+        GRP_ADD_TCR_INPUT_CSV_TCR = [ x.replace(", ", ",") for x in config['Grp_Adding_TCR']['vdj.input.files.tcr']]
+    else:
+        sys.exit("Error: No vdj.input.files.tcr in configfile!\n")
+    ### Analysis Parameters
+    GRP_ADD_TCR_AUTHOR_NAME = config['Grp_Adding_TCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Adding_TCR' in config and 'author.name' in config['Grp_Adding_TCR'] and config['Grp_Adding_TCR']['author.name'] != None) else "NULL"
+    GRP_ADD_TCR_AUTHOR_MAIL = config['Grp_Adding_TCR']['author.mail'].replace(", ", ",") if ('Grp_Adding_TCR' in config and 'author.mail' in config['Grp_Adding_TCR'] and config['Grp_Adding_TCR']['author.mail'] != None) else "NULL"
+    ### Snakefile parameters
+    #Correspondance input/output
+    GRP_ADD_TCR_OUTPUT = [os.path.splitext(x)[0] for x in GRP_ADD_TCR_INPUT_RDA]
+    dic_GRP_ADD_TCR_INFO = {}
+    for i in range(0,len(GRP_ADD_TCR_OUTPUT),1):
+        dic_GRP_ADD_TCR_INFO[GRP_ADD_TCR_OUTPUT[i]] = {}
+        dic_GRP_ADD_TCR_INFO[GRP_ADD_TCR_OUTPUT[i]]['GRP_ADD_TCR_INPUT_RDA'] = GRP_ADD_TCR_INPUT_RDA[i]
+        dic_GRP_ADD_TCR_INFO[GRP_ADD_TCR_OUTPUT[i]]['GRP_ADD_TCR_INPUT_CSV_TCR'] = GRP_ADD_TCR_INPUT_CSV_TCR[i]
+
+if "Grp_Adding_BCR" in STEPS:
+    ### Sample/Project
+    if 'Grp_Adding_BCR' in config and 'input.rda' in config['Grp_Adding_BCR'] :
+        GRP_ADD_BCR_INPUT_RDA = config['Grp_Adding_BCR']['input.rda']
+    elif "Grp_Adding_TCR" in STEPS:
+        sys.stderr.write("Note: No input.rda.ge find in Grp_Adding_BCR section of configfile; input.rda.ge will be determine from Grp_Adding_TCR step for Grp_Adding_BCR step!\n")
+        GRP_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in GRP_ADD_TCR_OUTPUT]
+    elif "Adding_ADT" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_ADT step for Grp_Adding_BCR step!\n")
+        GRP_ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in GRP_ADD_ADT_OUTPUT]
+    elif "Grp_Clust_Markers_Annot_GE" in STEPS:
+        sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Clust_Markers_Annot_GE step for Grp_Adding_BCR step!\n")
+        GRP_ADD_BCR_INPUT_RDA = [os.path.normpath(os.path.dirname(dic_GRP_CMA_INFO[GRP_CMA_NAME_GRP[x]]['GRP_CMA_INPUT_RDA']) + "/" + GRP_CMA_CLUST_FOLDER + "/" + GRP_CMA_NAME_GRP[x] + GRP_CMA_COMPLEMENT[x] + "_" + str(GRP_CMA_KEEP_DIM) + "_" + str(GRP_CMA_KEEP_RES) + ".rda") for x in range(len(GRP_CMA_NAME_GRP))]
+    else:
+        sys.exit("Error: No input.rda in configfile!\n")
+    if 'Grp_Adding_BCR' in config and 'vdj.input.files.bcr' in config['Grp_Adding_BCR'] :
+        GRP_ADD_BCR_INPUT_CSV_BCR = [ x.replace(", ", ",") for x in config['Grp_Adding_BCR']['vdj.input.files.bcr']]
+    else:
+        sys.exit("Error: No vdj.input.files.bcr in configfile!\n")
+    ### Analysis Parameters
+    GRP_ADD_BCR_AUTHOR_NAME = config['Grp_Adding_BCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Adding_BCR' in config and 'author.name' in config['Grp_Adding_BCR'] and config['Grp_Adding_BCR']['author.name'] != None) else "NULL"
+    GRP_ADD_BCR_AUTHOR_MAIL = config['Grp_Adding_BCR']['author.mail'].replace(", ", ",") if ('Grp_Adding_BCR' in config and 'author.mail' in config['Grp_Adding_BCR'] and config['Grp_Adding_BCR']['author.mail'] != None) else "NULL"
+    ### Snakefile parameters
+    #Correspondance input/output
+    GRP_ADD_BCR_OUTPUT = [os.path.splitext(x)[0] for x in GRP_ADD_BCR_INPUT_RDA]
+    dic_GRP_ADD_BCR_INFO = {}
+    for i in range(0,len(GRP_ADD_BCR_OUTPUT),1):
+        dic_GRP_ADD_BCR_INFO[GRP_ADD_BCR_OUTPUT[i]] = {}
+        dic_GRP_ADD_BCR_INFO[GRP_ADD_BCR_OUTPUT[i]]['GRP_ADD_BCR_INPUT_RDA'] = GRP_ADD_BCR_INPUT_RDA[i]
+        dic_GRP_ADD_BCR_INFO[GRP_ADD_BCR_OUTPUT[i]]['GRP_ADD_BCR_INPUT_CSV_BCR'] = GRP_ADD_BCR_INPUT_CSV_BCR[i]
+
 if "Cerebro" in STEPS:
     ### Sample/Project
     CEREBRO_INPUT_RDA = []
@@ -781,117 +961,17 @@ if "Cerebro" in STEPS:
     else:
         sys.exit("Error: Unknown version of cerebro in configfile!\n")
 
-#singularity #!/usr/bin/env python
+#singularity
 if "Droplets_QC_GE" in STEPS or "Filtering_GE" in STEPS or "Norm_DimRed_Eval_GE" in STEPS or "Clust_Markers_Annot_GE" in STEPS or "Adding_ADT" in STEPS or "Int_Clust_Markers_Annot_GE" in STEPS or "Grp_Norm_DimRed_Eval_GE" in STEPS or "Grp_Clust_Markers_Annot_GE" in STEPS:
     SINGULARITY_ENV = PIPELINE_FOLDER + "/envs/singularity/single_cell.simg"
 if "Int_Norm_DimRed_Eval_GE" in STEPS :
     INT_SINGULARITY_ENV = PIPELINE_FOLDER + "/envs/singularity/single_cell_integration.simg"
-
-
-onstart:
-    sys.stderr.write("\n############################################################# \n")
-    sys.stderr.write("\n\n\t Single-cell RNA-seq pipeline \n\n")
-    sys.stderr.write("\n############################################################# \n\n")
-    sys.stderr.write("***************** PARAMETERS ******************\n")
-    if "Alignment_countTable_GE" in STEPS:
-        sys.stderr.write("\n" + "Alignment_countTable_GE:" + "\n")
-        sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(ALIGN_SAMPLE_NAME_GE_RAW, list):
-            for sample in ALIGN_SAMPLE_NAME_GE_RAW:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_GE_RAW) + "\n")
-
-    if "Alignment_countTable_ADT" in STEPS:
-        sys.stderr.write("\n" + "Alignment_countTable_ADT:" + "\n")
-        sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(ALIGN_SAMPLE_NAME_ADT_RAW, list):
-            for sample in ALIGN_SAMPLE_NAME_ADT_RAW:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_ADT_RAW) + "\n")
-
-    if "Alignment_annotations_TCR_BCR" in STEPS:
-        sys.stderr.write("\n" + "Alignment_annotations_TCR_BCR:" + "\n")
-        sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(ALIGN_SAMPLE_NAME_TCR_BCR_RAW, list):
-            for sample in ALIGN_SAMPLE_NAME_TCR_BCR_RAW:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(ALIGN_SAMPLE_NAME_TCR_BCR_RAW) + "\n")
-
-    if "Droplets_QC_GE" in STEPS:
-        sys.stderr.write("\n" + "Droplets_QC_GE:" + "\n")
-        sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(QC_SAMPLE_NAME_GE, list):
-            for sample in QC_SAMPLE_NAME_GE:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(QC_SAMPLE_NAME_GE) + "\n")
-
-    if "Filtering_GE" in STEPS:
-        sys.stderr.write("\n" + "Filtering_GE:" + "\n")
-        sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(FILERING_SAMPLE_NAME_GE, list):
-            for sample in FILERING_SAMPLE_NAME_GE:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(FILERING_SAMPLE_NAME_GE) + "\n")
-
-    if "Norm_DimRed_Eval_GE" in STEPS:
-        sys.stderr.write("\n" + "Norm_DimRed_Eval_GE:" + "\n")
-        sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(NDRE_SAMPLE_NAME_GE, list):
-            for sample in NDRE_SAMPLE_NAME_GE:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(NDRE_SAMPLE_NAME_GE) + "\n")
-    if "Clust_Markers_Annot_GE" in STEPS:
-        sys.stderr.write("\n" + "Clust_Markers_Annot_GE:" + "\n")
-        sys.stderr.write("SAMPLE(S):\n")
-        if isinstance(CMA_SAMPLE_NAME_GE, list):
-            for sample in CMA_SAMPLE_NAME_GE:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(CMA_SAMPLE_NAME_GE) + "\n")
-    if "Adding_ADT" in STEPS:
-        sys.stderr.write("\n" + "Adding_ADT:" + "\n")
-        sys.stderr.write("RDA FILE(S):\n")
-        if isinstance(ADD_ADT_INPUT_RDA_GE, list):
-            for sample in ADD_ADT_INPUT_RDA_GE:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(ADD_ADT_INPUT_RDA_GE) + "\n")
-    if "Adding_TCR" in STEPS:
-        sys.stderr.write("\n" + "Adding_TCR:" + "\n")
-        sys.stderr.write("RDA FILE(S):\n")
-        if isinstance(ADD_TCR_INPUT_RDA_GE, list):
-            for sample in ADD_TCR_INPUT_RDA_GE:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(ADD_TCR_INPUT_RDA_GE) + "\n")
-    if "Adding_BCR" in STEPS:
-        sys.stderr.write("\n" + "Adding_BCR:" + "\n")
-        sys.stderr.write("RDA FILE(S):\n")
-        if isinstance(ADD_BCR_INPUT_RDA_GE, list):
-            for sample in ADD_BCR_INPUT_RDA_GE:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(ADD_BCR_INPUT_RDA_GE) + "\n")
-    if "Cerebro" in STEPS:
-        sys.stderr.write("\n" + "Cerebro:" + "\n")
-        sys.stderr.write("RDA FILE(S):\n")
-        if isinstance(CEREBRO_INPUT_RDA, list):
-            for sample in CEREBRO_INPUT_RDA:
-                sys.stderr.write("\t" + str(sample) + "\n")
-        else:
-            sys.stderr.write("\t" + str(CEREBRO_INPUT_RDA) + "\n")
-
-    sys.stderr.write("\n***************** RUN ******************\n")
-    return []
-
+if "Alignment_annotations_TCR_BCR" in STEPS or "Adding_TCR" in STEPS or "Adding_BCR" in STEPS or "Int_Adding_TCR" in STEPS or "Int_Adding_BCR" in STEPS or "Grp_Adding_TCR" in STEPS or "Grp_Adding_BCR" in STEPS:
+    SINGULARITY_ENV_TCR_BCR = PIPELINE_FOLDER + "/envs/singularity/single_cell_TCR_BCR.simg"
 
 ### rule all ###################################################################################################################################
+sys.stderr.write("\n########################### Run ############################\n\n")
+
 include: "rules/Rule_all.smk"
 rule all:
     input:
@@ -940,8 +1020,26 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
 if "Int_Clust_Markers_Annot_GE" in STEPS:
     include: "rules/Int_Clust_Markers_Annot_GE.smk"
 
+if "Int_Adding_ADT" in STEPS:
+    include: "rules/Int_Adding_ADT.smk"
+
+if "Int_Adding_TCR" in STEPS:
+    include: "rules/Int_Adding_TCR.smk"
+
+if "Int_Adding_BCR" in STEPS:
+    include: "rules/Int_Adding_BCR.smk"
+
 if "Grp_Norm_DimRed_Eval_GE" in STEPS:
     include: "rules/Grp_Norm_DimRed_Eval_GE.smk"
 
 if "Grp_Clust_Markers_Annot_GE" in STEPS:
     include: "rules/Grp_Clust_Markers_Annot_GE.smk"
+
+if "Grp_Adding_ADT" in STEPS:
+    include: "rules/Grp_Adding_ADT.smk"
+
+if "Grp_Adding_TCR" in STEPS:
+    include: "rules/Grp_Adding_TCR.smk"
+
+if "Grp_Adding_BCR" in STEPS:
+    include: "rules/Grp_Adding_BCR.smk"
