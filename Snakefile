@@ -110,6 +110,8 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
                     sys.exit("File names for TCR not recognized. It must be like mysample_2_S1_R1_001.fastq.gz or mysample_S1_L002_R1_001.fastq.gz")
         #files without path and extention
         ALIGN_SYMLINK_FILES_NAME_TCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_TCR]
+    else:
+        ALIGN_SAMPLE_NAME_TCR_RAW = []
     #BCR
     ALIGN_SAMPLE_NAME_BCR = []
     ALIGN_ORIG_FILES_BCR = []
@@ -132,6 +134,8 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
                     sys.exit("File names for BCR not recognized. It must be like mysample_2_S1_R1_001.fastq.gz or mysample_S1_L002_R1_001.fastq.gz")
         #files without path and extention
         ALIGN_SYMLINK_FILES_NAME_BCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_BCR]
+    else:
+        ALIGN_SAMPLE_NAME_BCR_RAW = []
     #Fusion TCR/BCR
     ALIGN_SAMPLE_NAME_TCR_BCR_RAW = ALIGN_SAMPLE_NAME_TCR_RAW  + ALIGN_SAMPLE_NAME_BCR_RAW
     ALIGN_SAMPLE_NAME_TCR_BCR = ALIGN_SAMPLE_NAME_TCR + ALIGN_SAMPLE_NAME_BCR
