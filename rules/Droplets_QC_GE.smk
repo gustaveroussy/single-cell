@@ -74,7 +74,7 @@ rule QC_droplets_ge:
         time_min = (lambda wildcards, attempt: min(attempt * 90, 200))
     shell:
         """
-        singularity exec --no-home {params.sing_bind} \
+        singularity exec --contain {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part1.R \
         --input.dir.ge {params.input_folder} \

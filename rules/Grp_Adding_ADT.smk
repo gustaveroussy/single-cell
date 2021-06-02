@@ -68,7 +68,7 @@ rule grp_add_adt_ge:
         time_min = lambda wildcards, attempt: min(attempt * 120, 200)
     shell:
         """
-        singularity exec --no-home {params.sing_bind} \
+        singularity exec --contain {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Int_Grp_pipeline_ADT.R \
         --samples.name.adt {params.sample_name_adt} \

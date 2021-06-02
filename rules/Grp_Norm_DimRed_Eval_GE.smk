@@ -50,7 +50,7 @@ rule grp_norm_dimred_ge:
         time_min = (lambda wildcards, attempt: min(60 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + attempt * 120, 4320))
     shell:
         """
-        singularity exec --no-home {params.sing_grp_bind} \
+        singularity exec --contain {params.sing_grp_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Grouped_analysis_part1.R \
         --input.list.rda {params.grp_input_rda} \

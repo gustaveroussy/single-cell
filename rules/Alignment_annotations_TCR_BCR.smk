@@ -164,7 +164,7 @@ rule alignment_annotations_tcr_bcr:
                  --fastqs=/WORKDIR/{ALIGN_INPUT_DIR_TCR_BCR} \
                  --sample={wildcards.sample_name_tcr_bcr} \
                  --localmem=10 \
-                 --localcores={threads}' | singularity exec --no-home {params.sing_bind} {SINGULARITY_ENV_TCR_BCR} bash
+                 --localcores={threads}' | singularity exec --contain {params.sing_bind} {SINGULARITY_ENV_TCR_BCR} bash
         FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
         FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")
         #CELLRANGER_V=`/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj --version | grep "cellranger vdj (" | sed -e "s/cellranger vdj (//g" | sed -e "s/)//g"`

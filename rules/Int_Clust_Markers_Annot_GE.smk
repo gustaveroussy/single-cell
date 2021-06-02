@@ -52,7 +52,7 @@ rule int_clust_markers_annot_ge:
         time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
     shell:
         """
-        singularity exec --no-home {params.sing_int_bind} \
+        singularity exec --contain {params.sing_int_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Integration_part2.R \
         --input.rda.int {params.int_input_rda} \

@@ -57,7 +57,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
         shell:
             """
-            singularity exec --no-home {params.sing_bind} \
+            singularity exec --contain {params.sing_bind} \
             {SINGULARITY_ENV} \
             Rscript {params.pipeline_folder}/scripts/pipeline_part2.R \
             --input.rda.ge {params.input_rda} \
@@ -106,7 +106,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
         shell:
             """
-            singularity exec --no-home {params.sing_bind} \
+            singularity exec --contain {params.sing_bind} \
             {SINGULARITY_ENV} \
             Rscript {params.pipeline_folder}/scripts/pipeline_part2.R \
             --input.rda.ge {params.input_rda} \

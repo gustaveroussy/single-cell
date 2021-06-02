@@ -52,7 +52,7 @@ rule grp_clust_markers_annot_ge:
         time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
     shell:
         """
-        singularity exec --no-home {params.sing_grp_bind} \
+        singularity exec --contain {params.sing_grp_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Grouped_analysis_part2.R \
         --input.rda.grp {params.grp_input_rda} \
