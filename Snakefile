@@ -375,6 +375,7 @@ if "Clust_Markers_Annot_GE" in STEPS: #alias CMA
     # Normalization and dimension reduction
     CMA_KEEP_DIM = config['Clust_Markers_Annot_GE']['keep.dims'] if ('Clust_Markers_Annot_GE' in config and 'keep.dims' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['keep.dims'] != None) else "NULL"
     CMA_KEEP_RES = config['Clust_Markers_Annot_GE']['keep.res'] if ('Clust_Markers_Annot_GE' in config and 'keep.res' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['keep.res'] != None) else "NULL"
+    CMA_KEEP_RES = str(CMA_KEEP_RES).replace(".0", "")
     CMA_CFR_MINSCORE = config['Clust_Markers_Annot_GE']['cfr.minscore'] if ('Clust_Markers_Annot_GE' in config and 'cfr.minscore' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['cfr.minscore'] != None) else "NULL"
     CMA_SR_MINSCORE = config['Clust_Markers_Annot_GE']['sr.minscore'] if ('Clust_Markers_Annot_GE' in config and 'sr.minscore' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['sr.minscore'] != None) else "NULL"
     # Metadata file
@@ -395,7 +396,7 @@ if "Clust_Markers_Annot_GE" in STEPS: #alias CMA
             compl = compl[len(CMA_SAMPLE_NAME_GE[i]):]
         CMA_COMPLEMENT.append(compl)
     #Names
-    CMA_CLUST_FOLDER = "dims" + str(CMA_KEEP_DIM) + "_res" + str(CMA_KEEP_RES).replace(".0", "")
+    CMA_CLUST_FOLDER = "dims" + str(CMA_KEEP_DIM) + "_res" + CMA_KEEP_RES
 
 if "Adding_ADT" in STEPS:
     ### Sample/Project
