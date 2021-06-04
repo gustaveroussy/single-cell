@@ -49,11 +49,11 @@ rule clust_markers_annot_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 1024, 20480)),
+        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 3072, 20480)),
         time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
-        singularity exec --contain {params.sing_bind} \
+        singularity exec --no-home {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part4.R \
         --input.rda.ge {params.input_rda} \

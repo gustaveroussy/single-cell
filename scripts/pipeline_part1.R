@@ -213,7 +213,7 @@ QC.hist(sobj = sobj, assay = assay, out.dir = unfiltred.dir)
 
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$part1_Droplets_QC <- paste0("Cell barcode by symbol count table were loaded in R (version ", getRversion(), ") using the BUSpaRse package (version ", sobj@misc$technical_info$BUSpaRse,").
-To call real cells from empty droplets, we used the emptyDrops() function from the dropletUtils (version ", sobj@misc$technical_info$DropletUtils,") package, which assesses whether the RNA content associated with a cell barcode is significantly distinct from the ambient background RNA present within each sample. Barcodes with p-value < ", emptydrops.fdr," (Benjamini-Hochberg-corrected) were considered as legitimate cells for further analysis.")
+To call real cells from empty droplets, we used the emptyDrops() function from the dropletUtils package (version ", sobj@misc$technical_info$DropletUtils,"), which assesses whether the RNA content associated with a cell barcode is significantly distinct from the ambient background RNA present within each sample. Barcodes with p-value < ", emptydrops.fdr," (Benjamini-Hochberg-corrected) were considered as legitimate cells for further analysis.")
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 
 ### Saving non-normalized object
