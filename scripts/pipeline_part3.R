@@ -171,6 +171,7 @@ sobj@misc$technical_info$patchwork <- utils::packageVersion('patchwork')
 ### Materials and Methods
 MM_tmp <- if(dimred.method == 'pca') 'PCA' else dimred.method
 if(!is.null(vtr)){
+  vtr <- stringr::str_replace(vtr, "nCount_RNA", "the number of detected transcripts")
   vtr <- stringr::str_replace(vtr, "sizeFactor", "the number of detected transcripts")
   vtr <- stringr::str_replace(vtr, "nFeature_RNA", "the number of detected genes")
   vtr <- stringr::str_replace(vtr, "percent_mt", "the proportion of mitochondrial transcripts")

@@ -13,8 +13,8 @@ option_list <- list(
   make_option("--pipeline.path", help="Path to pipeline folder; it allows to change path if this script is used by snakemake and singularity, or singularity only or in local way. Example for singularity only: /WORKDIR/scRNAseq_10X_R4"),
   ### Analysis Parameters
   make_option("--gene.names", help="List of gene names wich correspond to the ADT proteins."),
-  make_option("--ADT.min.cutoff", help="List of quantile min to cutoff protein expression for plot."),
-  make_option("--ADT.max.cutoff", help="List of quantile max to cutoff protein expression for plot."),
+  make_option("--ADT.min.cutoff", help="List of quantile min to cutoff protein expression for plot (default: q30)."),
+  make_option("--ADT.max.cutoff", help="List of quantile max to cutoff protein expression for plot (default: q95)."),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
