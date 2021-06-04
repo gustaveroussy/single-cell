@@ -395,7 +395,7 @@ if "Clust_Markers_Annot_GE" in STEPS: #alias CMA
             compl = compl[len(CMA_SAMPLE_NAME_GE[i]):]
         CMA_COMPLEMENT.append(compl)
     #Names
-    CMA_CLUST_FOLDER = "dims" + str(CMA_KEEP_DIM) + "_res" + str(CMA_KEEP_RES)
+    CMA_CLUST_FOLDER = "dims" + str(CMA_KEEP_DIM) + "_res" + str(CMA_KEEP_RES).replace(".0", "")
 
 if "Adding_ADT" in STEPS:
     ### Sample/Project

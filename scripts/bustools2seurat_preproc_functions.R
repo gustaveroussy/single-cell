@@ -2352,10 +2352,13 @@ save_stat <- function(sobj = NULL, sample.names = NULL, title = NULL, out.dir = 
   rm(sobj)
   gc()
   names(sobj.list) = sample.names
-  stat_tot=data.frame(matrix(vector(), 24, 0),stringsAsFactors=F)
+  stat_tot=data.frame(matrix(vector(), 29, 0),stringsAsFactors=F)
   for (i in sample.names){
     stat=format(as.data.frame(unlist(sobj.list[[i]]@misc$excel)), trim = TRUE, drop0trailing = TRUE, decimal.mark = ",", scientific = FALSE)
-    names_row_stat=c("Droplet_Quality.captured_droplet", "Droplet_Quality.total_number_UMI", "Droplet_Quality.estimated_cells",
+    names_row_stat=c("Kallisto_Bustools_alignment.Total_reads", "Kallisto_Bustools_alignment.Pseudo_aligned_reads",
+                     "Kallisto_Bustools_alignment.Pseudo_aligned_reads_percent", "Kallisto_Bustools_alignment.Pseudo_aligned_reads_to_unique_target_sequence",
+                     "Kallisto_Bustools_alignment.Pseudo_aligned_reads_to_unique_target_sequence_percent",
+                     "Droplet_Quality.captured_droplet", "Droplet_Quality.total_number_UMI", "Droplet_Quality.estimated_cells",
                      "Droplet_Quality.estimated_UMI", "Droplet_Quality.fraction_read_in_cells", "Cells_Quality.mito_summary.Median",
                      "Cells_Quality.ribo_summary.Median", "Cells_Quality.stress_summary.Median", "Cells_Quality.filter_cells_genes",
                      "Cells_Quality.filter_cells_counts", "Cells_Quality.genes_per_cell_summary.Median", "Cells_Quality.UMI_per_cell_summary.Median",
