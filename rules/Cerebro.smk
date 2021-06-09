@@ -30,7 +30,8 @@ This rule launches the R script to translate seurat file into cerebro file.
 """
 rule cerebro:
     input:
-        cerebro_rda_file = cerebro_input
+        cerebro_rda_file = cerebro_input,
+        tmp = temp(directory(tempfile.mkdtemp(prefix="sc_pipeline-", dir="/tmp")))
     output:
         cerebro_crb_file = expand("{{cerebro_input_rda_no_extention}}{cerebro_complement}", cerebro_complement = CEREBRO_COMPLEMENT_CRB)
     params:

@@ -51,7 +51,9 @@ rule norm_dimred_ge:
         time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
     shell:
         """
-        singularity exec --contain {params.sing_bind} \
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part3.R \
         --input.rda.ge {params.input_rda} \
@@ -72,5 +74,6 @@ rule norm_dimred_ge:
         --res.max {NDRE_RES_MAX} \
         --res.min {NDRE_RES_MIN} \
         --res.steps {NDRE_RES_STEPS} \
-        --metadata.file {params.SING_NDRE_METADATA_FILE}
+        --metadata.file {params.SING_NDRE_METADATA_FILE} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
         """

@@ -25,6 +25,7 @@ rule symlink_rename_fq_adt:
         mem_mb = (lambda wildcards, attempt: min(attempt * 256, 2048)),
         time_min = (lambda wildcards, attempt: min(attempt * 5, 50))
     run:
+        os.environ["TMPDIR"] = GLOBAL_TMP
         sys.stderr.write("\t Create symbolic link: \n")
         sys.stderr.write("\t From :" + "\t" + str(input.fq) + "\n")
         sys.stderr.write("\t To :" + "\t" + str(output.fq_link) + "\n")
@@ -47,7 +48,13 @@ rule fastqc_adt:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc -t {threads} {input}"
+        """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        mkdir -p {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc && \
+        fastqc --quiet -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc -d $TMP_DIR -t {threads} {input} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
+        """
 
 """
 This rule makes the multiqc from the fastqc and the fastq-screen results.
@@ -75,7 +82,14 @@ rule multiqc_adt:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "multiqc -n {wildcards.sample_name_adt}'_RAW' -i {wildcards.sample_name_adt}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{wildcards.sample_name_adt}_RAW_data.zip {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{wildcards.sample_name_adt}_RAW_plots"
+        """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        export TMPDIR=$TMP_DIR && \
+        multiqc -n {wildcards.sample_name_adt}'_RAW' -i {wildcards.sample_name_adt}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads {input} && \
+        rm -r {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{wildcards.sample_name_adt}_RAW_data.zip {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/{wildcards.sample_name_adt}_RAW_plots && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
+        """
 
 
 """
@@ -132,8 +146,6 @@ rule sort_file_adt:
         corrected_bus_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_corrected.bus")
     output:
         sorted_bus_file = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/{sample_name_adt}_sorted.bus")
-    params:
-        tmp_dir=os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/{sample_name_adt}/KALLISTOBUS/tmp")
     threads:
         1
     resources:
@@ -142,7 +154,12 @@ rule sort_file_adt:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {params.tmp_dir} && bustools sort -T {params.tmp_dir}/tmp -t {threads} -m 12G -o {output} {input} && rm -r {input} {params.tmp_dir}"
+        """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        bustools sort -T $TMP_DIR -t {threads} -m {resources.mem_mb}M -o {output} {input} && \
+        rm -r {input} $TMP_DIR || rm -r $TMP_DIR
+        """
 
 """
 This rule count UMI from the corrected sorted results of alignment, by bustools.

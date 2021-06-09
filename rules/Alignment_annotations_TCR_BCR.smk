@@ -60,7 +60,13 @@ rule fastqc_tcr_bcr:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc -t {threads} {input}"
+        """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc && \
+        fastqc --quiet -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc -d $TMP_DIR-t {threads} {input} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
+        """
 
 
 """
@@ -114,7 +120,14 @@ rule multiqc_tcr_bcr:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "multiqc -n {wildcards.sample_name_tcr_bcr}'_RAW' -i {wildcards.sample_name_tcr_bcr}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqscreen {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/{wildcards.sample_name_tcr_bcr}_RAW_data.zip {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/{wildcards.sample_name_tcr_bcr}_RAW_plots"
+        """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        export TMPDIR=$TMP_DIR && \
+        multiqc -n {wildcards.sample_name_tcr_bcr}'_RAW' -i {wildcards.sample_name_tcr_bcr}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads {input} && \
+        rm -r {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqscreen {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/{wildcards.sample_name_tcr_bcr}_RAW_data.zip {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/{wildcards.sample_name_tcr_bcr}_RAW_plots && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
+        """
 
 """
 This function allows to determine the singularity binding parameters.
@@ -157,13 +170,15 @@ rule alignment_annotations_tcr_bcr:
         """
         #source /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/sourceme.bash
         rm -r {params.sample_folder}/{wildcards.sample_name_tcr_bcr}_CellRanger
+        res=$(({resources.mem_mb}/1000))
+
         echo 'cd /WORKDIR/{params.sample_folder} && \
         /Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj \
                  --id={wildcards.sample_name_tcr_bcr}_CellRanger \
                  --reference=/WORKDIR/{CRINDEX_TCR_BCR} \
                  --fastqs=/WORKDIR/{ALIGN_INPUT_DIR_TCR_BCR} \
                  --sample={wildcards.sample_name_tcr_bcr} \
-                 --localmem=10 \
+                 --localmem=$res \
                  --localcores={threads}' | singularity exec --contain {params.sing_bind} {SINGULARITY_ENV_TCR_BCR} bash
         FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
         FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")

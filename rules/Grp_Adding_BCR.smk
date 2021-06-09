@@ -59,7 +59,9 @@ rule grp_add_bcr_ge:
         time_min = lambda wildcards, attempt: min(attempt * 120, 200)
     shell:
         """
-        singularity exec --contain {params.sing_bind} \
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV_TCR_BCR} \
         Rscript {params.pipeline_folder}/scripts/Int_Grp_pipeline_BCR.R \
         --input.rda {params.input_rda} \
@@ -67,5 +69,6 @@ rule grp_add_bcr_ge:
         --vdj.input.files.bcr {params.input_csv} \
         --author.name {GRP_ADD_BCR_AUTHOR_NAME} \
         --author.mail {GRP_ADD_BCR_AUTHOR_MAIL} \
-        --pipeline.path {params.pipeline_folder}
+        --pipeline.path {params.pipeline_folder} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
         """

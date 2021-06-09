@@ -57,7 +57,9 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
         shell:
             """
-            singularity exec --contain {params.sing_bind} \
+            export TMPDIR={GLOBAL_TMP}
+            TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+            singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
             {SINGULARITY_ENV} \
             Rscript {params.pipeline_folder}/scripts/pipeline_part2.R \
             --input.rda.ge {params.input_rda} \
@@ -76,7 +78,8 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             --doublets.filter.method {FILERING_DOUBLET_FILTER_METHOD} \
             --cc.seurat.file {params.SING_FILERING_CC_SEURAT_FILE} \
             --cc.cyclone.file {params.SING_FILERING_CC_CYCLONE_FILE} \
-            --metadata.file {params.SING_FILERING_METADATA_FILE}
+            --metadata.file {params.SING_FILERING_METADATA_FILE} && \
+            rm -r $TMP_DIR || rm -r $TMP_DIR
             """
 
 """
@@ -106,7 +109,9 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
         shell:
             """
-            singularity exec --contain {params.sing_bind} \
+            export TMPDIR={GLOBAL_TMP}
+            TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+            singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
             {SINGULARITY_ENV} \
             Rscript {params.pipeline_folder}/scripts/pipeline_part2.R \
             --input.rda.ge {params.input_rda} \
@@ -125,5 +130,6 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             --doublets.filter.method {FILERING_DOUBLET_FILTER_METHOD} \
             --cc.seurat.file {params.SING_FILERING_CC_SEURAT_FILE} \
             --cc.cyclone.file {params.SING_FILERING_CC_CYCLONE_FILE} \
-            --metadata.file {params.SING_FILERING_METADATA_FILE}
+            --metadata.file {params.SING_FILERING_METADATA_FILE} && \
+            rm -r $TMP_DIR || rm -r $TMP_DIR
             """

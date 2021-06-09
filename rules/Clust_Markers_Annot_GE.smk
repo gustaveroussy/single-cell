@@ -53,7 +53,9 @@ rule clust_markers_annot_ge:
         time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
-        singularity exec --no-home {params.sing_bind} \
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part4.R \
         --input.rda.ge {params.input_rda} \
@@ -67,5 +69,6 @@ rule clust_markers_annot_ge:
         --keep.res {CMA_KEEP_RES} \
         --cfr.minscore {CMA_CFR_MINSCORE} \
         --sr.minscore {CMA_SR_MINSCORE} \
-        --metadata.file {params.SING_CMA_METADATA_FILE}
+        --metadata.file {params.SING_CMA_METADATA_FILE} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
         """

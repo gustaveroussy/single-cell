@@ -67,7 +67,9 @@ rule int_add_adt_ge:
         time_min = lambda wildcards, attempt: min(attempt * 120, 200)
     shell:
         """
-        singularity exec --contain {params.sing_bind} \
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Int_Grp_pipeline_ADT.R \
         --samples.name.adt {params.sample_name_adt} \
@@ -80,5 +82,6 @@ rule int_add_adt_ge:
         --pipeline.path {params.pipeline_folder} \
         --gene.names  {INT_ADD_ADT_GENE_NAMES} \
         --ADT.min.cutoff {INT_ADD_ADT_MIN_CUTOFF} \
-        --ADT.max.cutoff {INT_ADD_ADT_MAX_CUTOFF}
+        --ADT.max.cutoff {INT_ADD_ADT_MAX_CUTOFF} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
         """

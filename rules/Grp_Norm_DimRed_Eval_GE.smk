@@ -50,7 +50,9 @@ rule grp_norm_dimred_ge:
         time_min = (lambda wildcards, attempt: min(60 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + attempt * 120, 4320))
     shell:
         """
-        singularity exec --contain {params.sing_grp_bind} \
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_grp_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Grouped_analysis_part1.R \
         --input.list.rda {params.grp_input_rda} \
@@ -74,5 +76,6 @@ rule grp_norm_dimred_ge:
         --res.max {GRP_NDRE_RES_MAX} \
         --res.min {GRP_NDRE_RES_MIN} \
         --res.steps {GRP_NDRE_RES_STEPS} \
-        --metadata.file {params.SING_GRP_NDRE_METADATA_FILE}
+        --metadata.file {params.SING_GRP_NDRE_METADATA_FILE} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
         """

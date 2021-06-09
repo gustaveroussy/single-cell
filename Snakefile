@@ -22,6 +22,13 @@ sys.stderr.write("\n#################### Setting Parameters ####################
 STEPS = config['Steps']
 PIPELINE_FOLDER = workflow.snakefile
 PIPELINE_FOLDER = PIPELINE_FOLDER.replace("/Snakefile", "")
+GLOBAL_TMP = config['Tmp'] if 'Tmp' in config else "/tmp"
+if os.path.normpath(GLOBAL_TMP) != "/tmp" :
+    if os.path.exists(GLOBAL_TMP) :
+        sys.stderr.write("Temporary directory is set to: " + GLOBAL_TMP + "\n")
+    else :
+        sys.stderr.write(GLOBAL_TMP + " doesn't exist! Temporary directory is set to /tmp \n")
+        GLOBAL_TMP = "/tmp"
 
 if "Alignment_countTable_GE" in STEPS:
     ### Sample/Project

@@ -74,7 +74,9 @@ rule QC_droplets_ge:
         time_min = (lambda wildcards, attempt: min(attempt * 90, 200))
     shell:
         """
-        singularity exec --contain {params.sing_bind} \
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part1.R \
         --input.dir.ge {params.input_folder} \
@@ -101,5 +103,6 @@ rule QC_droplets_ge:
         --str.genes.file {params.SING_QC_ST_FILE} \
         --translation.file {params.SING_QC_TRANSLATION_FILE} \
         --metadata.file {QC_METADATA_FILE} \
-        --metadata.file {params.SING_QC_METADATA_FILE}
+        --metadata.file {params.SING_QC_METADATA_FILE} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
         """

@@ -25,6 +25,7 @@ rule symlink_rename_fq_ge:
         mem_mb = (lambda wildcards, attempt: min(attempt * 256, 2048)),
         time_min = (lambda wildcards, attempt: min(attempt * 5, 50))
     run:
+        os.environ["TMPDIR"] = GLOBAL_TMP
         sys.stderr.write("\t Create symbolic link: \n")
         sys.stderr.write("\t From :" + "\t" + str(input.fq) + "\n")
         sys.stderr.write("\t To :" + "\t" + str(output.fq_link) + "\n")
@@ -37,8 +38,8 @@ rule fastqc_ge:
     input:
         fq = os.path.normpath(ALIGN_INPUT_DIR_GE + "/{sample_name_ge}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/fastqc/{sample_name_ge}{lane_R_complement}_fastqc.html"),
-        zip_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/fastqc/{sample_name_ge}{lane_R_complement}_fastqc.zip")
+        html_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/fastqc/{sample_name_ge}{lane_R_complement}_fastqc.html")),
+        zip_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/fastqc/{sample_name_ge}{lane_R_complement}_fastqc.zip"))
     threads:
         1
     resources:
@@ -47,7 +48,13 @@ rule fastqc_ge:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc && fastqc --quiet -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc -t {threads} {input}"
+        """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        mkdir -p {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc && \
+        fastqc -q -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc -d $TMP_DIR -t {threads} {input.fq} && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
+        """
 
 """
 This rule makes the fastq-screen control-quality on R2 files.
@@ -56,8 +63,8 @@ rule fastqscreen_ge:
     input:
         R2_fq = os.path.normpath(ALIGN_INPUT_DIR_GE + "/{sample_name_ge}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/fastqscreen/{sample_name_ge}{lane_R_complement}_screen.html"),
-        txt_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/fastqscreen/{sample_name_ge}{lane_R_complement}_screen.txt")
+        html_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/fastqscreen/{sample_name_ge}{lane_R_complement}_screen.html")),
+        txt_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/fastqscreen/{sample_name_ge}{lane_R_complement}_screen.txt"))
     threads:
         2
     resources:
@@ -91,7 +98,9 @@ rule multiqc_ge:
     input:
         qc_files2 = multiqc_inputs_ge
     output:
-        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/{sample_name_ge}_RAW.html")
+        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/QC_reads/{sample_name_ge}_RAW.html"),
+        zip_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_GE +"/{sample_name_ge}/QC_reads/{sample_name_ge}_RAW_data.zip")),
+        folder = temp(directory(os.path.normpath(ALIGN_OUTPUT_DIR_GE +"/{sample_name_ge}/QC_reads/{sample_name_ge}_RAW_plots")))
     threads:
         1
     resources:
@@ -100,8 +109,14 @@ rule multiqc_ge:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "multiqc -n {wildcards.sample_name_ge}'_RAW' -i {wildcards.sample_name_ge}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads {input} && rm -r {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqscreen {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/{wildcards.sample_name_ge}_RAW_data.zip {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/{wildcards.sample_name_ge}_RAW_plots"
-
+        """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        export TMPDIR=$TMP_DIR && \
+        multiqc -n {wildcards.sample_name_ge}'_RAW' -i {wildcards.sample_name_ge}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads {input} && \
+        rm -r {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqscreen && \
+        rm -r $TMP_DIR || rm -r $TMP_DIR
+        """
 
 """
 This rule makes the alignment by kallisto.
@@ -157,8 +172,6 @@ rule sort_file_ge:
         corrected_bus_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_corrected.bus")
     output:
         sorted_bus_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_sorted.bus")
-    params:
-        tmp_dir=os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/tmp")
     threads:
         1
     resources:
@@ -167,7 +180,12 @@ rule sort_file_ge:
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
-        "mkdir -p {params.tmp_dir} && bustools sort -T {params.tmp_dir}/tmp -t {threads} -m 12G -o {output} {input} && rm -r {input} {params.tmp_dir}"
+        """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
+        bustools sort -T $TMP_DIR -t {threads} -m {resources.mem_mb}M -o {output} {input} && \
+        rm -r {input} $TMP_DIR || rm -r $TMP_DIR
+        """
 
 """
 This rule count UMI from the corrected sorted results of alignment, by bustools.
@@ -208,15 +226,3 @@ rule build_count_matrix_ge:
 Reads quality control was performed using fastqc (version $FASTQC_V) and assignment to the expected genome species evaluated with fastq-screen (version $FASTQSCREEN_V).
 Reads were pseudo-mapped to the {REF_TXT_GE} with kallisto (version $KALLISTO_V) using its 'bus' subcommand and parameters corresponding to the $CR. The index was made with the kb-python (version $KBPYTHON_V) wrapper of kallisto. Barcode correction using whitelist provided by the manufacturer (10X Genomics) and gene-based reads quantification was performed with BUStools (version $BUSTOOLS_V)." > {output.MandM}
         """
-
-# """
-# This rule delete the symbolic links of fastq files.
-# """
-# rule symlink_rename_fq:
-#     input:
-#         fq_link = os.path.join(ALIGN_INPUT_DIR_GE, "{sample_name_ge}{lane_R_complement}.fastq.gz")
-#     output:
-#         fq_link = os.path.join(ALIGN_INPUT_DIR_GE, "{sample_name_ge}{lane_R_complement}.fastq.gz")
-#     run:
-#         sys.stderr.write("\t Delete symbolic link:" + "\t" + str(output.fq_link) + "\n")
-#         os.symlink(str(input.fq_link))
