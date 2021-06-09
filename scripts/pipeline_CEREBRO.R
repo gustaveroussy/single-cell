@@ -42,8 +42,8 @@ for (i in names(args$options)){
 #### Get Paramaters ####
 ### Project
 input.rda.ge <- args$options$input.rda.ge
-author.name <- args$options$author.name
-author.mail <- args$options$author.mail
+list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 nthreads <- args$options$nthreads
 pipeline.path <- args$options$pipeline.path
@@ -89,9 +89,11 @@ if (is.null(input.rda.ge)) stop("input.rda.ge parameter can't be empty!")
 ### Load data
 load(input.rda.ge)
 
+### Sourcing functions ####
+source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
+
 ### Save project parameters
-if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
-if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 
 #### Get Missing Paramaters ####
 ### Project
@@ -107,7 +109,6 @@ keep.dims <- sobj@misc$params$clustering$max.dim
 keep.res <- sobj@misc$params$clustering$resolution
 ident.name <- sobj@misc$params$clustering$ident
 RNA.reduction <- sobj@misc$params$clustering$umap
-
 # Cerebro
 if (is.null(version)) version <- "v1.3"
 if (is.null(remove.other.reductions)) remove.other.reductions <- FALSE
@@ -122,7 +123,6 @@ if (is.null(groups)){
 }else{
   groups_v1.2 <- unlist(stringr::str_split(groups, ","))
 }
-
 ### Databases
 # Cerebro
 if (is.null(gmt.file)) gmt.file <- paste0(pipeline.path, "/resources/DATABASE/MSIGDB/7.1/msigdb_v7.1_GMTs/msigdb.v7.1.symbols.gmt")
@@ -132,9 +132,6 @@ if (is.null(gmt.file)) gmt.file <- paste0(pipeline.path, "/resources/DATABASE/MS
 if (species == "homo_sapiens") species.rdx <- 'hg'
 if (species == "mus_musculus") species.rdx <- 'rn'
 if (species == "rattus_norvegicus") species.rdx <- 'rn'
-
-#### Sourcing functions ####
-source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 #########
 ## MAIN

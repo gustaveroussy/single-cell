@@ -29,8 +29,8 @@ for (i in names(args$options)){
 input.rda <- args$options$input.rda
 output.dir <- args$options$output.dir
 vdj.input.file.tcr <- args$options$vdj.input.file.tcr
-author.name <- args$options$author.name
-author.mail <- args$options$author.mail
+list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 pipeline.path <- args$options$pipeline.path
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
@@ -62,8 +62,10 @@ if (is.null(vdj.input.file.tcr)) stop("vdj.input.file.tcr parameter can't be emp
 load(input.rda)
 
 ### Save project parameters
-if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
-if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
+
+### Sourcing functions ####
+source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 #### Get Missing Paramaters ####
 ### Analysis Parameters
@@ -84,9 +86,6 @@ caption <- '“gene” - use the genes comprising the TCR
 “nt” - use the nucleotide sequence of the CDR3 region
 “aa” - use the amino acid sequence of the CDR3 region
 “gene+nt” - use the genes comprising the TCR + the nucleotide sequence of the CDR3 region for T cells. This is the proper definition of clonotype.'
-
-#### Sourcing functions ####
-source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 #########
 ## MAIN

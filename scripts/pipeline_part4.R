@@ -39,8 +39,8 @@ for (i in names(args$options)){
 input.rda.ge <- args$options$input.rda.ge
 output.dir.ge <- args$options$output.dir.ge
 markfile <- if (!is.null(args$options$markfile)) unlist(stringr::str_split(args$options$markfile, ","))
-author.name <- args$options$author.name
-author.mail <- args$options$author.mail
+list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 nthreads <-  if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
@@ -84,9 +84,11 @@ if (is.null(keep.res)) stop("keep.res parameter can't be empty!")
 ### Load data
 load(input.rda.ge)
 
+### Sourcing functions ####
+source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
+
 ### Save project parameters
-if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
-if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 
 #### Get Missing Paramaters ####
 ### Project
@@ -138,10 +140,6 @@ if (is.null(markfile)){
     markers <- c(markers,markers_tmp)
   }
 }
-
-#### Sourcing functions ####
-source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
-
 
 #########
 ## MAIN

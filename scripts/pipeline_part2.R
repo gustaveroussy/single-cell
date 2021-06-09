@@ -46,8 +46,8 @@ for (i in names(args$options)){
 ### Project
 input.rda.ge <- args$options$input.rda.ge
 output.dir.ge <- args$options$output.dir.ge
-author.name <- args$options$author.name
-author.mail <- args$options$author.mail
+list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 nthreads <- if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
@@ -96,9 +96,11 @@ if (is.null(output.dir.ge)) stop("output.dir.ge parameter can't be empty!")
 ### Load data
 load(input.rda.ge)
 
+### Sourcing functions ####
+source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
+
 ### Save project parameters
-if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
-if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 
 #### Get Missing Paramaters ####
 ### Project
@@ -140,9 +142,6 @@ if (species == "rattus_norvegicus") {
 #### Fixed parameters ####
 ### Analysis Parameters
 assay <- 'RNA'
-
-#### Sourcing functions ####
-source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 #########
 ## MAIN
@@ -253,7 +252,7 @@ if(doublets.filter.method != 'none'){
   ### Materials and Methods
   sobj@misc$parameters$Materials_and_Methods$part2_Filtering <- paste0("The count matrix was filtered to exclude genes detected in less than ",min.cells," cells, cells with less than ",min.counts," UMIs or less than ",min.features," detected genes, as well as cells with mitochondrial transcripts proportion higher than ",pcmito.range[2]*100,"%",
                                                               if(!pcmito.range[1]==0) paste0("and less than ",pcmito.range[1]*100, "%"),".",
-                                                              if(!pcribo.range[2]==1 || !pcribo.range[1]==0) paste0("as well as cells with ribosomal transcripts proportion higher than ",pcribo.range[2]*100,"% and less than ",pcribo.range[1]*100, "%. The proportion of mechanical stress-response gene counts (Thesis of Léo Machado entitled « From skeletal muscle stem cells to tissue atlases: new tools to investigate and circumvent dissociation-induced stress», 2019) were also estimated but not used to filter cells.") else "The proportion of ribosomal gene counts and the proportion of mechanical stress-response gene counts (Thesis of Léo Machado entitled « From skeletal muscle stem cells to tissue atlases: new tools to investigate and circumvent dissociation-induced stress», 2019) were also estimated but not used to filter cells.",
+                                                              if(!pcribo.range[2]==1 || !pcribo.range[1]==0) paste0("as well as cells with ribosomal transcripts proportion higher than ",pcribo.range[2]*100,"% and less than ",pcribo.range[1]*100, "%. The proportion of mechanical stress-response gene counts (Thesis of Léo Machado entitled « From skeletal muscle stem cells to tissue atlases: new tools to investigate and circumvent dissociation-induced stress», 2019) were also estimated but not used to filter cells.") else "The proportion of ribosomal gene counts and the proportion of mechanical stress-response gene counts (Thesis of Léo Machado entitled « From skeletal muscle stem cells to tissue atlases: new tools to investigate and circumvent dissociation-induced stress», 2019) were also estimated but not used to filter cells. ",
                                                               "Cell cycle scoring of each cell was performed using two methods: the CellcycleScoring() function from the Seurat package (version ",sobj@misc$technical_info$Seurat,"), and the cyclone() function from Scran (version ",sobj@misc$technical_info$scran,").",
                                                               if(doublets.filter.method == 'all') paste0("Barcodes corresponding to doublet cells were identified and discarded using the union of two methods: scDblFinder (version ",sobj@misc$technical_info$scDblFinder,") using default parameters, and scds (version ",sobj@misc$technical_info$scds,") with its hybrid method using default parameters. We manualy verified that the cells identified as doublets did not systematically correspond to cells in G2M phase.") else if(doublets.filter.method == 'scDblFinder') paste0("Barcodes corresponding to doublet cells were identified and discarded using scDblFinder (version ",sobj@misc$technical_info$scDblFinder,") using default parameters. We manualy verified that the cells identified as doublets did not systematically correspond to cells in G2M phase.") else if(doublets.filter.method == 'scds') paste0("Barcodes corresponding to doublet cells were identified and discarded using scds (version ",sobj@misc$technical_info$scds,") with its hybrid method using default parameters. We manualy verified that the cells identified as doublets did not systematically correspond to cells in G2M phase."))
   sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)

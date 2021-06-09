@@ -50,8 +50,8 @@ input.list.rda <- unlist(stringr::str_split(args$options$input.list.rda, ","))
 output.dir.grp <- args$options$output.dir.grp
 name.grp <- args$options$name.grp
 eval.markers <- unlist(stringr::str_split(args$options$eval.markers, ","))
-author.name <- args$options$author.name
-author.mail <- args$options$author.mail
+list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 nthreads <-  if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
@@ -310,8 +310,7 @@ sobj@misc$params$species <- species
 sobj@misc$params$group$keep.norm <- keep.norm
 sobj@misc$params$name.grp <- name.grp
 Seurat::Project(sobj) <- name.grp
-if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
-if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(name.grp, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")
 
 ### Correlating reduction dimensions with biases and markers expression

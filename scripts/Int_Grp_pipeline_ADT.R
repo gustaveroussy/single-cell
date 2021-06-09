@@ -36,8 +36,8 @@ samples.name.ADT <- unlist(stringr::str_split(args$options$samples.name.adt, ","
 input.rda.ge <- args$options$input.rda.ge
 output.dir <- args$options$output.dir
 input.dirs.adt <- unlist(stringr::str_split(args$options$input.dirs.adt, ","))
-author.name <- args$options$author.name
-author.mail <- args$options$author.mail
+list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 nthreads <- as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
@@ -75,9 +75,11 @@ if (is.null(gene.names)) stop("gene.names parameter can't be empty!")
 ### Load data
 load(input.rda.ge)
 
+### Sourcing functions ####
+source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
+
 ### Save project parameters
-if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
-if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 
 #### Get Missing Paramaters ####
 ### Computational Parameters
@@ -100,10 +102,6 @@ output_path_ADT <- paste0(output.dir, "/ADT_results/")
 cor.method <- 'spearman'
 norm.method_ADT <- 'LogNormalize' #gave good VISUAL results. Avoid sctransform on such small dataset
 slot <- 'data' #for correlation and umap
-
-
-#### Sourcing functions ####
-source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 #########
 ## MAIN

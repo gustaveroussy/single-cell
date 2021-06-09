@@ -41,7 +41,9 @@
 ## GUILTY AUTHOR : Bastien JOB (bastien.job@gustaveroussy.fr)
 
 
-
+## GLOBAL VARIABLES
+############
+Sys.setenv("TZ"="Europe/Paris")
 
 ## FUNCTIONS
 ############
@@ -572,7 +574,7 @@ sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = 
     assay.ori <- assay
 
     if (toupper(normalization.method) == toupper("SCTransform")) {
-      sobj <- Seurat::SCTransform(object = sobj, assay = assay, seed.use = my.seed, variable.features.n = features.n, vars.to.regress = vtr, return.only.var.genes = TRUE)
+      suppressWarnings(sobj <- Seurat::SCTransform(object = sobj, assay = assay, seed.use = my.seed, variable.features.n = features.n, vars.to.regress = vtr, return.only.var.genes = TRUE))
       assay <- 'SCT'
     } else if (toupper(normalization.method) == toupper("LogNormalize")) {
       sobj <- Seurat::NormalizeData(sobj, normalization.method = 'LogNormalize', assay = assay)
@@ -586,6 +588,7 @@ sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = 
     sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = normalization.method, assay.ori = assay.ori, assay.out = assay, features.used = features.n)
     sobj@assays[[assay]]@misc$scaling = list(vtr = if(is.null(vtr)) NA else vtr)
     sobj@misc$params$normalization <- c(sobj@assays[[assay]]@misc$params$normalization, sobj@assays[[assay]]@misc$scaling)
+
     sobj@misc$params$normalization$Rsession <- utils::capture.output(devtools::session_info())
   }
   return(sobj)
@@ -2398,8 +2401,23 @@ add_metadata_sobj <- function(sobj=NULL, metadata.file = NULL){
   return(sobj)
 }
 
+## Add name and mails of the authors of the analysis into seurat object
+Add_name_mail_author <- function(sobj = NULL, list.author.name = NULL, list.author.mail = NULL){
+  if (!is.null(list.author.name[1])){
+    for (author.name in list.author.name){
+      if(!tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
+    }
+  }
+  if (!is.null(list.author.mail[1])){
+    for (author.mail in list.author.mail){
+      if(!tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+    }
+  }
+  return(sobj)
+}
+
 ## Loading TCR data and filter barcode according to sobj
-load.sc.tcr.bcr <- function(x=1, sobj=NULL, vdj.input.file, sample.name=NULL){
+load.sc.tcr.bcr <- function(x = 1, sobj = NULL, vdj.input.file = NULL, sample.name = NULL){
   message(paste0("Loading '", vdj.input.file[x], "' ..."))
   df <- read.table(file = vdj.input.file[x], sep = ',', header = TRUE, stringsAsFactors = FALSE)
   df$barcode <- gsub(pattern = '-1', replacement = '', x = df$barcode)
@@ -2981,8 +2999,6 @@ write_MandM <- function(sobj=NULL, output.dir=NULL){
       if(pipeline_part == "BCR") pipeline_name <- c("","Single-cell immune profiling (Ig)")
       if(pipeline_part == "TCR/BCR") pipeline_name <- c("","Single-cell immune profiling (TCR/Ig)")
       if(pipeline_part == "Cerebro") pipeline_name <- c("","Cerebro")
-      
-      ### TO DO: Add the same if for integrated and grouped analysis ###
       if(pipeline_part == "Integration_Norm_DimRed_Eval") pipeline_name <- c("","Integration analysis")
       if(pipeline_part == "Integration_Clust_Markers_Annot") pipeline_name <- NULL
       if(pipeline_part == "Grouped_analysis_Norm_DimRed_Eval") pipeline_name <- c("","Grouped analysis")

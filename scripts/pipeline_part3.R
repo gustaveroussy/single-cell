@@ -45,8 +45,8 @@ for (i in names(args$options)){
 input.rda.ge <- args$options$input.rda.ge
 output.dir.ge <- args$options$output.dir.ge
 eval.markers <- unlist(stringr::str_split(args$options$eval.markers, ","))
-author.name <- args$options$author.name
-author.mail <- args$options$author.mail
+list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 nthreads <-  if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
@@ -93,9 +93,11 @@ if (is.null(output.dir.ge)) stop("output.dir.ge parameter can't be empty!")
 ### Load data
 load(input.rda.ge)
 
+### Sourcing functions ####
+source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
+
 ### Save project parameters
-if (!is.null(author.name) && !tolower(author.name) %in% tolower(sobj@misc$params$author.name)) sobj@misc$params$author.name <- c(sobj@misc$params$author.name, author.name)
-if (!is.null(author.mail) && !tolower(author.mail) %in% tolower(sobj@misc$params$author.mail)) sobj@misc$params$author.mail <- c(sobj@misc$params$author.mail, author.mail)
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 
 #### Get Missing Paramaters ####
 ### Project
@@ -127,9 +129,6 @@ normalization.vtr <- if (norm.method == 'SCTransform') vtr else NULL
 reduction.vtr <- if (dimred.method %in% c('scbfa','bpca','mds')) vtr else NULL
 if (!(norm.method == 'SCTransform' || dimred.method %in% c('scbfa', 'bpca', 'mds')) && !is.null(vtr)) stop("vtr can be used only with SCtransform, scbfa, bpca or mds methods!")
 if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) message(paste0("Warning: vtr were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
-
-#### Sourcing functions ####
-source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
 
 #########
 ## MAIN

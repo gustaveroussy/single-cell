@@ -57,8 +57,8 @@ input.dir.ge <- args$options$input.dir.ge
 output.dir.ge <- args$options$output.dir.ge
 sample.name.GE <- args$options$sample.name.ge
 species <- args$options$species
-author.name <- args$options$author.name
-author.mail <- args$options$author.mail
+list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 nthreads <- if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
@@ -201,8 +201,7 @@ if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file =
 ### Save project parameters
 sobj@misc$params$sample.name.GE <- sample.name.GE
 sobj@misc$params$species <- species
-sobj@misc$params$author.name <- author.name
-sobj@misc$params$author.mail <- author.mail
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 sobj@misc$params$analysis_type <- "Individual analysis"
 
 ### Computing basic metrics : percentage of counts in the top features + mito + ribo + stress + nb features + nb counts
@@ -212,8 +211,7 @@ sobj <- QC.metrics(sobj = sobj, assay = assay, mt.genes.file = mt.genes.file, cr
 QC.hist(sobj = sobj, assay = assay, out.dir = unfiltred.dir)
 
 ### Materials and Methods
-sobj@misc$parameters$Materials_and_Methods$part1_Droplets_QC <- paste0("Cell barcode by symbol count table were loaded in R (version ", getRversion(), ") using the BUSpaRse package (version ", sobj@misc$technical_info$BUSpaRse,").
-To call real cells from empty droplets, we used the emptyDrops() function from the dropletUtils package (version ", sobj@misc$technical_info$DropletUtils,"), which assesses whether the RNA content associated with a cell barcode is significantly distinct from the ambient background RNA present within each sample. Barcodes with p-value < ", emptydrops.fdr," (Benjamini-Hochberg-corrected) were considered as legitimate cells for further analysis.")
+sobj@misc$parameters$Materials_and_Methods$part1_Droplets_QC <- paste0("Cell barcode by symbol count table were loaded in R (version ", getRversion(), ") using the BUSpaRse package (version ", sobj@misc$technical_info$BUSpaRse,"). To call real cells from empty droplets, we used the emptyDrops() function from the dropletUtils package (version ", sobj@misc$technical_info$DropletUtils,"), which assesses whether the RNA content associated with a cell barcode is significantly distinct from the ambient background RNA present within each sample. Barcodes with p-value < ", emptydrops.fdr," (Benjamini-Hochberg-corrected) were considered as legitimate cells for further analysis.")
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 
 ### Saving non-normalized object
