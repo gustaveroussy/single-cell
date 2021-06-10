@@ -248,7 +248,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     
     ## Save Materials&Methods
     if(file.exists(paste0(data.path, "/Materials_and_Methods.txt"))){
-      tmp <- readr::read_tsv(paste0(data.path, "/Materials_and_Methods.txt"), col_names = FALSE)$X1
+      tmp <- tmp <- suppressMessages(readr::read_tsv(paste0(data.path, "/Materials_and_Methods.txt"), col_names = FALSE)$X1)
       tmp2 <- ""
       for (i in 1:length(tmp)) tmp2=paste(tmp2,tmp[i], sep="")
       sobj@misc$parameters$Materials_and_Methods$part0_Alignment <- tmp2

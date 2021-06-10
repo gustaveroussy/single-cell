@@ -182,8 +182,9 @@ rule sort_file_ge:
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
+        res=$(({resources.mem_mb}-512)) && \
         TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        bustools sort -T $TMP_DIR -t {threads} -m {resources.mem_mb}M -o {output} {input} && \
+        bustools sort -T $TMP_DIR -t {threads} -m $res"M" -o {output} {input} && \
         rm -r {input} $TMP_DIR || rm -r $TMP_DIR
         """
 

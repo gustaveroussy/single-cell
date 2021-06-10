@@ -149,15 +149,16 @@ rule sort_file_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(12288 + attempt * 2048, 20480)),
+        mem_mb = (lambda wildcards, attempt: min(12288 + attempt * 3072, 30720)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
+        res=$(({resources.mem_mb}-512)) && \
         TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        bustools sort -T $TMP_DIR -t {threads} -m {resources.mem_mb}M -o {output} {input} && \
+        bustools sort -T $TMP_DIR -t {threads} -m $res"M" -o {output} {input} && \
         rm -r {input} $TMP_DIR || rm -r $TMP_DIR
         """
 

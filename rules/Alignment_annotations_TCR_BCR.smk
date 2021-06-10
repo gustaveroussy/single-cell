@@ -64,7 +64,7 @@ rule fastqc_tcr_bcr:
         export TMPDIR={GLOBAL_TMP}
         TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
         mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc && \
-        fastqc --quiet -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc -d $TMP_DIR-t {threads} {input} && \
+        fastqc --quiet -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc -d $TMP_DIR -t {threads} {input} && \
         rm -r $TMP_DIR || rm -r $TMP_DIR
         """
 
