@@ -220,7 +220,7 @@ sobj@misc$params$ADT$cutoff_min = ADT.min.cutoff
 sobj@misc$params$ADT$cutoff_max = ADT.max.cutoff
 
 ### Materials and Methods
-sobj@misc$parameters$Materials_and_Methods$ADT <- paste0(sobj@misc$parameters$Materials_and_Methods$ADT," Only cell barcodes corresponding to the cell barcodes of gene expression were kept. Counting table was log-normalize (NormalizeData() function from Seurat with normalization.method parameters setting to '", norm.method_ADT,"') and ploted on UMAP near corresponding gene expression. ", stringr::str_to_title(cor.method)," correlation scores beetween protein levels and gene expression levels was computed.")
+sobj@misc$parameters$Materials_and_Methods$ADT <- paste0(sobj@misc$parameters$Materials_and_Methods$ADT," Only cell barcodes corresponding to the cell barcodes of gene expression were kept. Counting table was log-normalize (NormalizeData() function from Seurat with normalization.method parameters setting to '", norm.method_ADT,"') and ploted on UMAP near corresponding gene expression. ", stringr::str_to_title(cor.method)," correlation scores beetween proteins levels and genes expression levels was computed.")
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 write_MandM(sobj=sobj, output.dir=output.dir)
 

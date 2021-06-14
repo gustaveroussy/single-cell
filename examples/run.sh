@@ -3,7 +3,7 @@
 ########################################################################
 ## Single-cell RNA-seq script to launch single-cell RNA-seq pipeline
 ##
-## using: sbatch /mnt/beegfs/userdata/m_aglave/pipeline/launcher.sh
+## using: sbatch /mnt/beegfs/userdata/m_aglave/pipeline/run.sh
 ##
 ########################################################################
 

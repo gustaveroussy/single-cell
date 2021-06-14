@@ -105,6 +105,8 @@ if(is.null(pipeline.path)) stop("--pipeline.path parameter must be set!")
 ### Computational Parameters
 if (is.null(nthreads)) nthreads <- 4
 ### Analysis Parameters
+# Load data
+if (is.null(min.cells)) min.cells <- 0
 # Normalization and dimension reduction
 if (is.null(features.n)) features.n <- 3000
 if (is.null(vtr)) vtr <- NULL
@@ -191,11 +193,15 @@ sobj.list <- sapply(seq_along(input.list.rda), function(x) {
 })
 names(sobj.list) <- vapply(sobj.list, Seurat::Project, 'a')
 message(paste0("There are ", length(sobj.list), " samples."))
+if(length(sobj.list) == 1) stop("We can't mix only one sample!") 
 
 ## Filtering low cells datasets # pour seurat surtout!
 sobj.cells <- vapply(sobj.list, ncol, 1L)
 if(any(sobj.cells < min.cells)) warning(paste0('Some datasets had less than ', min.cells, ' cells, thus were removed !'))
 sobj.list <- sobj.list[sobj.cells >= min.cells]
+
+## Save sample_GE names
+names.GE <- names(sobj.list)
 
 ## Get species parameter
 species <- sapply(seq_along(sobj.list), function(x) { sobj.list[[x]]@misc$params$species })
@@ -262,7 +268,7 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     })
     if(assay == 'SCT') int.norm.method <- 'SCT' else  int.norm.method <- 'LogNormalize'
     sobj.features <- Seurat::SelectIntegrationFeatures(object.list = sobj.list, nfeatures = features.n) #Sélection des marqueurs biologiques partagés
-    sobj.list <- Seurat::PrepSCTIntegration(object.list = sobj.list, anchor.features = sobj.features) #Verifie que les résidus de Pearson ont bien été calculés
+    sobj.list <- suppressWarnings(Seurat::PrepSCTIntegration(object.list = sobj.list, anchor.features = sobj.features)) #Verifie que les résidus de Pearson ont bien été calculés
     sobj.anchors <- Seurat::FindIntegrationAnchors(object.list = sobj.list, normalization.method = int.norm.method, anchor.features = sobj.features) #CCA + L2normalisation; puis KNN; puis MNNs : identification des paires de cellules; filtrage des anchors; calcul des scores
     sobj <- Seurat::IntegrateData(anchorset = sobj.anchors, normalization.method = int.norm.method) #Calcul des poids; application des poids sur la matrice d'expression: intégration
 
@@ -282,11 +288,13 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     rm(sobj.list, sobj.features, sobj.anchors)
     gc()
     ## Dimensions reduction
+    cat("\nDimensions reduction...\n")
     red.name <- paste(c("integrated", dimred.method, integration.method), collapse = '_')
     sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = "integrated", max.dims = dims.max, vtr = reduction.vtr, vtr.scale = vtr.scale, red.name = red.name)
 
   } else if(integration.method == 'Liger'){
     ## Merge data
+    cat("\nMerge data...\n")
     sobj <- merge(x = sobj.list[[1]], y = sobj.list[-1], add.cell.ids = names(sobj.list), project = name.int, merge.data = TRUE)
     Seurat::Project(sobj) <- name.int
     sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
@@ -317,6 +325,7 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
 ## scbfa/bpca (or Harmony integration beging)
 if((integration.method %in% raw.methods) || (integration.method == 'Harmony')){
   ## Merge data
+  cat("\nMerge data...\n")
   sobj <- merge(x = sobj.list[[1]], y = sobj.list[-1], add.cell.ids = names(sobj.list), project = name.int, merge.data = TRUE)
   Seurat::Project(sobj) <- name.int
   sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
@@ -324,9 +333,11 @@ if((integration.method %in% raw.methods) || (integration.method == 'Harmony')){
   rm(sobj.list)
   gc()
   #Normalization
+  cat("\nNormalization...\n")
   sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr = normalization.vtr)
   if(tolower(norm.method) == 'sctransform') assay <- 'SCT'
   ## Dimensions reduction
+  cat("\nDimensions reduction...\n")
   if(integration.method %in% raw.methods) message(paste0(integration.method," integration..."))
   red.name <- if(integration.method %in% raw.methods) paste(c(assay, dimred.method, integration.method), collapse = '_') else paste(c(assay, dimred.method), collapse = '_')
   sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = dims.max, vtr = if(integration.method == 'Harmony') reduction.vtr else c(reduction.vtr, batch.vtr), vtr.scale = vtr.scale, red.name = red.name)
@@ -436,17 +447,21 @@ sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval <- paste
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 
 ### Saving reduced normalized object
+cat("\nSaving object...\n")
 sobj@misc$params$analysis_type <- paste0("Integrated analysis; Method: ", integration.method)
 sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
 sobj@misc$params$species <- species
 sobj@misc$params$name.int <- name.int
+sobj@misc$params$names.ge <- names.GE
 Seurat::Project(sobj) <- name.int
 sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(name.int, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")
 
 ### Correlating reduction dimensions with biases and markers expression
+cat("\nCorrelation of dimensions...\n")
 dimensions.eval(sobj = sobj, reduction = red.name, eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
 gc()
 
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)
+cat("\nEvaluation of multiple clustering parameters...\n")
 clustering.eval.mt(sobj = sobj, reduction = red.name, dimsvec = seq.int(dims.min, dims.max, dims.steps), resvec = seq(res.min,res.max,res.steps), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)

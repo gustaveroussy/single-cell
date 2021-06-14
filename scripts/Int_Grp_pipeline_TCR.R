@@ -77,7 +77,7 @@ dimred.method <- sobj@misc$params$reductions$method
 ident.name <- sobj@misc$params$clustering$ident
 INT_GRP.reduction <- sobj@misc$params$clustering$umap
 sample.name.INT_GRP <- Seurat::Project(sobj)
-samples.name.GE <- unique(sort(sobj@meta.data$orig.ident))
+samples.name.GE <- sobj@misc$params$names.ge
 samples.name <- sub("_GE","",samples.name.GE)
 
 #### Fixed parameters ####

@@ -574,7 +574,7 @@ sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = 
     assay.ori <- assay
 
     if (toupper(normalization.method) == toupper("SCTransform")) {
-      suppressWarnings(sobj <- Seurat::SCTransform(object = sobj, assay = assay, seed.use = my.seed, variable.features.n = features.n, vars.to.regress = vtr, return.only.var.genes = TRUE))
+      sobj <- suppressWarnings(Seurat::SCTransform(object = sobj, assay = assay, seed.use = my.seed, variable.features.n = features.n, vars.to.regress = vtr, return.only.var.genes = TRUE))
       assay <- 'SCT'
     } else if (toupper(normalization.method) == toupper("LogNormalize")) {
       sobj <- Seurat::NormalizeData(sobj, normalization.method = 'LogNormalize', assay = assay)
@@ -673,10 +673,10 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
   }
 
   if (reduction.method == 'pca') {
-    sobj <- Seurat::RunPCA(object = sobj, assay = assay, verbose = FALSE, npcs = max.dims, reduction.name = red.name, reduction.key = paste0(red.name, '_'), seed.use = my.seed)
+    sobj <- suppressWarnings(Seurat::RunPCA(object = sobj, assay = assay, verbose = FALSE, npcs = max.dims, reduction.name = red.name, reduction.key = paste0(red.name, '_'), seed.use = my.seed))
     sobj@assays[[assay]]@misc$params$reductions$vtr <- sobj@reductions[[red.name]]@misc$vtr <- NA
   } else if (reduction.method == 'ica') {
-    sobj <- Seurat::RunICA(object = sobj, assay = assay, verbose = FALSE, nics = max.dims, reduction.name = red.name, reduction.key = paste0(red.name, '_'), seed.use = my.seed)
+    sobj <- suppressWarnings(Seurat::RunICA(object = sobj, assay = assay, verbose = FALSE, nics = max.dims, reduction.name = red.name, reduction.key = paste0(red.name, '_'), seed.use = my.seed))
     sobj@assays[[assay]]@misc$params$reductions$vtr <- sobj@reductions[[red.name]]@misc$vtr <- NA
   } else if (reduction.method == 'mds') {
     set.seed(my.seed)
@@ -927,7 +927,7 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
 
       message(paste0("Testing resolution ", format(my.res, digits=2, nsmall=1, decimal.mark="."), " ..."))
 
-      miniobj <- Seurat::FindClusters(object = miniobj, assay = assay, random.seed = my.seed, resolution = my.res, graph.name = paste0(assay, '_snn'))
+      miniobj <- Seurat::FindClusters(object = miniobj, random.seed = my.seed, resolution = my.res, graph.name = paste0(assay, '_snn'))
       miniobj <- Seurat::RunUMAP(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction, seed.use = my.seed, reduction.name = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'))
       png(paste0(umaps.clustree.dir, '/', sample.name,'_uMAP_', reduction, my.dims, "_res", format(my.res, digits=2, nsmall=1, decimal.mark="."), '.png'), width = 1100, height = 1000)
       resdim.plot <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = miniobj, reduction = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'), pt.size = solo.pt.size) + ggplot2::ggtitle(paste0(toupper(reduction), " dims =  ", my.dims, " ; resolution = ", format(my.res, digits=2, nsmall=1, decimal.mark="."))) + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")

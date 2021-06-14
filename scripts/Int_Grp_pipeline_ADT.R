@@ -132,7 +132,9 @@ sobjADT.list <- sapply(seq_along(input.dirs.adt), function(x) {
   sobjADT <- load.sc.data(data.path = input.dirs.adt[x], sample.name = samples.name.ADT[x], assay = 'ADT', droplets.limit = NULL, emptydrops.fdr = NULL, BPPARAM = cl, my.seed = sobj@misc$params$seed, out.dir = output_path_ADT, draw_plots = FALSE)
   return(sobjADT)
 })
-names(sobjADT.list) <- sub("_ADT","_GE",vapply(sobjADT.list, Seurat::Project, 'a'))
+names(sobjADT.list) <- sobj@misc$params$names.ge
+
+### Merge ADT of all sampels
 sobjADT <- merge(x = sobjADT.list[[1]], y = sobjADT.list[-1], add.cell.ids = names(sobjADT.list), project = name.int_grp, merge.data = TRUE)
 for (x in seq_along(sobjADT.list)) sobjADT@misc$pipeline_commands <- c(sobjADT@misc$pipeline_commands, sobjADT.list[[x]]@misc$pipeline_commands)
 sobjADT@misc$params$ADT <- sobjADT.list[[1]]@misc$params$sobj_creation
@@ -212,6 +214,8 @@ sobj <-  Seurat::AddMetaData(sobj, adt.values, col.name = colnames(adt.values))
 rm(adt.values)
 
 ### Save parameters
+#samples names
+sobj@misc$params$names.adt <- samples.name.ADT
 #gene.names:
 sobj@assays[['ADT']]@misc$paramters$gene.names <- gene.names
 sobj@misc$params$ADT$gene.names <- gene.names
@@ -230,7 +234,7 @@ sobj@misc$params$ADT$cutoff_min = ADT.min.cutoff
 sobj@misc$params$ADT$cutoff_max = ADT.max.cutoff
 
 ### Materials and Methods
-sobj@misc$parameters$Materials_and_Methods$ADT <- paste0(sobj@misc$parameters$Materials_and_Methods$ADT," Only cell barcodes corresponding to the cell barcodes of gene expression were kept. Counting table was log-normalize (NormalizeData() function from Seurat with normalization.method parameters setting to '", norm.method_ADT,"') and ", cor.method," correlation scores beetween protein levels and gene expression levels was computed and ploted on UMAP.")
+sobj@misc$parameters$Materials_and_Methods$ADT <- paste0(sobj@misc$parameters$Materials_and_Methods$ADT," Only cell barcodes corresponding to the cell barcodes of gene expression were kept. Counting table was log-normalize (NormalizeData() function from Seurat with normalization.method parameters setting to '", norm.method_ADT,"') and ", cor.method," correlation scores beetween proteins levels and genes expression levels was computed and ploted on UMAP.")
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 write_MandM(sobj=sobj, output.dir=output.dir)
 

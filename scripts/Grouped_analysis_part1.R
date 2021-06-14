@@ -102,7 +102,7 @@ if (is.null(output.dir.grp)) stop("output.dir.grp parameter can't be empty!")
 if (is.null(nthreads)) nthreads <- 4
 ### Analysis Parameters
 # Load data
-if (is.null(min.cells)) min.cells <- 10
+if (is.null(min.cells)) min.cells <- 0
 # Normalization and dimension reduction
 if (is.null(keep.norm)) keep.norm <- FALSE
 if (is.null(features.n)) features.n <- 3000
@@ -170,11 +170,15 @@ sobj.list <- sapply(seq_along(input.list.rda), function(x) {
 })
 names(sobj.list) <- vapply(sobj.list, Seurat::Project, 'a')
 message(paste0("There are ", length(sobj.list), " samples."))
+if(length(sobj.list) == 1) stop("We can't mix only one sample!") 
 
 ### Filtering low cells datasets # pour seurat surtout!
 sobj.cells <- vapply(sobj.list, ncol, 1L)
 if(any(sobj.cells < min.cells)) warning(paste0('Some datasets had less than ', min.cells, ' cells, thus were removed !'))
 sobj.list <- sobj.list[sobj.cells >= min.cells]
+
+## Save sample_GE names
+names.GE <- names(sobj.list)
 
 ## Get species parameter
 species <- sapply(seq_along(sobj.list), function(x) { sobj.list[[x]]@misc$params$species })
@@ -309,6 +313,7 @@ sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::sessi
 sobj@misc$params$species <- species
 sobj@misc$params$group$keep.norm <- keep.norm
 sobj@misc$params$name.grp <- name.grp
+sobj@misc$params$names.ge <- names.GE
 Seurat::Project(sobj) <- name.grp
 sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(name.grp, norm_vtr, dimred_vtr), collapse = '_'), '.rda'), compress = "bzip2")

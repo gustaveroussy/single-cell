@@ -30,8 +30,7 @@ This rule launches the R script to translate seurat file into cerebro file.
 """
 rule cerebro:
     input:
-        cerebro_rda_file = cerebro_input,
-        tmp = temp(directory(tempfile.mkdtemp(prefix="sc_pipeline-", dir="/tmp")))
+        cerebro_rda_file = cerebro_input
     output:
         cerebro_crb_file = expand("{{cerebro_input_rda_no_extention}}{cerebro_complement}", cerebro_complement = CEREBRO_COMPLEMENT_CRB)
     params:
@@ -47,8 +46,10 @@ rule cerebro:
         time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """
+        export TMPDIR={GLOBAL_TMP}
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
         mkdir -p $HOME/.sc_cache && \
-        singularity exec --contain --home $HOME/.sc_cache:$HOME {params.sing_bind} \
+        singularity exec --contain --home $HOME/.sc_cache:$HOME -B $TMP_DIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV_CEREBRO} \
         Rscript {params.pipeline_folder}/scripts/pipeline_CEREBRO.R \
         --input.rda.ge {params.input_rda} \

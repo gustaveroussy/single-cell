@@ -61,11 +61,11 @@ if (is.null(vdj.input.file.tcr)) stop("vdj.input.file.tcr parameter can't be emp
 ### Load data
 load(input.rda)
 
-### Save project parameters
-sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
-
 ### Sourcing functions ####
 source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
+
+### Save project parameters
+sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, list.author.mail = list.author.mail)
 
 #### Get Missing Paramaters ####
 ### Analysis Parameters
