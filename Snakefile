@@ -259,7 +259,7 @@ if "Filtering_GE" in STEPS:
     else:
         sys.exit("Error: No sample.name.ge or/and input.rda.ge in configfile!\n")
     if 'Filtering_GE' in config and 'output.dir.ge' in config['Filtering_GE'] :
-        FILERING_OUTPUT_DIR_GE = config['Filtering_GE']['output.dir.ge']
+        FILERING_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Filtering_GE']['output.dir.ge']]
     elif "Droplets_QC_GE" in STEPS:
         FILERING_OUTPUT_DIR_GE = copy.deepcopy(QC_OUTPUT_DIR_GE)
         sys.stderr.write("Note: No output.dir.ge find in Filtering_GE section of configfile; output.dir.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
@@ -315,7 +315,7 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     else:
         sys.exit("Error: No sample.name.ge or/and input.rda.ge in configfile!\n")
     if ('Norm_DimRed_Eval_GE' in config) and ('output.dir.ge' in config['Norm_DimRed_Eval_GE']) :
-        NDRE_OUTPUT_DIR_GE = config['Norm_DimRed_Eval_GE']['output.dir.ge']
+        NDRE_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Norm_DimRed_Eval_GE']['output.dir.ge']]
     elif "Filtering_GE" in STEPS:
         NDRE_OUTPUT_DIR_GE = [dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + ("/DOUBLETSKEPT" if FILERING_DOUBLET_FILTER_METHOD_NAME == "none" else ("/DOUBLETSFILTER_" + FILERING_DOUBLET_FILTER_METHOD_NAME)) for x in FILERING_SAMPLE_NAME_GE]
         sys.stderr.write("Note: No output.dir.ge find in Norm_DimRed_Eval_GE section of configfile; output.dir.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
@@ -518,7 +518,7 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
     else:
         sys.exit("Error: No name.int or/and input.list.rda in configfile!\n")
     if ('Int_Norm_DimRed_Eval_GE' in config) and ('output.dir.int' in config['Int_Norm_DimRed_Eval_GE']) :
-        INT_NDRE_OUTPUT_DIR_GE = config['Int_Norm_DimRed_Eval_GE']['output.dir.int']
+        INT_NDRE_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Int_Norm_DimRed_Eval_GE']['output.dir.int']]
     else :
         sys.exit("Error: No output.dir.int find in configfile!\n")
     ### Analysis Parameters
@@ -630,7 +630,11 @@ if "Int_Adding_ADT" in STEPS:
         sys.exit("Error: No input.rda in configfile!\n")
     if 'Int_Adding_ADT' in config and 'samples.name.adt' in config['Int_Adding_ADT'] and 'input.dirs.adt' in config['Int_Adding_ADT'] :
         INT_ADD_ADT_INPUT_DIR_ADT = [ x.replace(", ", ",") for x in config['Int_Adding_ADT']['input.dirs.adt']]
-        INT_ADD_ADT_SAMPLE_NAME_ADT = [ x.replace(", ", ",") for x in config['Int_Adding_ADT']['samples.name.adt']]
+        INT_ADD_ADT_SAMPLE_NAME_ADT_RAW = [ x.replace(", ", ",") for x in config['Int_Adding_ADT']['samples.name.adt']]
+        #check samples names and add "_ADT" if needed
+        INT_ADD_ADT_SAMPLE_NAME_ADT = []
+        for i in range(0,len(INT_ADD_ADT_SAMPLE_NAME_ADT_RAW),1):
+            INT_ADD_ADT_SAMPLE_NAME_ADT.append(INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i][len(INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else INT_ADD_ADT_SAMPLE_NAME_ADT.append(INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i])
     else:
         sys.exit("Error: No samples.name.adt or input.dirs.adt in configfile!\n")
     ### Analysis Parameters
@@ -716,7 +720,7 @@ if "Grp_Norm_DimRed_Eval_GE" in STEPS:
     else:
         sys.exit("Error: No name.grp or/and input.list.rda in configfile!\n")
     if ('Grp_Norm_DimRed_Eval_GE' in config) and ('output.dir.grp' in config['Grp_Norm_DimRed_Eval_GE']) :
-        GRP_NDRE_OUTPUT_DIR_GE = config['Grp_Norm_DimRed_Eval_GE']['output.dir.grp']
+        GRP_NDRE_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Grp_Norm_DimRed_Eval_GE']['output.dir.grp']]
     else :
         sys.exit("Error: No output.dir.grp find in configfile!\n")
     ### Analysis Parameters
@@ -814,7 +818,11 @@ if "Grp_Adding_ADT" in STEPS:
         sys.exit("Error: No input.rda in configfile!\n")
     if 'Grp_Adding_ADT' in config and 'samples.name.adt' in config['Grp_Adding_ADT'] and 'input.dirs.adt' in config['Grp_Adding_ADT'] :
         GRP_ADD_ADT_INPUT_DIR_ADT = [ x.replace(", ", ",") for x in config['Grp_Adding_ADT']['input.dirs.adt']]
-        GRP_ADD_ADT_SAMPLE_NAME_ADT = [ x.replace(", ", ",") for x in config['Grp_Adding_ADT']['samples.name.adt']]
+        GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW = [ x.replace(", ", ",") for x in config['Grp_Adding_ADT']['samples.name.adt']]
+        #check samples names and add "_ADT" if needed
+        GRP_ADD_ADT_SAMPLE_NAME_ADT = []
+        for i in range(0,len(GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW),1):
+            GRP_ADD_ADT_SAMPLE_NAME_ADT.append(GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i][len(GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else GRP_ADD_ADT_SAMPLE_NAME_ADT.append(GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i])
     else:
         sys.exit("Error: No samples.name.adt or input.dirs.adt in configfile!\n")
     ### Analysis Parameters
