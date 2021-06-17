@@ -1,0 +1,27 @@
+Steps: ["Int_Norm_DimRed_Eval_GE","Int_Clust_Markers_Annot_GE","Int_Adding_ADT","Int_Adding_TCR","Int_Adding_BCR","Cerebro"]
+
+Int_Norm_DimRed_Eval_GE :
+  name.int : ["sc5p_v2_hs_PBMC_Int_Seurat"]
+  input.list.rda : ["/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_1k_5gex_GE/F200_C1000_M0-0.15_R0-1_G5/DOUBLETSFILTER_all/SCTransform/pca/dims35_res1.2/sc5p_v2_hs_PBMC_1k_5gex_GE_SCTransform_pca_35_1.2_ADT_TCR_BCR.rda,/mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_10k_5gex_GE/F200_C1000_M0-0.15_R0-1_G5/DOUBLETSFILTER_all/SCTransform/pca/dims33_res0.4/sc5p_v2_hs_PBMC_10k_5gex_GE_SCTransform_pca_33_0.4_ADT_TCR_BCR.rda"]
+  output.dir.int : ["/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/"]
+  eval.markers : "GAPDH"
+  author.name : "marine aglave"
+  author.mail : "marine.aglave@gustaveroussy.fr, bigr@gustaveroussy.fr"
+  integration.method : "Seurat"
+  #dims.max : 100
+  
+Int_Clust_Markers_Annot_GE:
+  markfile : "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/markfile.xlsx"
+  keep.dims : 29
+  keep.res : 0.6
+
+Int_Adding_ADT:
+  samples.name.adt: ["sc5p_v2_hs_PBMC_1k_5fb,sc5p_v2_hs_PBMC_10k_5fb"]
+  input.dirs.adt: ["/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_1k_5fb_ADT/KALLISTOBUS/,/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_10k_5fb_ADT/KALLISTOBUS/"]
+  gene.names: "CD3G,CD19,PTPRC,CD4,CD8A,CD14,FCGR3A,NCAM1,IL2RA,PTPRC,PDCD1,TIGIT,IGHG1,IGHG2,IGHG2,IL7R,FUT4,CCR7,HLA-DRA"
+
+Int_Adding_TCR:
+  vdj.input.files.tcr: ["/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_1k_t_TCR/sc5p_v2_hs_PBMC_1k_t_TCR_CellRanger/outs/filtered_contig_annotations.csv,/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_10k_t_TCR/sc5p_v2_hs_PBMC_10k_t_TCR_CellRanger/outs/filtered_contig_annotations.csv"]
+
+Int_Adding_BCR:
+  vdj.input.files.bcr: ["/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_1k_b_BCR/sc5p_v2_hs_PBMC_1k_b_BCR_CellRanger/outs/filtered_contig_annotations.csv,/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_10k_b_BCR/sc5p_v2_hs_PBMC_10k_b_BCR_CellRanger/outs/filtered_contig_annotations.csv"]
