@@ -3,7 +3,7 @@
 ########################################################################
 ## Single-cell script to launch single-cell pipeline
 ##
-## using: sbatch /mnt/beegfs/userdata/m_aglave/pipeline/launcher.sh
+## using: sbatch /mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/launcher.sh
 ########################################################################
 #SBATCH --job-name=pipeline_sc
 #SBATCH --nodes=1
@@ -15,7 +15,7 @@ conda activate /mnt/beegfs/userdata/m_aglave/.environnement_conda/single_cell_us
 module load singularity
 
 
-path_to_configfile="/mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_example_of_wiki/Params.yaml"
+path_to_configfile="/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Params.yaml"
 path_to_pipeline="/mnt/beegfs/pipelines/single-cell"
 
 snakemake --profile ${path_to_pipeline}/profiles/slurm -s ${path_to_pipeline}/Snakefile --configfile ${path_to_configfile}
