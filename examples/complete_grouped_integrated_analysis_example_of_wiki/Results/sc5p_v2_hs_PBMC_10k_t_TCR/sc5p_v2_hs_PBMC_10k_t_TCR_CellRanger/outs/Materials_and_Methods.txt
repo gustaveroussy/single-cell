@@ -1,0 +1,3 @@
+Raw BCL-files were demultiplexed and converted to Fastq format using bcl2fastq (version 2.20.0.422 from Illumina).
+Reads quality control was performed using fastqc (version 0.11.9) and assignment to the expected genome species evaluated with fastq-screen (version 0.14.0).
+CellRanger (version 3.1.0 from 10X Genomics) was used to generate single-cell V(D)J sequences and annotations.
