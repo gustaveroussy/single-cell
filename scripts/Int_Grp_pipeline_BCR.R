@@ -116,7 +116,7 @@ dir.create(path = global_output, recursive = TRUE, showWarnings = FALSE)
 ## Loading input data and Combining contigs
 cat("\nLoading input data and Combining contigs...\n")
 cr_res <- lapply(seq_along(vdj.input.files.bcr), load.sc.tcr.bcr, sobj=sobj, vdj.input.file=vdj.input.files.bcr, sample.name=samples.name.GE)
-bcr.combined <- scRepertoire::combineBCR(df = cr_res, samples = samples.name, ID = rep("BCR", length(samples.name)))
+bcr.combined <- scRepertoire::combineBCR(df = cr_res, samples = samples.name, ID = rep("GE", length(samples.name)))
 
 ## Quantification of unique contig analysis
 cat("\nQuantification analysis...\n")
@@ -161,8 +161,6 @@ Div.g(combined = bcr.combined, list_type_clT = list_type_clT, out.dir = global_o
 ## Combine BCR data with seurat object
 cat("\nCombine BCR data with seurat object...\n")
 
-### Corresponding barcode
-for(i in 1:length(bcr.combined)) bcr.combined[[i]]$barcode <- gsub(pattern = "BCR", replacement = "GE", bcr.combined[[i]]$barcode)
 ### Combination
 sobj <- scRepertoire::combineExpression(df = bcr.combined, sc = sobj, cloneCall="aa")
 sobj@meta.data$Frequency_indiv=sobj@meta.data$Frequency
@@ -296,7 +294,7 @@ for (i in seq(samples.name)){
   
   ## Clonal Overlap analysis (si plus de 1)
   cat("\nClonal Overlap analysis...\n")
-  if(length(levels(Seurat::Idents(sobj)))!=1 && length(unique(sobj@meta.data[!is.na(sobj@meta.data$CTstrict),ident.name]))!=1) Overlap.c(sobj = sub_sobj, list_type_clT = list_type_clT, out.dir = sample_output, caption = caption, sample.name = samples.name[i], filtred_metadata_aa = filtred_metadata_aa, filtred_metadata_nt = filtred_metadata_nt, filtred_metadata_gene = filtred_metadata_gene, filtred_metadata_gene_nt = filtred_metadata_gene_nt)
+  if(length(levels(Seurat::Idents(sub_sobj)))!=1 && length(unique(sub_sobj@meta.data[!is.na(sub_sobj@meta.data$CTstrict),ident.name]))!=1) Overlap.c(sobj = sub_sobj, list_type_clT = list_type_clT, out.dir = sample_output, caption = caption, sample.name = samples.name[i], filtred_metadata_aa = filtred_metadata_aa, filtred_metadata_nt = filtred_metadata_nt, filtred_metadata_gene = filtred_metadata_gene, filtred_metadata_gene_nt = filtred_metadata_gene_nt)
   
   ## Physico-chemical properties of the CDR3
   cat("\nPhysico-chemical properties of the CDR3 analysis...\n")

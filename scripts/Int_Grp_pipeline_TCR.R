@@ -116,7 +116,7 @@ dir.create(path = global_output, recursive = TRUE, showWarnings = FALSE)
 ## Loading input data and Combining contigs
 cat("\nLoading input data and Combining contigs...\n")
 cr_res <- lapply(seq_along(vdj.input.files.tcr), load.sc.tcr.bcr, sobj=sobj, vdj.input.file=vdj.input.files.tcr, sample.name=samples.name.GE)
-tcr.combined <- scRepertoire::combineTCR(df = cr_res, samples = samples.name, ID = rep("TCR", length(samples.name)), cells = "T-AB")
+tcr.combined <- scRepertoire::combineTCR(df = cr_res, samples = samples.name, ID = rep("GE", length(samples.name)), cells = "T-AB")
 
 ## Quantification of unique contig analysis
 cat("\nQuantification analysis...\n")
@@ -300,7 +300,7 @@ for (i in seq(samples.name)){
   
   ## Clonal Overlap analysis (si plus de 1)
   cat("\nClonal Overlap analysis...\n")
-  if(length(levels(Seurat::Idents(sobj)))!=1 && length(unique(sobj@meta.data[!is.na(sobj@meta.data$CTstrict),ident.name]))!=1) Overlap.c(sobj = sub_sobj, list_type_clT = list_type_clT, out.dir = sample_output, caption = caption, sample.name = samples.name[i], filtred_metadata_aa = filtred_metadata_aa, filtred_metadata_nt = filtred_metadata_nt, filtred_metadata_gene = filtred_metadata_gene, filtred_metadata_gene_nt = filtred_metadata_gene_nt)
+  if(length(levels(Seurat::Idents(sub_sobj)))!=1 && length(unique(sub_sobj@meta.data[!is.na(sub_sobj@meta.data$CTstrict),ident.name]))!=1) Overlap.c(sobj = sub_sobj, list_type_clT = list_type_clT, out.dir = sample_output, caption = caption, sample.name = samples.name[i], filtred_metadata_aa = filtred_metadata_aa, filtred_metadata_nt = filtred_metadata_nt, filtred_metadata_gene = filtred_metadata_gene, filtred_metadata_gene_nt = filtred_metadata_gene_nt)
   
   ## Physico-chemical properties of the CDR3
   cat("\nPhysico-chemical properties of the CDR3 analysis...\n")

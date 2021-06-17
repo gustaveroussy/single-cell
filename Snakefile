@@ -634,7 +634,13 @@ if "Int_Adding_ADT" in STEPS:
         #check samples names and add "_ADT" if needed
         INT_ADD_ADT_SAMPLE_NAME_ADT = []
         for i in range(0,len(INT_ADD_ADT_SAMPLE_NAME_ADT_RAW),1):
-            INT_ADD_ADT_SAMPLE_NAME_ADT.append(INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i][len(INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else INT_ADD_ADT_SAMPLE_NAME_ADT.append(INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i])
+            list_sample_tmp = []
+            for sample in INT_ADD_ADT_SAMPLE_NAME_ADT_RAW[i].split(","):
+                if sample[len(sample)-4:] != "_ADT" :
+                    list_sample_tmp.append(sample + "_ADT")
+                else :
+                    list_sample_tmp.append(sample)
+            INT_ADD_ADT_SAMPLE_NAME_ADT.append(",".join(list_sample_tmp))
     else:
         sys.exit("Error: No samples.name.adt or input.dirs.adt in configfile!\n")
     ### Analysis Parameters
@@ -822,7 +828,13 @@ if "Grp_Adding_ADT" in STEPS:
         #check samples names and add "_ADT" if needed
         GRP_ADD_ADT_SAMPLE_NAME_ADT = []
         for i in range(0,len(GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW),1):
-            GRP_ADD_ADT_SAMPLE_NAME_ADT.append(GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i][len(GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else GRP_ADD_ADT_SAMPLE_NAME_ADT.append(GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i])
+            list_sample_tmp = []
+            for sample in GRP_ADD_ADT_SAMPLE_NAME_ADT_RAW[i].split(","):
+                if sample[len(sample)-4:] != "_ADT" :
+                    list_sample_tmp.append(sample + "_ADT")
+                else :
+                    list_sample_tmp.append(sample)
+            GRP_ADD_ADT_SAMPLE_NAME_ADT.append(",".join(list_sample_tmp))
     else:
         sys.exit("Error: No samples.name.adt or input.dirs.adt in configfile!\n")
     ### Analysis Parameters

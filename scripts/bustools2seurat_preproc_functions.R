@@ -44,6 +44,7 @@
 ## GLOBAL VARIABLES
 ############
 Sys.setenv("TZ"="Europe/Paris")
+pdf(NULL)
 
 ## FUNCTIONS
 ############
@@ -2755,7 +2756,7 @@ Homeo.c <- function(sobj = NULL, ident.name=NULL, list_type_clT = c("gene+nt","g
     assign(paste0("plot_clust_clhomeo_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalHomeostasis(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
   }
   ### Save
-  png(paste0(out.dir,'/clust_clhomeo',sample.name,'.png'), width =2000, height = 800)
+  png(paste0(out.dir,'/clust_clhomeo_',sample.name,'.png'), width =2000, height = 800)
   print(( (plot_clust_clhomeo_gene_nt | plot_clust_clhomeo_gene | plot_clust_clhomeo_nt | plot_clust_clhomeo_aa ) /
             gridExtra::grid.arrange(gridExtra::tableGrob(clust_clhomeo_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clhomeo_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clhomeo_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_clhomeo_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
           plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
@@ -2800,7 +2801,7 @@ Div.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), ou
     assign(paste0("plot_clust_cldiv_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalDiversity(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, group = "cluster") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
   }
   ### Save
-  png(paste0(out.dir,'/clust_cldiv', sample.name, '.png'), width =2000, height = 800)
+  png(paste0(out.dir,'/clust_cldiv_', sample.name, '.png'), width =2000, height = 800)
   print(( (plot_clust_cldiv_gene_nt | plot_clust_cldiv_gene | plot_clust_cldiv_nt | plot_clust_cldiv_aa ) /
             gridExtra::grid.arrange(gridExtra::tableGrob(clust_cldiv_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_cldiv_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_cldiv_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_cldiv_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
           plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
