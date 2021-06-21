@@ -139,7 +139,13 @@ sobjADT <- merge(x = sobjADT.list[[1]], y = sobjADT.list[-1], add.cell.ids = nam
 for (x in seq_along(sobjADT.list)) sobjADT@misc$pipeline_commands <- c(sobjADT@misc$pipeline_commands, sobjADT.list[[x]]@misc$pipeline_commands)
 sobjADT@misc$params$ADT <- sobjADT.list[[1]]@misc$params$sobj_creation
 sobjADT@misc$technical_info <- sobjADT.list[[1]]@misc$technical_info
-sobjADT@misc$parameters$Materials_and_Methods$part0_Alignment <- sobjADT.list[[1]]@misc$parameters$Materials_and_Methods$part0_Alignment
+tmp=c()
+for (nb_file in 1:length(sobjADT.list)) tmp[nb_file] <- sobjADT.list[[nb_file]]@misc$parameters$Materials_and_Methods$part0_Alignment
+if(length(unique(tmp)) == 1){
+  sobjADT@misc$parameters$Materials_and_Methods$part0_Alignment <- tmp[1]
+} else {
+  sobjADT@misc$parameters$Materials_and_Methods$part0_Alignment <- NULL
+}
 
 ### Check number of protein names and gene.names and quantiles cutoff
 if(length(rownames(sobjADT)) != length(gene.names)) stop(paste0("The number of gene.names is not the same as the proteins in the ADT count table: ", length(gene.names), " genes (", paste0(gene.names, collapse=","),") and ",length(rownames(sobjADT))," proteins (",paste0(rownames(sobjADT), collapse=","),")."))

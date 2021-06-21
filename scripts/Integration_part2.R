@@ -210,7 +210,7 @@ if(!is.null(markers)) sobj <- markers.umap.plot(sobj = sobj, markers = markers, 
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$Integration_Clust_Markers_Annot <- paste0(
   "An automatic annotation of cell types was perfom by SingleR (version ",sobj@misc$technical_info$SingleR,") (with fine-tuning step) and ClustifyR (version ",sobj@misc$technical_info$clustifyr,"), using packages built-in references. It labels clusters (or cells) from a dataset based on similarity (Spearman correlation score) to a reference dataset with known labels. The labels with a correlation score greater than ",sr.minscore," for SingleR or greater than ",cfr.minscore," for ClustifyR were kept.",
-  "Marker genes for Louvain clusters and samples, were identified through a «one versus others» differential anaylisis using the Wilcoxon test through the FindAllMarkers() function from Seurat, considering only genes with a minimum log fold-change of 0.5 in at least 75% of cells from one of the groups compared, and FDR-adjusted p-values <0.05 (Benjaminin-Hochberg method)."
+  "Marker genes for Louvain clusters and samples, were identified through a «one versus others» differential analysis using the Wilcoxon test through the FindAllMarkers() function from Seurat, considering only genes with a minimum log fold-change of 0.5 in at least 75% of cells from one of the groups compared, and FDR-adjusted p-values <0.05 (Benjaminin-Hochberg method)."
 )
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 write_MandM(sobj=sobj, output.dir=clust.dir)
