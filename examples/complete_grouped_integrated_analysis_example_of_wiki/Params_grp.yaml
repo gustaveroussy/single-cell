@@ -1,8 +1,9 @@
 Steps: ["Grp_Norm_DimRed_Eval_GE","Grp_Clust_Markers_Annot_GE","Grp_Adding_ADT","Grp_Adding_TCR","Grp_Adding_BCR","Cerebro"]
+Tmp: "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/log/"
 
 Grp_Norm_DimRed_Eval_GE :
   name.grp : ["sc5p_v2_hs_PBMC_Grp_keep"]
-  input.list.rda : ["/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_1k_5gex_GE/F200_C1000_M0-0.15_R0-1_G5/DOUBLETSFILTER_all/SCTransform/pca/dims35_res1.2/sc5p_v2_hs_PBMC_1k_5gex_GE_SCTransform_pca_35_1.2_ADT_TCR_BCR.rda,/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_10k_5gex_GE/F200_C1000_M0-0.15_R0-1_G5/DOUBLETSFILTER_all/SCTransform/pca/dims33_res0.4/sc5p_v2_hs_PBMC_10k_5gex_GE_SCTransform_pca_33_0.4_ADT_TCR_BCR.rda"]
+  input.list.rda : ["/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_1k_5gex_GE/F200_C1000_M0-0.15_R0-1_G5/DOUBLETSFILTER_all/SCTransform/pca/dims35_res1.2/sc5p_v2_hs_PBMC_1k_5gex_GE_SCTransform_pca_35_1.2_ADT_TCR_BCR.rda,/mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_10k_5gex_GE/F200_C1000_M0-0.15_R0-1_G5/DOUBLETSFILTER_all/SCTransform/pca/dims33_res0.4/sc5p_v2_hs_PBMC_10k_5gex_GE_SCTransform_pca_33_0.4_ADT_TCR_BCR.rda"]
   output.dir.grp : ["/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/"]
   eval.markers : "GAPDH"
   author.name : "marine aglave"
