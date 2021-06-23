@@ -1,5 +1,4 @@
 Steps: ["Grp_Norm_DimRed_Eval_GE","Grp_Clust_Markers_Annot_GE","Grp_Adding_ADT","Grp_Adding_TCR","Grp_Adding_BCR","Cerebro"]
-Tmp: "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/log/"
 
 Grp_Norm_DimRed_Eval_GE :
   name.grp : ["sc5p_v2_hs_PBMC_Grp_keep"]
