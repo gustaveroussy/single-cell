@@ -109,7 +109,6 @@ if (is.null(nthreads)) nthreads <- 4
 if (is.null(min.cells)) min.cells <- 0
 # Normalization and dimension reduction
 if (is.null(features.n)) features.n <- 3000
-if (is.null(vtr)) vtr <- NULL
 if (is.null(vtr.scale)) vtr.scale <- TRUE
 if (vtr.scale && !(dimred.method %in% c('scbfa', 'bpca', 'mds'))) vtr.scale <- FALSE
 if (is.null(dims.max)) dims.max <- 49
@@ -139,19 +138,19 @@ if ((integration.method == "Liger") && !(dimred.method == "Liger")){
   warning(paste0("With ",integration.method," integration, dimensions reduction is included. Set dimred.method to Liger"))
   dimred.method <- "Liger"
 }
-if ((integration.method == "Seurat") && !is.null(batch.vtr)){
-  warning(paste0("With ",integration.method," integration, batch.vtr is not used. Set batch.vtr to NULL."))
-  batch.vtr <- NULL
-}
 
 if (is.null(norm.method) && ((integration.method == "Harmony") || (integration.method == "scbfa"))) norm.method <- 'SCTransform'
 if (is.null(dimred.method) && ((integration.method == "Seurat") || (integration.method == "Harmony"))) dimred.method <- 'pca'
 if(is.null(dimred.method) && (integration.method %in% raw.methods)) dimred.method <- integration.method
 if((integration.method != dimred.method) && (integration.method %in% raw.methods)){
-  warning(paste("For ", integration.method, " integration, the same method must be used for dimension reduction! Set dimred.method to ", integration.method, "."))
+  warning(paste("For ", integration.method, " integration, dimensions reduction is included. Set dimred.method to ", integration.method, "."))
   dimred.method <- integration.method
 }
 if (is.null(batch.vtr) && (integration.method %in% c("Harmony","Liger","scbfa","bpca"))) stop(paste0("batch.vtr parameter can't be empty for ",integration.method,"! (example: orig.ident)"))
+if ((integration.method == "Seurat") && !is.null(batch.vtr)){
+  warning(paste0("With ",integration.method," integration, batch.vtr is not used. Set batch.vtr to NULL."))
+  batch.vtr <- NULL
+}
 
 if (!is.null(norm.method) && !(norm.method %in% c('SCTransform','LogNormalize'))) stop("Normalization method unknown! (LogNormalize or SCTransform)")
 if (!is.null(dimred.method) && !(dimred.method %in% c('pca','scbfa','bpca','mds', 'Liger'))) stop("Dimension Reduction method unknown! (pca, scbfa, bpca, mds or Liger)")
