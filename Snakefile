@@ -692,7 +692,7 @@ if "Int_Adding_BCR" in STEPS:
     if 'Int_Adding_BCR' in config and 'input.rda' in config['Int_Adding_BCR'] :
         INT_ADD_BCR_INPUT_RDA = config['Int_Adding_BCR']['input.rda']
     elif "Int_Adding_TCR" in STEPS:
-        sys.stderr.write("Note: No input.rda.ge find in Int_Adding_BCR section of configfile; input.rda.ge will be determine from Int_Adding_TCR step for Int_Adding_BCR step!\n")
+        sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_TCR step for Int_Adding_BCR step!\n")
         INT_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in INT_ADD_TCR_OUTPUT]
     elif "Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_ADT step for Int_Adding_BCR step!\n")
@@ -886,7 +886,7 @@ if "Grp_Adding_BCR" in STEPS:
     if 'Grp_Adding_BCR' in config and 'input.rda' in config['Grp_Adding_BCR'] :
         GRP_ADD_BCR_INPUT_RDA = config['Grp_Adding_BCR']['input.rda']
     elif "Grp_Adding_TCR" in STEPS:
-        sys.stderr.write("Note: No input.rda.ge find in Grp_Adding_BCR section of configfile; input.rda.ge will be determine from Grp_Adding_TCR step for Grp_Adding_BCR step!\n")
+        sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_TCR step for Grp_Adding_BCR step!\n")
         GRP_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in GRP_ADD_TCR_OUTPUT]
     elif "Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_ADT step for Grp_Adding_BCR step!\n")

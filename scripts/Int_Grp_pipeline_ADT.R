@@ -33,7 +33,7 @@ for (i in names(args$options)){
 #### Get Paramaters ####
 ### Project
 samples.name.ADT <- unlist(stringr::str_split(args$options$samples.name.adt, ","))
-input.rda.ge <- args$options$input.rda.ge
+input.rda <- args$options$input.rda
 output.dir <- args$options$output.dir
 input.dirs.adt <- unlist(stringr::str_split(args$options$input.dirs.adt, ","))
 list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
@@ -67,13 +67,13 @@ if(is.null(pipeline.path)) stop("--pipeline.path parameter must be set!")
 
 #### Check non-optional parameters ####
 if (is.null(samples.name.ADT)) stop("samples.name.adt parameter can't be empty!")
-if (is.null(input.rda.ge)) stop("input.rda.ge parameter can't be empty!")
+if (is.null(input.rda)) stop("input.rda parameter can't be empty!")
 if (is.null(output.dir)) stop("output.dir parameter can't be empty!")
 if (is.null(input.dirs.adt)) stop("input.dirs.adt parameter can't be empty!")
 if (is.null(gene.names)) stop("gene.names parameter can't be empty!")
 
 ### Load data
-load(input.rda.ge)
+load(input.rda)
 
 ### Sourcing functions ####
 source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
@@ -90,7 +90,7 @@ dimred.method <- sobj@misc$params$reductions$method
 norm.method_GE <- sobj@misc$params$normalization$normalization.method
 assay <- if(norm.method_GE == "SCTransform") 'SCT' else 'RNA'
 ## Clustering
-GE_file <- sub("\\.rda$", "", input.rda.ge)
+GE_file <- sub("\\.rda$", "", input.rda)
 INT_GRP.reduction <- sobj@misc$params$clustering$umap
 ## ADT
 if (is.null(ADT.min.cutoff))  ADT.min.cutoff <- rep("q30", length(gene.names))
