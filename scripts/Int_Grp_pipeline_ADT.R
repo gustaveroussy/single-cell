@@ -3,7 +3,7 @@ library(optparse)
 option_list <- list(
   ### Project
   make_option("--samples.name.adt", help="Names of CITE-seq samples (ADT)"),
-  make_option("--input.rda.ge", help="Input seurat object (in .rda format)."),
+  make_option("--input.rda", help="Input seurat object (in .rda format)."),
   make_option("--output.dir", help="Output path"),
   make_option("--input.dirs.adt", help="Input paths to the KALLISTOBUS results."),
   make_option("--author.name", help="Name of author of the analysis"),

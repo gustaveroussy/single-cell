@@ -1,0 +1,82 @@
+# Yaml file for single-cell pipeline
+Steps:
+Tmp:
+
+############################################ GE (RNA) ############################################
+
+Int_Norm_DimRed_Eval_GE:
+  name.int :
+  input.list.rda :
+  output.dir.int :
+  author.name :
+  author.mail :
+  eval.markers :
+  min.cells :
+  integration.method :
+  batch.vtr :
+  features.n :
+  norm.method :
+  dimred.method :
+  vtr :
+  vtr.scale :
+  dims.max :
+  dims.min :
+  dims.steps :
+  res.max :
+  res.min :
+  res.steps :
+  metadata.file :
+
+Int_Clust_Markers_Annot_GE:
+  name.int :
+  input.rda.int :
+  output.dir.int :
+  author.name :
+  author.mail :
+  markfile :
+  keep.dims :
+  keep.res :
+  cfr.minscore :
+  sr.minscore :
+  metadata.file :
+
+Cerebro:
+  input.rda :
+  version :
+  groups:
+  remove.other.reductions:
+  remove.other.idents :
+  remove.mt.genes:
+  remove.crb.genes:
+  remove.str.genes:
+  only.pos.DE:
+  remove.custom.DE:
+  gmt.file :
+  metadata.file :
+  
+############################################ ADT ############################################
+
+Int_Adding_ADT:
+  sample.name.adt :
+  input.rda:
+  input.dir.adt:
+  author.name:
+  author.mail:
+  gene.names:
+  ADT.max.cutoff:
+  ADT.min.cutoff:
+
+############################################ TCR/BCR ############################################
+
+Int_Adding_TCR:
+  input.rda :
+  vdj.input.files.tcr:
+  author.name:
+  author.mail:
+
+Int_Adding_BCR:
+  input.rda :
+  vdj.input.files.bcr:
+  author.name:
+  author.mail:
+

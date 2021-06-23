@@ -1,0 +1,30 @@
+# Yaml file for single-cell pipeline
+Steps: ["Grp_Norm_DimRed_Eval_GE","Grp_Clust_Markers_Annot_GE","Grp_Adding_ADT","Grp_Adding_TCR","Grp_Adding_BCR","Cerebro"]
+
+############################################ GE (RNA) ############################################
+
+Grp_Norm_DimRed_Eval_GE:
+  name.grp : ["samples1_and_2_int_Seurat"]
+  input.list.rda : ["/mnt/beegfs/userdata/m_aglave/pipeline/output/sample1_GE/F200_C1000_M0-0.2_R0-1_G5/DOUBLETSFILTER_all/SCTransform/pca/dims35_res1.2/sample1_GE_SCTransform_pca_35_1.2_ADT_TCR_BCR.rda,/mnt/beegfs/userdata/m_aglave/pipeline/output/sample2_GE/F200_C1000_M0-0.2_R0-1_G5/DOUBLETSFILTER_all/SCTransform/pca/dims33_res0.4/sample2_GE_SCTransform_pca_33_0.4_ADT_TCR_BCR.rda"]
+  output.dir.grp : ["/mnt/beegfs/userdata/m_aglave/pipeline/output/"]
+
+Grp_Clust_Markers_Annot_GE:
+  keep.dims : 25
+  keep.res : 0.5
+
+  
+############################################ ADT ############################################
+
+Grp_Adding_ADT:
+  sample.name.adt : ["sample1_ADT,sample2_ADT"]
+  input.dir.adt: ["/mnt/beegfs/userdata/m_aglave/pipeline/output/sample1_ADT/KALLISTOBUS/,/mnt/beegfs/userdata/m_aglave/pipeline/output/sample2_ADT/KALLISTOBUS/"]
+  gene.names: "CD3G,CD4,CTLA4"
+
+############################################ TCR/BCR ############################################
+
+Grp_Adding_TCR:
+  vdj.input.files.tcr: ["/mnt/beegfs/userdata/m_aglave/pipeline/output/sample1_TCR/sample1_TCR_CellRanger/outs/filtered_contig_annotations.csv,/mnt/beegfs/userdata/m_aglave/pipeline/output/sample2_TCR/sample2_TCR_CellRanger/outs/filtered_contig_annotations.csv"]
+
+Grp_Adding_BCR:
+  vdj.input.files.bcr: ["/mnt/beegfs/userdata/m_aglave/pipeline/output/sample1_BCR/sample1_BCR_CellRanger/outs/filtered_contig_annotations.csv,/mnt/beegfs/userdata/m_aglave/pipeline/output/sample2_BCR/sample2_BCR_CellRanger/outs/filtered_contig_annotations.csv"]
+

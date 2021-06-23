@@ -73,7 +73,7 @@ rule int_add_adt_ge:
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Int_Grp_pipeline_ADT.R \
         --samples.name.adt {params.sample_name_adt} \
-        --input.rda.ge {params.input_rda} \
+        --input.rda {params.input_rda} \
         --output.dir {params.output_folder} \
         --input.dirs.adt {params.kallisto_folder} \
         --author.name {INT_ADD_ADT_AUTHOR_NAME} \
