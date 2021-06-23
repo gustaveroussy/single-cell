@@ -110,7 +110,7 @@ slot <- 'data' #for correlation and umap
 ### printing parameters:
 print("###########################################")
 print(paste0("samples.name.adt : ",samples.name.ADT))
-print(paste0("input.rda.ge : ",input.rda.ge))
+print(paste0("input.rda : ",input.rda))
 print(paste0("output.dir : ",output.dir))
 print(paste0("input.dirs.adt : ",input.dirs.adt))
 print(paste0("gene.names : ",paste0(gene.names,collapse = ", ")))
