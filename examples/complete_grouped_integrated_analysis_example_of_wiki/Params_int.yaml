@@ -1,5 +1,4 @@
 Steps: ["Int_Norm_DimRed_Eval_GE","Int_Clust_Markers_Annot_GE","Int_Adding_ADT","Int_Adding_TCR","Int_Adding_BCR","Cerebro"]
-Tmp: "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/log/"
 
 Int_Norm_DimRed_Eval_GE :
   name.int : ["sc5p_v2_hs_PBMC_Int_Seurat"]
