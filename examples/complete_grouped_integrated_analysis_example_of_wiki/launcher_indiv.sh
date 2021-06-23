@@ -27,8 +27,7 @@ singularity --version
 
 #parameters
 path_to_configfile="/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_grouped_integrated_analysis_example_of_wiki/Params_indiv.yaml"
-# path_to_pipeline="/mnt/beegfs/pipelines/single-cell"
-path_to_pipeline="/mnt/beegfs/userdata/m_aglave/pipeline/single-cell"
+path_to_pipeline="/mnt/beegfs/pipelines/single-cell"
 
 #launch
 snakemake --profile ${path_to_pipeline}/profiles/slurm -s ${path_to_pipeline}/Snakefile --configfile ${path_to_configfile} #--unlock
