@@ -101,11 +101,11 @@ if (is.null(nthreads)) nthreads <- 4
 # Normalization and dimension reduction
 norm.method <- sobj@misc$params$normalization$normalization.method
 assay <- if(norm.method == 'SCTransform') 'SCT' else 'RNA'
-norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL), collapse = '_')
+norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL), collapse = '_')
 if(isTRUE(sobj@misc$params$group$keep.norm)) norm_vtr <- "NORMKEPT"
 dimred.method <- sobj@assays[[assay]]@misc$params$reductions$method
 red.name <- paste0(assay, "_", dimred.method)
-dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[red.name]]@misc$vtr[1])) paste(sobj@reductions[[red.name]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
+dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[red.name]]@misc$vtr.biases[1])) paste(sobj@reductions[[red.name]]@misc$vtr.biases, collapse = '_') else NULL), collapse = '_')
 # Annotation
 if (is.null(cfr.minscore)) cfr.minscore <- 0.35
 if (is.null(sr.minscore)) sr.minscore <- 0.25
@@ -190,7 +190,7 @@ technical.plot(sobj = sobj, ident = ident.name, out.dir = clust.dir, multi.pt.si
 sobj <- find.markers.quick(sobj = sobj, ident = ident.name, test.use = 'wilcox', min.pct = .75, logfc.threshold = .5, only.pos = TRUE, adjp.p.max = 5E-02, topn = 10, heatmap.cols = gradient.cols, out.dir = clust.dir)
 
 ### Automatic cell type annotation
-sobj <- cells.annot(sobj = sobj, ident = ident.name, singler.setnames = singler.setnames, clustifyr.setnames = clustifyr.setnames, sr.minscore = .25, cfr.minscore = .35, out.dir = clust.dir, solo.pt.size = solo.pt.size)
+sobj <- cells.annot(sobj = sobj, ident = ident.name, singler.setnames = singler.setnames, clustifyr.setnames = clustifyr.setnames, sr.minscore = sr.minscore, cfr.minscore = cfr.minscore, out.dir = clust.dir, solo.pt.size = solo.pt.size)
 
 ### Assessing clusters : Plotting provided marker genes
 if(!is.null(markers)) sobj <- markers.umap.plot(sobj = sobj, markers = markers, ident = ident.name, out.dir = clust.dir, dimplot.cols = gradient.cols, multi.pt.size = 2)
@@ -207,5 +207,4 @@ write_MandM(sobj=sobj, output.dir=clust.dir)
 cat("\nSaving object...\n")
 GE_file=paste0(clust.dir, '/', paste(c(name.grp, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = "_"))
 save(sobj, file = paste0(GE_file, '.rda'), compress = "bzip2")
-
 

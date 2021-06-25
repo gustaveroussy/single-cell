@@ -106,12 +106,13 @@ integration.method <- sobj@misc$params$integration$method
 # Normalization and dimension reduction
 assay <- sobj@misc$params$integration$out.assay
 norm.method <- sobj@assays[[assay]]@misc$params$normalization$normalization.method
-norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL), collapse = '_')
+norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL), collapse = '_')
+if(integration.method %in% c("Seurat", "Liger")) norm_vtr <- "NORMKEPT"
 dimred.method <- sobj@assays[[assay]]@misc$params$reductions$method
 if(integration.method == "Seurat") red.name <- paste(c("integrated", dimred.method, integration.method), collapse = '_')
 if(integration.method %in% c('scbfa', 'bpca','Liger')) red.name <- paste(c(assay, dimred.method, integration.method), collapse = '_')
 if(integration.method == "Harmony") red.name <- paste(c(assay, dimred.method), collapse = '_')
-dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[red.name]]@misc$vtr[1])) paste(sobj@reductions[[red.name]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
+dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[red.name]]@misc$vtr.biases[1])) paste(sobj@reductions[[red.name]]@misc$vtr.biases, collapse = '_') else NULL), collapse = '_')
 if(integration.method == "Harmony") red.name <- paste(c(assay, dimred.method, integration.method), collapse = '_')
 # Annotation
 if (is.null(cfr.minscore)) cfr.minscore <- 0.35
@@ -201,7 +202,7 @@ sobj <- find.markers.quick(sobj = sobj, ident = ident.name, test.use = 'wilcox',
 
 ### Automatic cell type annotation
 cat("\nAutomatic cell type annotation...\n")
-sobj <- cells.annot(sobj = sobj, ident = ident.name, singler.setnames = singler.setnames, clustifyr.setnames = clustifyr.setnames, sr.minscore = .25, cfr.minscore = .35, out.dir = clust.dir, solo.pt.size = solo.pt.size)
+sobj <- cells.annot(sobj = sobj, ident = ident.name, singler.setnames = singler.setnames, clustifyr.setnames = clustifyr.setnames, sr.minscore = sr.minscore, cfr.minscore = cfr.minscore, out.dir = clust.dir, solo.pt.size = solo.pt.size)
 
 ### Assessing clusters : Plotting provided marker genes
 cat("\nPlotting provided marker genes...\n")
@@ -219,21 +220,3 @@ write_MandM(sobj=sobj, output.dir=clust.dir)
 cat("\nSaving object...\n")
 GE_file=paste0(clust.dir, '/', paste(c(name.int, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = "_"))
 save(sobj, file = paste0(GE_file, '.rda'), compress = "bzip2")
-
-# #TCR view
-# #Fusion of *highlight_aa_top10_freq TCR_highlight_aa_top11to20_freq *highlight_aa_top11to20_freq (only TCR)
-# col.names.top <- grep("highlight_aa_top", names(sobj@meta.data), value=TRUE)
-# col.name.all <- grep("highlight_aa_all", names(sobj@meta.data), value=TRUE)
-# for (i in 1:length(sobj@meta.data[[col.name.all]])){
-#   if (is.na(sobj@meta.data[[col.names.top[1]]][i])){
-#     if (is.na(sobj@meta.data[[col.names.top[2]]][i])){
-#       sobj@meta.data$TCR_highlight_aa_top20_freq[i] <- NA
-#     }else{
-#       sobj@meta.data$TCR_highlight_aa_top20_freq[i] <- sobj@meta.data[[col.names.top[2]]][i]
-#     }
-#   }else if (is.na(sobj@meta.data[[col.names.top[2]]][i])){
-#     sobj@meta.data$TCR_highlight_aa_top20_freq[i] <- sobj@meta.data[[col.names.top[1]]][i]
-#   }else{
-#       stop(paste0("Error :", col.names.top[1]," AND ", col.names.top[2]," are full in ",i,"! "))
-#     }
-# }

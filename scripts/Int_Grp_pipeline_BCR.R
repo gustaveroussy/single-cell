@@ -359,14 +359,12 @@ sobj@misc$technical_info$scRepertoire <- utils::packageVersion('scRepertoire')
 sobj@misc$technical_info$alakazam <- utils::packageVersion('alakazam')
 
 ### Materials and Methods
-if(any(file.exists(paste0(dirname(vdj.input.files.bcr), "/Materials_and_Methods.txt")))){
+if(all(file.exists(paste0(dirname(vdj.input.files.bcr), "/Materials_and_Methods.txt")))){
   tmp2=c()
   for (nb_file in 1:length(dirname(vdj.input.files.bcr))){
-    if(file.exists(paste0(dirname(vdj.input.files.bcr[nb_file]), "/Materials_and_Methods.txt"))){
-      tmp <- readr::read_tsv(paste0(dirname(vdj.input.files.bcr[nb_file]), "/Materials_and_Methods.txt"), col_names = FALSE)$X1
-      tmp2[nb_file]=""
-      for (i in 1:length(tmp)) tmp2[nb_file]=paste(tmp2[nb_file],tmp[i], sep="")
-    }
+    tmp <- readr::read_tsv(paste0(dirname(vdj.input.files.bcr[nb_file]), "/Materials_and_Methods.txt"), col_names = FALSE)$X1
+    tmp2[nb_file]=""
+    for (i in 1:length(tmp)) tmp2[nb_file]=paste(tmp2[nb_file],tmp[i], sep="")
   }
   if(length(unique(tmp2)) == 1) sobj@misc$parameters$Materials_and_Methods$BCR <- tmp2[1]
 } else sobj@misc$parameters$Materials_and_Methods$BCR <- NULL

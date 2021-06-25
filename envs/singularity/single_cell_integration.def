@@ -27,7 +27,7 @@ From: ubuntu:20.04
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
     add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/'
     apt-get -y update && apt-get -y upgrade
-    apt-get install -y r-base r-base-dev #apt-cache policy r-base r-base-dev pour connaître les versions
+    apt-get install -y r-base-core=4.0.4-1.2004.0 r-base-dev=4.0.4-1.2004.0 #apt-cache policy r-base r-base-dev pour connaître les versions
     apt install -y default-jre
     echo "java version ######################"
     java --version
@@ -61,7 +61,9 @@ From: ubuntu:20.04
     echo "Install Integration packages ######################"
     R -e 'install.packages("remotes")'
     R -e 'install.packages("rliger")'
+    R -e 'install.packages("R.utils")' #for seurat-wrappers
     R -e 'remotes::install_github("satijalab/seurat-wrappers")'
+    R -e 'BiocManager::install("SingleCellExperiment")' #for harmony'
     R -e 'devtools::install_github("immunogenomics/harmony")'
 
     echo "Install params packages ######################"
@@ -69,8 +71,8 @@ From: ubuntu:20.04
 
     echo "Install Normalization + dimension reduction + correction of bias + evaluation of bias and clustering parameters packages ######################"
     R -e 'devtools::install_github("quon-titative-biology/scBFA")' # red dim + eval_red_dim
-    R -e 'install.packages("matrixStats")' # red dim
     R -e 'install.packages("scales")' # eval.redim
+    R -e 'install.packages("matrixStats")' # red dim
     R -e 'install.packages("RColorBrewer")' # eval.redim ################### nécessaire ailleurs???
     R -e 'install.packages("foreach")' # clustering.eval.mt
     R -e 'install.packages("clustree")' # clustering.eval.mt

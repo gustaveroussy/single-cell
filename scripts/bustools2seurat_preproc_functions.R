@@ -562,20 +562,20 @@ tag.ctrl.genes <- function(sobj = NULL, ctrl.genes = c("GAPDH"), ctrl.min.counts
 }
 
 ## Normalization (Seurat: SCTransform ou LogNormalize ou CLR)
-sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = "SCTransform", features.n = 3000, vtr = NULL) {
+sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = "SCTransform", features.n = 3000, vtr.biases = NULL) {
   if (!is.null(sobj)) {
     if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
-    if(!is.null(vtr)) vtr <- sort(vtr)
+    if(!is.null(vtr.biases)) vtr.biases <- sort(vtr.biases)
 
     ## Save command
-    sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("sc.normalization(sobj = sobj, assay = ", assay, ", normalization.method = ", normalization.method, ", features.n = ", features.n, ", vtr = ", if(is.null(vtr)) "NULL" else paste0("c(", paste(vtr, collapse = ","),")"), ")"))
+    sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("sc.normalization(sobj = sobj, assay = ", assay, ", normalization.method = ", normalization.method, ", features.n = ", features.n, ", vtr.biases = ", if(is.null(vtr.biases)) "NULL" else paste0("c(", paste(vtr.biases, collapse = ","),")"), ")"))
 
     ## Restoring seed and set assay.ori
     my.seed <- sobj@misc$params$seed
     assay.ori <- assay
 
     if (toupper(normalization.method) == toupper("SCTransform")) {
-      sobj <- suppressWarnings(Seurat::SCTransform(object = sobj, assay = assay, seed.use = my.seed, variable.features.n = features.n, vars.to.regress = vtr, return.only.var.genes = TRUE))
+      sobj <- suppressWarnings(Seurat::SCTransform(object = sobj, assay = assay, seed.use = my.seed, variable.features.n = features.n, vars.to.regress = vtr.biases, return.only.var.genes = TRUE))
       assay <- 'SCT'
     } else if (toupper(normalization.method) == toupper("LogNormalize")) {
       sobj <- Seurat::NormalizeData(sobj, normalization.method = 'LogNormalize', assay = assay)
@@ -587,7 +587,7 @@ sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = 
 
     ## Save parameters
     sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = normalization.method, assay.ori = assay.ori, assay.out = assay, features.used = features.n)
-    sobj@assays[[assay]]@misc$scaling = list(vtr = if(is.null(vtr)) NA else vtr)
+    sobj@assays[[assay]]@misc$scaling = list(vtr.biases = if(is.null(vtr.biases)) NA else vtr.biases)
     sobj@misc$params$normalization <- c(sobj@assays[[assay]]@misc$params$normalization, sobj@assays[[assay]]@misc$scaling)
 
     sobj@misc$params$normalization$Rsession <- utils::capture.output(devtools::session_info())
@@ -596,28 +596,28 @@ sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = 
 }
 
 ## Dimensions reduction (now, character or factors are converted to a model.matrix)
-dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 'RNA', max.dims = 100L, vtr = NULL, vtr.scale = TRUE, red.name = NULL) {
+dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 'RNA', max.dims = 100L, vtr.biases = NULL, vtr.scale = TRUE, red.name = NULL) {
   raw.methods <- c('scbfa', 'bpca')
   all.methods <- c(raw.methods, 'pca', 'mds', 'ica')
   if (is.null(sobj)) stop('No Seurat object provided !')
   if (!reduction.method %in% all.methods) stop(paste0('Unknown reduction method ! Expecting any of : ', paste(all.methods, collapse = ', ')))
   if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
   if(is.null(red.name)) red.name <- paste0(assay, '_', reduction.method)
-  if(!is.null(vtr)) vtr <- sort(vtr)
+  if(!is.null(vtr.biases)) vtr.biases <- sort(vtr.biases)
 
   ## Save command
-  sobj@misc$pipeline_commands = c(sobj@misc$pipeline_commands, paste0("dimensions.reduction(sobj = sobj, reduction.method = ", reduction.method, ", assay = ", assay, ", max.dims = ", max.dims, ", vtr = ", if(is.null(vtr)) "NULL" else paste0("c(", paste(vtr, collapse = ","),")"), ", vtr.scale =", vtr.scale, ")"))
+  sobj@misc$pipeline_commands = c(sobj@misc$pipeline_commands, paste0("dimensions.reduction(sobj = sobj, reduction.method = ", reduction.method, ", assay = ", assay, ", max.dims = ", max.dims, ", vtr.biases = ", if(is.null(vtr.biases)) "NULL" else paste0("c(", paste(vtr.biases, collapse = ","),")"), ", vtr.scale =", vtr.scale, ")"))
 
   ## Restoring seed
   my.seed <- sobj@misc$params$seed
 
   if(reduction.method %in% raw.methods) {
     ## Formatting covariates for scbfa
-    if (!is.null(vtr)) {
-      if (!all(vtr %in% colnames(sobj@meta.data))) stop('Not all vtr names found in Seurat object meta data !')
-      minimeta <- sobj@meta.data[,colnames(sobj@meta.data) %in% vtr, drop = FALSE]
+    if (!is.null(vtr.biases)) {
+      if (!all(vtr.biases %in% colnames(sobj@meta.data))) stop('Not all vtr.biases names found in Seurat object meta data !')
+      minimeta <- sobj@meta.data[,colnames(sobj@meta.data) %in% vtr.biases, drop = FALSE]
       X <- matrix(ncol = 0, nrow = nrow(sobj@meta.data))
-      for(v in vtr) {
+      for(v in vtr.biases) {
         if(is.character(minimeta[[v]])) minimeta[[v]] <- as.factor(minimeta[[v]])
         if(any(is.na(minimeta[[v]]))) stop(paste0("Covariate '", v, "' contains NA value(s) !"))
         if(is.factor(minimeta[[v]])) {
@@ -633,30 +633,15 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
     } else {
       X <- NULL
     }
-    # ## Formatting covariates if needed
-    # if (!is.null(vtr)) {
-    #   if(is.matrix(vtr)) {
-    #     message(paste0("Regressing matrix named '", vtr.matrix.name, "' ..."))
-    #     X <- vtr
-    #   } else {
-    #     if (!all(vtr %in% colnames(sobj@meta.data))) stop('Not all vtr names found in Seurat object meta data !')
-    #     X <- sobj@meta.data[, vtr, drop = FALSE]
-    #     for(x in seq_len(ncol(X))) {
-    #       if (!is.numeric(X[,x])) X[,x] <- as.numeric(as.factor(X[,x]))
-    #     }
-    #     X <- as.matrix(X)
-    #   }
-    #   if(vtr.scale) X <- scale(X)
-    # } else X <- vtr
   } else {
-    ## If vtr is called, stop !
-    if(!is.null(vtr)) stop("vtr can only be called when using any reduction method out of : ", paste(raw.methods, collapse = ', '))
+    ## If vtr.biases is called, stop !
+    if(!is.null(vtr.biases)) stop("vtr.biases can only be called when using any reduction method out of : ", paste(raw.methods, collapse = ', '))
     ## Scaling if necessary
     if (sum(dim(sobj@assays[[assay]]@scale.data)) < 3) {
       scale.vtr.all <- NULL
-      if(!any(is.na(sobj@assays[[assay]]@misc$scaling$vtr))) {
-        message(paste0("Found scaling coveriate(s) '", paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = "', '"), "' to regress from normalization ..."))
-        scale.vtr.all <- c(scale.vtr.all, sobj@assays[[assay]]@misc$scaling$vtr)
+      if(!any(is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases))) {
+        message(paste0("Found scaling coveriate(s) '", paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = "', '"), "' to regress from normalization ..."))
+        scale.vtr.all <- c(scale.vtr.all, sobj@assays[[assay]]@misc$scaling$vtr.biases)
       }
       assay.ori <- Seurat::DefaultAssay(sobj)
       Seurat::DefaultAssay(sobj) <- assay
@@ -675,15 +660,18 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
 
   if (reduction.method == 'pca') {
     sobj <- suppressWarnings(Seurat::RunPCA(object = sobj, assay = assay, verbose = FALSE, npcs = max.dims, reduction.name = red.name, reduction.key = paste0(red.name, '_'), seed.use = my.seed))
-    sobj@assays[[assay]]@misc$params$reductions$vtr <- sobj@reductions[[red.name]]@misc$vtr <- NA
+    sobj@assays[[assay]]@misc$params$reductions$vtr.biases <- sobj@reductions[[red.name]]@misc$vtr.biases <- NA
+    sobj@assays[[assay]]@misc$params$reductions$vtr.scale <- sobj@reductions[[red.name]]@misc$vtr.scale <- NA
   } else if (reduction.method == 'ica') {
     sobj <- suppressWarnings(Seurat::RunICA(object = sobj, assay = assay, verbose = FALSE, nics = max.dims, reduction.name = red.name, reduction.key = paste0(red.name, '_'), seed.use = my.seed))
-    sobj@assays[[assay]]@misc$params$reductions$vtr <- sobj@reductions[[red.name]]@misc$vtr <- NA
+    sobj@assays[[assay]]@misc$params$reductions$vtr.biases <- sobj@reductions[[red.name]]@misc$vtr.biases <- NA
+    sobj@assays[[assay]]@misc$params$reductions$vtr.scale <- sobj@reductions[[red.name]]@misc$vtr.scale <- NA
   } else if (reduction.method == 'mds') {
     set.seed(my.seed)
     mds.res <- scater::calculateMDS(x = sobj@assays[[assay]]@scale.data, ncomponents = max.dims)
     sobj@reductions[[red.name]] <- Seurat::CreateDimReducObject(embeddings = mds.res, loadings = matrix(nrow = 0, ncol = 0), assay = assay, stdev = matrixStats::colSds(mds.res), key = paste0(red.name, '_'), misc = list())
-    sobj@assays[[assay]]@misc$params$reductions$vtr <- sobj@reductions[[red.name]]@misc$vtr <- NA
+    sobj@assays[[assay]]@misc$params$reductions$vtr.biases <- sobj@reductions[[red.name]]@misc$vtr.biases <- NA
+    sobj@assays[[assay]]@misc$params$reductions$vtr.scale <- sobj@reductions[[red.name]]@misc$vtr.scale <- NA
     ## Save packages versions
     sobj@misc$technical_info$scater <- utils::packageVersion('scater')
   } else if (reduction.method == 'bpca') {
@@ -695,7 +683,7 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
     ## Save parameters
     sobj@assays[[assay]]@misc$params$reductions <- sobj@reductions[[red.name]]@misc <- list(numFactors = bpca.res$numFactors,
                                                                                                        X = if(is.null(X)) NA else X,
-                                                                                                       vtr = if(is.null(vtr)) NA else vtr,
+                                                                                                       vtr.biases = if(is.null(vtr.biases)) NA else vtr.biases,
                                                                                                        vtr.scale = vtr.scale)
     ## Save packages versions
     sobj@misc$technical_info$scBFA <- utils::packageVersion('scBFA')
@@ -711,7 +699,7 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
     sobj@assays[[assay]]@misc$params$reductions <- sobj@reductions[[red.name]]@misc <- list(binary.matrix = bfa.res$BB,
                                                                                                        numFactors = bfa.res$numFactors,
                                                                                                        X = if(is.null(X)) NA else X,
-                                                                                                       vtr = if(is.null(vtr)) NA else vtr,
+                                                                                                       vtr.biases = if(is.null(vtr.biases)) NA else vtr.biases,
                                                                                                        vtr.scale = vtr.scale)
     ## Save packages versions
     sobj@misc$technical_info$scBFA <- utils::packageVersion('scBFA')
@@ -723,7 +711,6 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
   sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
 
   ## Filling @misc
-  # sobj@reductions[[red.name]]@misc$vtr <- if (!is.null(vtr)) vtr else NA
   sobj@reductions[[red.name]]@misc$from.assay <- assay
   ## Save parameters
   sobj@assays[[assay]]@misc$params$reductions <- c(sobj@assays[[assay]]@misc$params$reductions, list(method = tolower(reduction.method), assay = assay, max.dims = max.dims))
@@ -733,29 +720,29 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
 }
 
 ## Harmonize dataset (remove sample effect) for integration
-harmonize <- function(sobj = NULL, reduction = NULL, vtr = NULL, harmony.max.iter = 100, ncomp = 20, out.dir = NULL) {
+harmonize <- function(sobj = NULL, reduction = NULL, vtr.biases = NULL, harmony.max.iter = 100, ncomp = 20, out.dir = NULL) {
   if (is.null(sobj)) stop('No Seurat object provided !')
   if (is.null(out.dir)) stop('No output dir provided !')
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(reduction)) stop('No reduction name provided !')
   if (!reduction %in% names(sobj@reductions)) stop(paste0("Reduction '", reduction, "' not found !"))
-  if (is.null(vtr)) stop("No variable name to regress provided ! At least one (ex : 'orig.ident') is required.")
-  if (!all(vtr %in% colnames(sobj@meta.data))) stop('At least one of the variable names to regress was not found Seurat object metadata !')
+  if (is.null(vtr.biases)) stop("No variable name to regress provided ! At least one (ex : 'orig.ident') is required.")
+  if (!all(vtr.biases %in% colnames(sobj@meta.data))) stop('At least one of the variable names to regress was not found Seurat object metadata !')
 
   ## Save command
-  sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("harmonize(sobj = sobj, reduction = ", reduction, " vtr = ", if(is.null(vtr)) "NULL" else paste0("c(", paste(vtr, collapse = ","),")"), ", harmony.max.iter =", harmony.max.iter, ", ncomp =", ncomp, ", out.dir =", out.dir, ")"))
+  sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("harmonize(sobj = sobj, reduction = ", reduction, " vtr.biases = ", if(is.null(vtr.biases)) "NULL" else paste0("c(", paste(vtr.biases, collapse = ","),")"), ", harmony.max.iter =", harmony.max.iter, ", ncomp =", ncomp, ", out.dir =", out.dir, ")"))
 
-  message(paste0('Harmonizing for : ', paste(vtr, collapse = ', ')))
+  message(paste0('Harmonizing for : ', paste(vtr.biases, collapse = ', ')))
   set.seed(sobj@misc$params$seed)
   png(paste0(out.dir, '/harmony_convergence_plot.png'), width = 1000, height = 1000)
-  harmonized.red <- harmony::HarmonyMatrix(data_mat = sobj@reductions[[reduction]]@cell.embeddings[,1:ncomp], meta_data = sobj@meta.data[, vtr, drop = FALSE], vars_use = vtr, do_pca = FALSE, max.iter.harmony = harmony.max.iter, max.iter.cluster = 1000, plot_convergence = TRUE)
+  harmonized.red <- harmony::HarmonyMatrix(data_mat = sobj@reductions[[reduction]]@cell.embeddings[,1:ncomp], meta_data = sobj@meta.data[, vtr.biases, drop = FALSE], vars_use = vtr.biases, do_pca = FALSE, max.iter.harmony = harmony.max.iter, max.iter.cluster = 1000, plot_convergence = TRUE)
   dev.off()
-  harm.red.name <- paste(c(reduction, paste(c(vtr, 'harmonized'), collapse = '.')), collapse = '_')
+  harm.red.name <- paste(c(reduction, paste(c(vtr.biases, 'harmonized'), collapse = '.')), collapse = '_')
   sobj@reductions[[harm.red.name]] <- sobj@reductions[[reduction]]
   sobj@reductions[[harm.red.name]]@cell.embeddings <- harmonized.red
   sobj@reductions[[harm.red.name]]@feature.loadings <- sobj@reductions[[harm.red.name]]@feature.loadings[,1:ncomp]
   sobj@reductions[[harm.red.name]]@stdev <- sobj@reductions[[harm.red.name]]@stdev[1:ncomp]
-  sobj@reductions[[harm.red.name]]@misc$harmony <- list(vtr = vtr, max.iter = harmony.max.iter)
+  sobj@reductions[[harm.red.name]]@misc$harmony <- list(vtr.biases = vtr.biases, max.iter = harmony.max.iter)
   sobj@reductions[[harm.red.name]]@misc$harmony$Rsession <- utils::capture.output(devtools::session_info())
   ## Save packages versions
   sobj@misc$technical_info$harmony <- utils::packageVersion('harmony')
@@ -815,8 +802,8 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
       ## Scaling if necessary
       if (sum(dim(sobj@assays[[assay]]@scale.data)) < 3) {
         scale.vtr <- NULL
-        if(!is.na(sobj@reductions[[reduction]]@misc$vtr)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$vtr)
-        if("harmony" %in% names(sobj@reductions[[reduction]]@misc)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$harmony$vtr)
+        if(!is.na(sobj@reductions[[reduction]]@misc$vtr.biases)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$vtr.biases)
+        if("harmony" %in% names(sobj@reductions[[reduction]]@misc)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$harmony$vtr.biases)
   
         if (length(scale.vtr) > 0) future::plan("multiprocess", workers = nthreads, gc = TRUE)
         if (assay == 'SCT') {
@@ -1556,13 +1543,13 @@ norm.red.plot.quick <- function(sobj = NULL, assay = 'RNA', sample.name.GE = NUL
   if (!dir.exists(pre.out.dir)) stop('Output directory does not exist !')
 
   ### Basic normalization and dimension reduction
-  sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = 3000, vtr = normalization.vtr)
+  sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = 3000, vtr.biases = normalization.vtr)
   if(tolower(norm.method == 'sctransform')) assay <- 'SCT'
-  sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = keep.dims, vtr = reduction.vtr, vtr.scale = vtr.scale)
+  sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = keep.dims, vtr.biases = reduction.vtr, vtr.scale = vtr.scale)
 
   ### Building reduced normalized output dir
-  norm_vtr = paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr)) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL)
-  dimred_vtr = paste0(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr)) paste(sobj@reductions[[paste(c(assay, reduction.method), collapse = '_')]]@misc$vtr, collapse = '_') else NULL)
+  norm_vtr = paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases)[1]) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL)
+  dimred_vtr = paste0(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr.biases[1])) paste(sobj@reductions[[paste(c(assay, reduction.method), collapse = '_')]]@misc$vtr.biases, collapse = '_') else NULL)
   norm.dim.red.dir = paste(c(pre.out.dir, norm_vtr, dimred_vtr), collapse = '/')
   dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -1907,12 +1894,12 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
     sobj@misc$parameters$normalization <- c(list(method = sobj@assays[[assay]]@misc$params$normalization$normalization.method),
                                             sobj@assays[[assay]]@misc$params$normalization[2:3],
                                             list(High_Variable_Genes_used = sobj@assays[[assay]]@misc$params$normalization$features.used,
-                                                 regressed_variables = paste0(sobj@assays[[assay]]@misc$scaling$vtr, collapse = ", ")))
+                                                 regressed_variables = paste0(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = ", ")))
   }
   if (!is.null(sobj@assays[[assay]]@misc$params$reductions$method)){
     sobj@misc$parameters$reductions <- list( method = sobj@assays[[assay]]@misc$params$reductions$method,
                                              dims.max = sobj@assays[[assay]]@misc$params$reductions$max.dims,
-                                             regressed_variables = sobj@reductions[[reduction]]@misc$vtr,
+                                             regressed_variables = sobj@reductions[[reduction]]@misc$vtr.biases,
                                              scale_regressed_variables = sobj@reductions[[reduction]]@misc$vtr.scale )
   }
   if (!is.null(sobj@misc$params$clustering$method)){
@@ -2171,12 +2158,12 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
     sobj@misc$parameters$normalization <- c(list(method = sobj@assays[[assay]]@misc$params$normalization$normalization.method),
                                             sobj@assays[[assay]]@misc$params$normalization[2:3],
                                             list(High_Variable_Genes_used = sobj@assays[[assay]]@misc$params$normalization$features.used,
-                                                 regressed_variables = paste0(sobj@assays[[assay]]@misc$scaling$vtr, collapse = ", ")))
+                                                 regressed_variables = paste0(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = ", ")))
   }
   if (!is.null(sobj@assays[[assay]]@misc$params$reductions$method)){
     sobj@misc$parameters$reductions <- list( method = sobj@assays[[assay]]@misc$params$reductions$method,
                                        dims.max = sobj@assays[[assay]]@misc$params$reductions$max.dims,
-                                       regressed_variables = sobj@reductions[[reduction]]@misc$vtr,
+                                       regressed_variables = sobj@reductions[[reduction]]@misc$vtr.biases,
                                        scale_regressed_variables = sobj@reductions[[reduction]]@misc$vtr.scale )
   }
   if (!is.null(sobj@misc$params$clustering$method)){
@@ -3015,5 +3002,3 @@ write_MandM <- function(sobj=NULL, output.dir=NULL){
   writeLines(MandM, file)
   close(file)
 }
-
-                                                                                                            

@@ -134,14 +134,16 @@ sobjADT.list <- sapply(seq_along(input.dirs.adt), function(x) {
 })
 names(sobjADT.list) <- sobj@misc$params$names.ge
 
-### Merge ADT of all sampels
+### Merge ADT of all samples
 sobjADT <- merge(x = sobjADT.list[[1]], y = sobjADT.list[-1], add.cell.ids = names(sobjADT.list), project = name.int_grp, merge.data = TRUE)
 for (x in seq_along(sobjADT.list)) sobjADT@misc$pipeline_commands <- c(sobjADT@misc$pipeline_commands, sobjADT.list[[x]]@misc$pipeline_commands)
 sobjADT@misc$params$ADT <- sobjADT.list[[1]]@misc$params$sobj_creation
 sobjADT@misc$technical_info <- sobjADT.list[[1]]@misc$technical_info
 tmp=c()
-for (nb_file in 1:length(sobjADT.list)) tmp[nb_file] <- sobjADT.list[[nb_file]]@misc$parameters$Materials_and_Methods$part0_Alignment
-if(length(unique(tmp)) == 1){
+for (nb_file in 1:length(sobjADT.list)){
+  tmp[nb_file] <-  if(length(sobjADT.list[[nb_file]]@misc$parameters$Materials_and_Methods$part0_Alignment) == 0) NA else sobjADT.list[[nb_file]]@misc$parameters$Materials_and_Methods$part0_Alignment
+}
+if(length(unique(tmp)) == 1 && !any(is.na(unique(tmp)))){
   sobjADT@misc$parameters$Materials_and_Methods$part0_Alignment <- tmp[1]
 } else {
   sobjADT@misc$parameters$Materials_and_Methods$part0_Alignment <- NULL

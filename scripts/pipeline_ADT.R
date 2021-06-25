@@ -204,7 +204,7 @@ rm(adt.values)
 ### Save parameters
 #gene.names:
 sobj@assays[['ADT']]@misc$paramters$gene.names <- gene.names
-sobj@misc$params$ADT$gene.names <- gene.names
+sobj@misc$params$ADT$gene.names <- paste0(gene.names, collapse=",")
 #normalization:
 sobj@assays[['ADT']]@misc$paramters$normalization$method <- norm.method_ADT
 sobj@misc$params$ADT$normalization$method <- norm.method_ADT
@@ -216,8 +216,8 @@ sobj@misc$params$ADT$cor$slot <- slot
 #cutoff:
 sobj@assays[['ADT']]@misc$paramters$cutoff_min = ADT.min.cutoff
 sobj@assays[['ADT']]@misc$paramters$cutoff_max = ADT.max.cutoff
-sobj@misc$params$ADT$cutoff_min = ADT.min.cutoff
-sobj@misc$params$ADT$cutoff_max = ADT.max.cutoff
+sobj@misc$params$ADT$cutoff_min = paste0(ADT.min.cutoff, collapse=",")
+sobj@misc$params$ADT$cutoff_max = paste0(ADT.max.cutoff, collapse=",")
 
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$ADT <- paste0(sobj@misc$parameters$Materials_and_Methods$ADT," Only cell barcodes corresponding to the cell barcodes of gene expression were kept. Counting table was log-normalize (NormalizeData() function from Seurat with normalization.method parameters setting to '", norm.method_ADT,"') and ploted on UMAP near corresponding gene expression. ", stringr::str_to_title(cor.method)," correlation scores beetween proteins levels and genes expression levels was computed.")

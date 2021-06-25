@@ -20,12 +20,12 @@ option_list <- list(
   make_option("--metadata.file", help="csv file with the metadata to add in the seurat objects"),
   # Integration
   make_option("--integration.method", help="Name of integration method (Seurat, scbfa, Harmony or Liger)"),
-  make_option("--batch.vtr", help="List of batch effect to regress into Harmony, Liger, scbfa or bpca correction ('orig.ident')"),
+  make_option("--vtr.batch", help="List of batch effect to regress into Harmony, Liger, scbfa or bpca correction ('orig.ident')"),
   # Normalization and dimension reduction
   make_option("--features.n", help="Number of High Variable Genes to consider"),
   make_option("--norm.method", help="Name of normalization method (LogNormalize or SCTransform)"),
   make_option("--dimred.method", help="Name of dimension reduction method (scbfa or bpca or pca or ica or mds or Liger)"),
-  make_option("--vtr", help="List of biases to regress into normalisation or dimension reduction (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
+  make_option("--vtr.biases", help="List of biases to regress into normalisation or dimension reduction (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
   make_option("--vtr.scale", help="TRUE to center biaises to regress (for scbfa and bpca only)"),
   make_option("--dims.max", help="Number max of dimensions to compute (depends on sample complexity and number of cells)"),
   make_option("--dims.min", help="Number min of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
@@ -38,7 +38,6 @@ option_list <- list(
 )
 parser <- OptionParser(usage="Rscript %prog [options]", description = " ", option_list = option_list)
 args <- parse_args(parser, positional_arguments = 0)
-
 
 #### Formatting Parameters ####
 #convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
@@ -55,31 +54,32 @@ input.list.rda <- unlist(stringr::str_split(args$options$input.list.rda, ","))
 output.dir.int <- args$options$output.dir.int
 name.int <- args$options$name.int
 eval.markers <- unlist(stringr::str_split(args$options$eval.markers, ","))
-list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
-list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
+list.author.name <- unlist(stringr::str_split(args$options$author.name, ","))
+list.author.mail <- unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
-nthreads <- if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
+nthreads <- if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads) else NULL
 pipeline.path <- args$options$pipeline.path
 ### Analysis Parameters
 # Load data
-min.cells <- if (!is.null(args$options$min.cells)) as.numeric(args$options$min.cells)
+min.cells <- if (!is.null(args$options$min.cells)) as.numeric(args$options$min.cells) else NULL
 # Metadata
 metadata.file <- unlist(stringr::str_split(args$options$metadata.file, ","))
 # Integration
 integration.method <- args$options$integration.method
-batch.vtr <- unlist(stringr::str_split(args$options$batch.vtr, ","))
+vtr.batch <- unlist(stringr::str_split(args$options$vtr.batch, ","))
 # Normalization and dimension reduction
-features.n <- if (!is.null(args$options$features.n)) as.numeric(args$options$features.n)
+features.n <- if (!is.null(args$options$features.n)) as.numeric(args$options$features.n) else NULL
 norm.method <- args$options$norm.method
 dimred.method <- args$options$dimred.method
-vtr <- sort(unlist(stringr::str_split(args$options$vtr, ",")))
+vtr.biases <- sort(unlist(stringr::str_split(args$options$vtr.biases, ",")))
 vtr.scale <- args$options$vtr.scale
-dims.max <- if (!is.null(args$options$dims.max)) as.numeric(args$options$dims.max)
-dims.min <- if (!is.null(args$options$dims.min)) as.numeric(args$options$dims.min)
-dims.steps <- if (!is.null(args$options$dims.steps)) as.numeric(args$options$dims.steps)
-res.max <- if (!is.null(args$options$res.max)) as.numeric(args$options$res.max)
-res.min <- if (!is.null(args$options$res.min)) as.numeric(args$options$res.min)
-res.steps <- if (!is.null(args$options$res.steps)) as.numeric(args$options$res.steps)
+dims.max <- if (!is.null(args$options$dims.max)) as.numeric(args$options$dims.max) else NULL
+dims.min <- if (!is.null(args$options$dims.min)) as.numeric(args$options$dims.min) else NULL
+dims.steps <- if (!is.null(args$options$dims.steps)) as.numeric(args$options$dims.steps) else NULL
+res.max <- if (!is.null(args$options$res.max)) as.numeric(args$options$res.max) else NULL
+res.min <- if (!is.null(args$options$res.min)) as.numeric(args$options$res.min) else NULL
+res.steps <- if (!is.null(args$options$res.steps)) as.numeric(args$options$res.steps) else NULL
+
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
@@ -110,7 +110,6 @@ if (is.null(min.cells)) min.cells <- 0
 # Normalization and dimension reduction
 if (is.null(features.n)) features.n <- 3000
 if (is.null(vtr.scale)) vtr.scale <- TRUE
-if (vtr.scale && !(dimred.method %in% c('scbfa', 'bpca', 'mds'))) vtr.scale <- FALSE
 if (is.null(dims.max)) dims.max <- 49
 if (is.null(dims.min)) dims.min <- 3
 if (is.null(dims.steps)) dims.steps <- 2
@@ -127,16 +126,17 @@ if (is.null(input.list.rda)) stop("input.list.rda parameter can't be empty!")
 if (is.null(output.dir.int)) stop("output.dir.int parameter can't be empty!")
 if (is.null(integration.method)) stop("integration.method parameter can't be empty!")
 
-
 ## Cheking parameters
 if (!(integration.method %in% c("Seurat", "scbfa", "Harmony", "Liger"))) stop("Integration method unknown! (Seurat, scbfa, Harmony or Liger)")
 if (((integration.method == "Seurat" )||(integration.method == "Liger")) && !is.null(norm.method)){
   warning(paste0("With ",integration.method," integration, normalization of each sample is kept. Set norm.method to NULL."))
   norm.method <- NULL
 }
-if ((integration.method == "Liger") && !(dimred.method == "Liger")){
-  warning(paste0("With ",integration.method," integration, dimensions reduction is included. Set dimred.method to Liger"))
-  dimred.method <- "Liger"
+if (integration.method == "Liger"){
+  if(!(dimred.method == "Liger")){
+    warning(paste0("With ",integration.method," integration, dimensions reduction is included. Set dimred.method to Liger"))
+    dimred.method <- "Liger"
+  }
 }
 
 if (is.null(norm.method) && ((integration.method == "Harmony") || (integration.method == "scbfa"))) norm.method <- 'SCTransform'
@@ -146,19 +146,22 @@ if((integration.method != dimred.method) && (integration.method %in% raw.methods
   warning(paste("For ", integration.method, " integration, dimensions reduction is included. Set dimred.method to ", integration.method, "."))
   dimred.method <- integration.method
 }
-if (is.null(batch.vtr) && (integration.method %in% c("Harmony","Liger","scbfa","bpca"))) stop(paste0("batch.vtr parameter can't be empty for ",integration.method,"! (example: orig.ident)"))
-if ((integration.method == "Seurat") && !is.null(batch.vtr)){
-  warning(paste0("With ",integration.method," integration, batch.vtr is not used. Set batch.vtr to NULL."))
-  batch.vtr <- NULL
+if (is.null(vtr.batch) && (integration.method %in% c("Harmony","Liger","scbfa","bpca"))) stop(paste0("vtr.batch parameter can't be empty for ",integration.method,"! (example: orig.ident)"))
+if ((integration.method == "Seurat") && !is.null(vtr.batch)){
+  warning(paste0("With ",integration.method," integration, vtr.batch is not used. Set vtr.batch to NULL."))
+  vtr.batch <- NULL
 }
 
 if (!is.null(norm.method) && !(norm.method %in% c('SCTransform','LogNormalize'))) stop("Normalization method unknown! (LogNormalize or SCTransform)")
 if (!is.null(dimred.method) && !(dimred.method %in% c('pca','scbfa','bpca','mds', 'Liger'))) stop("Dimension Reduction method unknown! (pca, scbfa, bpca, mds or Liger)")
-normalization.vtr <- if (!is.null(norm.method) && norm.method == 'SCTransform') vtr else NULL
-reduction.vtr <- if (!is.null(dimred.method) && dimred.method %in% c('scbfa','bpca','mds')) vtr else NULL
-if (!((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca', 'mds'))) && !is.null(vtr)) stop("vtr can be used only with SCTransform, scbfa, bpca or mds methods!")
-if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
-
+normalization.vtr <- if (!is.null(norm.method) && norm.method == 'SCTransform') vtr.biases else NULL
+reduction.vtr <- if (!is.null(dimred.method) && dimred.method %in% c('scbfa','bpca')) vtr.biases else NULL
+if (all(!any((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca'))) && !is.null(vtr.biases))) stop("vtr.biases can be used only with SCTransform, scbfa or bpca methods!")
+if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr.biases were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
+if (vtr.scale && !(dimred.method %in% c('scbfa', 'bpca'))){
+  message(paste0("vtr.scale is used only for scbfa or bpca. Set vtr.scale to FALSE."))
+  vtr.scale <- FALSE
+}
 
 ## Sourcing functions
 source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
@@ -238,10 +241,10 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
   for (x in seq_along(sobj.list)){
     ## Scaling if necessary
     if (sum(dim(sobj.list[[x]]@assays[[assay]]@scale.data)) < 3) {
-      #Check vtr
+      #Check vtr.biases
       scale.vtr.all <- NULL
-      if(!any(is.na(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr))) {
-        scale.vtr.all <- c(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr)
+      if(!any(is.na(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr.biases))) {
+        scale.vtr.all <- c(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr.biases)
         message(paste0("Found scaling coveriate(s) '", paste(scale.vtr.all, collapse = "', '"), "' to regress from normalization ..."))
       }
       #Scaling
@@ -272,16 +275,17 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     sobj <- Seurat::IntegrateData(anchorset = sobj.anchors, normalization.method = int.norm.method) #Calcul des poids; application des poids sur la matrice d'expression: intégration
 
     # Params
+    
     Seurat::Project(sobj) <- name.int
     sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
     DefaultAssay(sobj) <- "integrated"
-    sobj@assays[["integrated"]]@misc$scaling$vtr = NA
-    sobj@assays[["integrated"]]@misc$params$normalization$normalization.method <- norm.method
+    sobj@assays[["integrated"]]@misc$scaling$vtr.biases = NA
+    sobj@assays[["integrated"]]@misc$params$normalization <- list(normalization.method = norm.method, assay.ori = NA, assay.out = NA, features.used = NA)
     sobj@misc$params$normalization$normalization.method <- norm.method
     sobj@misc$params$integration$method <- integration.method
     sobj@misc$params$integration$orig.assay <- assay
     sobj@misc$params$integration$out.assay <- "integrated"
-    sobj@misc$params$integration$batch.vtr <- NA
+    sobj@misc$params$integration$vtr.batch <- NA
     assay <- "integrated"
     # Cleaning
     rm(sobj.list, sobj.features, sobj.anchors)
@@ -289,7 +293,7 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     ## Dimensions reduction
     cat("\nDimensions reduction...\n")
     red.name <- paste(c("integrated", dimred.method, integration.method), collapse = '_')
-    sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = "integrated", max.dims = dims.max, vtr = reduction.vtr, vtr.scale = vtr.scale, red.name = red.name)
+    sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = "integrated", max.dims = dims.max, vtr.biases = reduction.vtr, vtr.scale = vtr.scale, red.name = red.name)
 
   } else if(integration.method == 'Liger'){
     ## Merge data
@@ -303,19 +307,20 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     ## Integration LIGER
     message(paste0(integration.method," integration..."))
     red.name <- paste(c(assay, dimred.method, integration.method), collapse = '_')
-    sobj <- SeuratWrappers::RunOptimizeALS(sobj, k = 20, lambda = 5, split.by = batch.vtr, rand.seed = sobj@misc$params$seed) #calcul les matrices (fait la red dim)
-    sobj <- SeuratWrappers::RunQuantileNorm(sobj, resolution = 1, split.by = batch.vtr, reduction.name = red.name, rand.seed = sobj@misc$params$seed) #fait le SFN graph + clustering + correction de la red dim
+    sobj <- SeuratWrappers::RunOptimizeALS(sobj, k = dims.max, lambda = 5, split.by = vtr.batch, rand.seed = sobj@misc$params$seed) #calcul les matrices (fait la red dim)
+    sobj <- SeuratWrappers::RunQuantileNorm(sobj, resolution = 1, split.by = vtr.batch, reduction.name = red.name, rand.seed = sobj@misc$params$seed) #fait le SFN graph + clustering + correction de la red dim
     # Params
-    sobj@reductions[[red.name]]@misc$vtr = NA
+    sobj@assays[[assay]]@misc$scaling$vtr.biases[1] <- NA
+    sobj@reductions[[red.name]]@misc$vtr.biases <- vtr.batch
     sobj@reductions[[red.name]]@misc$from.assay <- assay
-    sobj@assays[[assay]]@misc$params$normalization$normalization.method <- norm.method
+    sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = norm.method, assay.ori = NA, assay.out = NA, features.used = NA)
+    sobj@assays[[assay]]@misc$params$reductions <- list(method = integration.method, assay = assay, max.dims = dims.max, vtr.biases = vtr.batch, scale_regressed_variables = NA)
     sobj@misc$params$integration$method <- integration.method
     sobj@misc$params$integration$orig.assay <- assay
     sobj@misc$params$integration$out.assay <- assay
-    sobj@misc$params$integration$batch.vtr <- batch.vtr
+    sobj@misc$params$integration$vtr.batch <- vtr.batch
     sobj@misc$technical_info$SeuratWrappers <- utils::packageVersion('SeuratWrappers')
     # Cleaning
-    rm(sobj.list)
     sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
     gc()
   }
@@ -333,23 +338,27 @@ if((integration.method %in% raw.methods) || (integration.method == 'Harmony')){
   gc()
   #Normalization
   cat("\nNormalization...\n")
-  sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr = normalization.vtr)
+  sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr.biases = normalization.vtr)
   if(tolower(norm.method) == 'sctransform') assay <- 'SCT'
   ## Dimensions reduction
   cat("\nDimensions reduction...\n")
   if(integration.method %in% raw.methods) message(paste0(integration.method," integration..."))
   red.name <- if(integration.method %in% raw.methods) paste(c(assay, dimred.method, integration.method), collapse = '_') else paste(c(assay, dimred.method), collapse = '_')
-  sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = dims.max, vtr = if(integration.method == 'Harmony') reduction.vtr else c(reduction.vtr, batch.vtr), vtr.scale = vtr.scale, red.name = red.name)
+  sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = dims.max, vtr.biases = if(integration.method == 'Harmony') reduction.vtr else c(reduction.vtr, vtr.batch), vtr.scale = vtr.scale, red.name = red.name)
   # Params
   sobj@misc$params$integration$method <- integration.method
   sobj@misc$params$integration$orig.assay <- "RNA"
   sobj@misc$params$integration$out.assay <- assay
-  sobj@misc$params$integration$batch.vtr <- batch.vtr
+  sobj@misc$params$integration$vtr.batch <- vtr.batch
 }
 
 ### Building reduced normalized output dir
-norm_vtr = paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL), collapse = '_')
-dimred_vtr = paste0(c(dimred.method, if(!is.na(sobj@reductions[[red.name]]@misc$vtr[1])) paste(sobj@reductions[[red.name]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
+if (integration.method %in% c("Seurat", "Liger")){
+  norm_vtr = "NORMKEPT"
+}else{
+  norm_vtr = paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL), collapse = '_')
+}
+dimred_vtr = paste0(c(dimred.method, if(!is.na(sobj@reductions[[red.name]]@misc$vtr.biases[1])) paste(sobj@reductions[[red.name]]@misc$vtr.biases, collapse = '_') else NULL), collapse = '_')
 norm.dim.red.dir = paste0(data.path, norm_vtr, '/', dimred_vtr)
 dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -358,10 +367,10 @@ if (integration.method == 'Harmony'){
   message(paste0(integration.method," integration..."))
   ## Scaling if necessary #NB: harmony needs scale.data
   if (sum(dim(sobj@assays[[assay]]@scale.data)) < 3) {
-    #Check vtr
+    #Check vtr.biases
     scale.vtr.all <- NULL
-    if(!any(is.na(sobj@assays[[assay]]@misc$scaling$vtr))) {
-      scale.vtr.all <- c(sobj@assays[[assay]]@misc$scaling$vtr)
+    if(!any(is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases))) {
+      scale.vtr.all <- c(sobj@assays[[assay]]@misc$scaling$vtr.biases)
       message(paste0("Found scaling coveriate(s) '", paste(scale.vtr.all, collapse = "', '"), "' to regress from normalization ..."))
     }
     #Scaling
@@ -379,14 +388,14 @@ if (integration.method == 'Harmony'){
   ## Integration
   red.name <- paste(c(assay, dimred.method, integration.method), collapse = '_')
   png(paste0(norm.dim.red.dir, '/harmony_convergence_plot.png'), width = 1000, height = 1000)
-  sobj <- harmony::RunHarmony(sobj, batch.vtr, reduction = paste(c(assay, dimred.method), collapse = '_'), assay.use = assay, plot_convergence = TRUE, reduction.save = red.name) #, do_pca=FALSE ??
+  sobj <- harmony::RunHarmony(sobj, vtr.batch, reduction = paste(c(assay, dimred.method), collapse = '_'), assay.use = assay, plot_convergence = TRUE, reduction.save = red.name) #, do_pca=FALSE ??
   dev.off()
   ##Clean
   sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
   gc()
   #Params
   sobj@misc$technical_info$Harmony <- utils::packageVersion('harmony')
-  sobj@reductions[[red.name]]@misc$vtr = NA
+  sobj@reductions[[red.name]]@misc$vtr.biases = NA
   sobj@reductions[[red.name]]@misc$from.assay <- assay
 }
 
@@ -397,16 +406,16 @@ sobj@misc$technical_info$Seurat <- utils::packageVersion('Seurat')
 
 ### Materials and Methods
 MM_tmp <- if(dimred.method == 'pca') 'PCA' else dimred.method
-if(!is.null(vtr)){
-  vtr <- stringr::str_replace(vtr, "sizeFactor", "the number of detected transcripts")
-  vtr <- stringr::str_replace(vtr, "nFeature_RNA", "the number of detected genes")
-  vtr <- stringr::str_replace(vtr, "percent_mt", "the proportion of mitochondrial transcripts")
-  vtr <- stringr::str_replace(vtr, "percent_rb", "the proportion of ribosomal transcripts")
-  vtr <- stringr::str_replace(vtr, "percent_st", "the proportion of mechanical stress response transcripts")
-  vtr <- stringr::str_replace(vtr, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
-  vtr <- stringr::str_replace(vtr, "Seurat.Phase", "the cell cycle phase determined by Seurat")
-  MM_tmp2 <- if(norm.method == 'SCTransform') paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") else NULL
-  MM_tmp3 <- if(dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
+if(!is.null(vtr.biases)){
+  vtr.biases <- stringr::str_replace(vtr.biases, "sizeFactor", "the number of detected transcripts")
+  vtr.biases <- stringr::str_replace(vtr.biases, "nFeature_RNA", "the number of detected genes")
+  vtr.biases <- stringr::str_replace(vtr.biases, "percent_mt", "the proportion of mitochondrial transcripts")
+  vtr.biases <- stringr::str_replace(vtr.biases, "percent_rb", "the proportion of ribosomal transcripts")
+  vtr.biases <- stringr::str_replace(vtr.biases, "percent_st", "the proportion of mechanical stress response transcripts")
+  vtr.biases <- stringr::str_replace(vtr.biases, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
+  vtr.biases <- stringr::str_replace(vtr.biases, "Seurat.Phase", "the cell cycle phase determined by Seurat")
+  MM_tmp2 <- if(norm.method == 'SCTransform') paste0(" and regress out bias factors (",paste0(vtr.biases, collapse = ", "),")") else NULL
+  MM_tmp3 <- if(dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr.biases, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
 }else {
   MM_tmp2 <- NULL
   MM_tmp3 <- NULL
@@ -420,14 +429,14 @@ if(integration.method == "Seurat"){
     if(dimred.method == 'scbfa') paste("After integration, a ",dimred.method," dimension reduction was performed on HVG of integrated dataset.", MM_tmp3)
   )
 }else if(integration.method == "scbfa"){
-  sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval <- paste0("Datasets were integrated using the scBFA dimension reduction method. Datasets were merged by the merge() function from Seurat (version ",sobj@misc$technical_info$Seurat,"), and",
+  sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval <- paste0("Datasets were integrated using the scBFA dimension reduction method. Datasets were merged by the merge() function from Seurat (version ",sobj@misc$technical_info$Seurat,"), and ",
     if(norm.method == 'SCTransform')  paste0(" the SCTransform normalization method (Hafemeister C, Satija R. Normalization and variance stabilization of single-cell RNA-seq data using regularized negative binomial regression. Genome Biol. 2019;20 10.1186/s13059-019-1874-1.) was used to normalize, scale, select ",features.n," Highly Variable Genes", MM_tmp2,"."),
     if(norm.method == 'LogNormalize')  paste0(features.n," Highly Variable Genes (HVG) were identified using the FindVariableFeatures() method from Seurat applied on data transformed by its LogNormalize method."),
-    if(dimred.method == 'scbfa') paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3, "The batch effect (", paste0(sapply(batch.vtr, function(x) {return(paste0(x,": ",paste0(unique(sort(sobj@meta.data[[x]])),collapse=", ")))}), collapse="; "), ") was regressed with the other potential biases.")
+    if(dimred.method == 'scbfa') paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3, "The batch effect (", paste0(sapply(vtr.batch, function(x) {return(paste0(x,": ",paste0(unique(sort(sobj@meta.data[[x]])),collapse=", ")))}), collapse="; "), ") was regressed with the other potential biases.")
   )
 }else if(integration.method == "Liger"){
   sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval <- paste0("Datasets were integrated using the Liger method. Datasets were individually normalized by ",norm.method,", as described before. ",
-    "Data were merged by the merge() function from Seurat (version ",sobj@misc$technical_info$Seurat,"), and the integration was performed by the Liger method included in SeuratWrappers package (version ",sobj@misc$technical_info$SeuratWrappers,"). The functions used were RunOptimizeALS() to make dimension reduction and RunQuantileNorm() to build a shared factor neighborhood graph to jointly cluster cells and corrects this clusters, with the batch effect (", paste0(sapply(batch.vtr, function(x) {return(paste0(x,": ",paste0(unique(sort(sobj@meta.data[[x]])),collapse=", ")))}), collapse="; "), ") for split.by parameter and default for other parameters."
+    "Data were merged by the merge() function from Seurat (version ",sobj@misc$technical_info$Seurat,"), and the integration was performed by the Liger method included in SeuratWrappers package (version ",sobj@misc$technical_info$SeuratWrappers,"). The functions used were RunOptimizeALS() to make dimension reduction and RunQuantileNorm() to build a shared factor neighborhood graph to jointly cluster cells and corrects this clusters, with the batch effect (", paste0(sapply(vtr.batch, function(x) {return(paste0(x,": ",paste0(unique(sort(sobj@meta.data[[x]])),collapse=", ")))}), collapse="; "), ") for split.by parameter and default for other parameters."
   )
 }else if(integration.method == "Harmony"){
   sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval <- paste0("Datasets were integrated using the Harmony method. Datasets were merged by the merge() function from Seurat(version ",sobj@misc$technical_info$Seurat,"), and",
@@ -438,7 +447,7 @@ if(integration.method == "Seurat"){
       if(norm.method == 'LogNormalize') paste0(" HVG were scaled and and centered, providing person residuals used for dimension reduction by Principal Component Analysis (PCA).")
     },
     if(dimred.method == 'scbfa') paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3),
-    " The reduced ",MM_tmp," spaces are used as input for the HarmonyMatrix() function implemented in Harmony package (version ",sobj@misc$technical_info$Harmony,") where the batch effect (", paste0(sapply(batch.vtr, function(x) {return(paste0(x,": ",paste0(unique(sort(sobj@meta.data[[x]])),collapse=", ")))}), collapse="; "), ") was regressed. The batch-corrected shared space output by harmony is used for clustering."
+    " The reduced ",MM_tmp," spaces are used as input for the HarmonyMatrix() function implemented in Harmony package (version ",sobj@misc$technical_info$Harmony,") where the batch effect (", paste0(sapply(vtr.batch, function(x) {return(paste0(x,": ",paste0(unique(sort(sobj@meta.data[[x]])),collapse=", ")))}), collapse="; "), ") was regressed. The batch-corrected shared space output by harmony is used for clustering."
   )
   MM_tmp <- "Harmony"
 }

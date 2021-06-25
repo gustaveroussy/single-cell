@@ -329,7 +329,7 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     NDRE_FEATURES_N = config['Norm_DimRed_Eval_GE']['features.n'] if ('Norm_DimRed_Eval_GE' in config and 'features.n' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['features.n'] != None) else "NULL"
     NDRE_NORM_METHOD = config['Norm_DimRed_Eval_GE']['norm.method'] if ('Norm_DimRed_Eval_GE' in config and 'norm.method' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['norm.method'] != None) else 'SCTransform'
     NDRE_DIMRED_METHOD = config['Norm_DimRed_Eval_GE']['dimred.method'] if ('Norm_DimRed_Eval_GE' in config and 'dimred.method' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['dimred.method'] != None) else "pca"
-    NDRE_VTR = config['Norm_DimRed_Eval_GE']['vtr'].replace(", ", ",") if ('Norm_DimRed_Eval_GE' in config and 'vtr' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['vtr'] != None) else "NULL"
+    NDRE_VTR_BIASES = config['Norm_DimRed_Eval_GE']['vtr.biases'].replace(", ", ",") if ('Norm_DimRed_Eval_GE' in config and 'vtr.biases' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['vtr.biases'] != None) else "NULL"
     NDRE_VTR_SCALE = config['Norm_DimRed_Eval_GE']['vtr.scale'] if ('Norm_DimRed_Eval_GE' in config and 'vtr.scale' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['vtr.scale'] != None) else "NULL"
     NDRE_DIM_MAX = config['Norm_DimRed_Eval_GE']['dims.max'] if ('Norm_DimRed_Eval_GE' in config and 'dims.max' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['dims.max'] != None) else 49
     NDRE_DIM_MIN = config['Norm_DimRed_Eval_GE']['dims.min'] if ('Norm_DimRed_Eval_GE' in config and 'dims.min' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['dims.min'] != None) else 3
@@ -347,8 +347,8 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
         dic_NDRE_INFO[NDRE_SAMPLE_NAME_GE[i]]['NDRE_INPUT_RDA'] = NDRE_INPUT_RDA_GE[i]
         dic_NDRE_INFO[NDRE_SAMPLE_NAME_GE[i]]['NDRE_OUTPUT_DIR'] = NDRE_OUTPUT_DIR_GE[i]
     #Names
-    NDRE_NORM_VTR = NDRE_NORM_METHOD if (NDRE_NORM_METHOD == "LogNormalize" or NDRE_VTR == "NULL") else (NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR.split(","))))))
-    NDRE_DIMRED_VTR = NDRE_DIMRED_METHOD if (NDRE_DIMRED_METHOD == "pca" or NDRE_VTR == "NULL") else (NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR.split(","))))))
+    NDRE_NORM_VTR = NDRE_NORM_METHOD if (NDRE_NORM_METHOD == "LogNormalize" or NDRE_VTR_BIASES == "NULL") else (NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
+    NDRE_DIMRED_VTR = NDRE_DIMRED_METHOD if (NDRE_DIMRED_METHOD == "pca" or GRP_NDRE_DIMRED_METHOD == "ica" or GRP_NDRE_DIMRED_METHOD == "mds" or NDRE_VTR_BIASES == "NULL") else (NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
     POSSIBLE_DIM = ["%.0f" % number for number in numpy.arange(NDRE_DIM_MIN,NDRE_DIM_MAX+1,NDRE_DIM_STEPS)]
     POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_RES_MIN*10,NDRE_RES_MAX*10+1,NDRE_RES_STEPS*10)/10] #*10 then /10 because numpy.arange doesn't handle floats well
     ASSAY = "RNA" if NDRE_NORM_METHOD == "LogNormalize" else "SCT"
@@ -532,12 +532,19 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
         INT_NDRE_INT_METHOD = config['Int_Norm_DimRed_Eval_GE']['integration.method'] if ('Int_Norm_DimRed_Eval_GE' in config and 'integration.method' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['integration.method'] != None) else "NULL"
     else :
         sys.exit("Error: No integration.method find in configfile!\n")
-    INT_NDRE_BATCH_VTR = config['Int_Norm_DimRed_Eval_GE']['batch.vtr'] if ('Int_Norm_DimRed_Eval_GE' in config and 'batch.vtr' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['batch.vtr'] != None) else "NULL"
+    INT_NDRE_VTR_BATCH = config['Int_Norm_DimRed_Eval_GE']['vtr.batch'] if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr.batch' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr.batch'] != None) else "NULL"
     # Normalization and dimension reduction
     INT_NDRE_FEATURES_N = config['Int_Norm_DimRed_Eval_GE']['features.n'] if ('Int_Norm_DimRed_Eval_GE' in config and 'features.n' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['features.n'] != None) else "NULL"
-    INT_NDRE_NORM_METHOD = config['Int_Norm_DimRed_Eval_GE']['norm.method'] if ('Int_Norm_DimRed_Eval_GE' in config and 'norm.method' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['norm.method'] != None) else 'SCTransform'
+    if ('Int_Norm_DimRed_Eval_GE' in config and 'norm.method' in config['Int_Norm_DimRed_Eval_GE']):
+        if (config['Int_Norm_DimRed_Eval_GE']['norm.method'] is None):
+            INT_NDRE_NORM_METHOD = "NULL"
+        else:
+            INT_NDRE_NORM_METHOD = config['Int_Norm_DimRed_Eval_GE']['norm.method']
+    else:
+        INT_NDRE_NORM_METHOD = 'SCTransform'
+    sys.stderr.write(INT_NDRE_NORM_METHOD)
     INT_NDRE_DIMRED_METHOD = config['Int_Norm_DimRed_Eval_GE']['dimred.method'] if ('Int_Norm_DimRed_Eval_GE' in config and 'dimred.method' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['dimred.method'] != None) else "pca"
-    INT_NDRE_VTR = config['Int_Norm_DimRed_Eval_GE']['vtr'].replace(", ", ",") if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr'] != None) else "NULL"
+    INT_NDRE_VTR_BIASES = config['Int_Norm_DimRed_Eval_GE']['vtr.biases'].replace(", ", ",") if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr.biases' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr.biases'] != None) else "NULL"
     INT_NDRE_VTR_SCALE = config['Int_Norm_DimRed_Eval_GE']['vtr.scale'] if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr.scale' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr.scale'] != None) else "NULL"
     INT_NDRE_DIM_MAX = config['Int_Norm_DimRed_Eval_GE']['dims.max'] if ('Int_Norm_DimRed_Eval_GE' in config and 'dims.max' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['dims.max'] != None) else 49
     INT_NDRE_DIM_MIN = config['Int_Norm_DimRed_Eval_GE']['dims.min'] if ('Int_Norm_DimRed_Eval_GE' in config and 'dims.min' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['dims.min'] != None) else 3
@@ -555,22 +562,27 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
         dic_INT_NDRE_INFO[INT_NDRE_NAME_INT[i]]['INT_NDRE_INPUT_LIST_RDA'] = INT_NDRE_INPUT_LIST_RDA_GE[i]
         dic_INT_NDRE_INFO[INT_NDRE_NAME_INT[i]]['INT_NDRE_OUTPUT_DIR'] = INT_NDRE_OUTPUT_DIR_GE[i] + "/GROUPED_ANALYSIS/INTEGRATED/" + INT_NDRE_NAME_INT[i]
     #Names
-    INT_NDRE_NORM_VTR = INT_NDRE_NORM_METHOD if (INT_NDRE_NORM_METHOD == "LogNormalize" or INT_NDRE_VTR == "NULL") else (INT_NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR.split(","))))))
-    if (INT_NDRE_DIMRED_METHOD == "pca" or INT_NDRE_DIMRED_METHOD == "mds" or INT_NDRE_DIMRED_METHOD == "ica"):
-        INT_NDRE_DIMRED_VTR = INT_NDRE_DIMRED_METHOD
-    elif (INT_NDRE_INT_METHOD == "scbfa" or INT_NDRE_INT_METHOD == "bpca"):
-        if (INT_NDRE_BATCH_VTR == "NULL") : sys.exit("Error: No batch.vtr can't be empty with scbfa or bpca integration!\n")
-        if (INT_NDRE_VTR == "NULL") :
-            INT_NDRE_DIMRED_VTR = INT_NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_BATCH_VTR.split(",")))))
-        else :
-            INT_NDRE_DIMRED_VTR = INT_NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR.split(","))) + list(dict.fromkeys(INT_NDRE_BATCH_VTR.split(",")))))
+    #INT_NDRE_NORM_VTR = INT_NDRE_NORM_METHOD if (INT_NDRE_NORM_METHOD == "LogNormalize" or INT_NDRE_VTR_BIASES == "NULL") else (INT_NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR_BIASES.split(","))))))
+    if (INT_NDRE_INT_METHOD == "Seurat" or INT_NDRE_INT_METHOD == "Liger"):
+        INT_NDRE_NORM_VTR = "NORMKEPT"
+    elif (INT_NDRE_NORM_METHOD == "LogNormalize" or INT_NDRE_VTR_BIASES == "NULL"):
+        INT_NDRE_NORM_VTR = INT_NDRE_NORM_METHOD
     else :
-        INT_NDRE_DIMRED_VTR = INT_NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR.split(",")))))
-    INT_POSSIBLE_DIM = ["%.0f" % number for number in numpy.arange(INT_NDRE_DIM_MIN,INT_NDRE_DIM_MAX+1,INT_NDRE_DIM_STEPS)]
-    INT_POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(INT_NDRE_RES_MIN*10,INT_NDRE_RES_MAX*10+1,INT_NDRE_RES_STEPS*10)/10] #*10 then /10 because numpy.arange doesn't handle floats well
-    INT_ASSAY = "RNA" if (INT_NDRE_NORM_METHOD == "LogNormalize") else "SCT"
-    if (INT_NDRE_INT_METHOD == "Seurat"):
-        INT_ASSAY = "integrated"
+        INT_NDRE_NORM_VTR =  INT_NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR_BIASES.split(",")))))
+    if (INT_NDRE_INT_METHOD == "scbfa" or INT_NDRE_INT_METHOD == "bpca" or INT_NDRE_INT_METHOD == "Liger" or INT_NDRE_INT_METHOD == "Harmony"):
+        if (INT_NDRE_VTR_BATCH == "NULL") : sys.exit("Error: No vtr.batch can't be empty with scbfa, bpca, Harmony or Liger integration!\n")
+    if (INT_NDRE_DIMRED_METHOD == "pca" or INT_NDRE_DIMRED_METHOD == "mds" or INT_NDRE_DIMRED_METHOD == "ica" or INT_NDRE_VTR_BIASES == "NULL"):
+        INT_NDRE_DIMRED_VTR = INT_NDRE_DIMRED_METHOD
+    else:
+        INT_NDRE_DIMRED_VTR = INT_NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR_BIASES.split(",")))))
+    if (INT_NDRE_INT_METHOD == "scbfa" or INT_NDRE_INT_METHOD == "bpca" or INT_NDRE_INT_METHOD == "Liger"):
+        if (INT_NDRE_INT_METHOD == "Liger") :
+            INT_NDRE_DIMRED_VTR = INT_NDRE_INT_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR_BATCH.split(",")))))
+        elif (INT_NDRE_VTR_BIASES == "NULL") :
+            INT_NDRE_DIMRED_VTR = INT_NDRE_INT_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR_BATCH.split(",")))))
+        else :
+            INT_NDRE_DIMRED_VTR = INT_NDRE_INT_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR_BIASES.split(","))) + list(dict.fromkeys(INT_NDRE_VTR_BATCH.split(",")))))
+
 
 if "Int_Clust_Markers_Annot_GE" in STEPS:
     ### Sample/Project
@@ -738,9 +750,15 @@ if "Grp_Norm_DimRed_Eval_GE" in STEPS:
     # Normalization and dimension reduction
     GRP_NDRE_KEEP_NORM = config['Grp_Norm_DimRed_Eval_GE']['keep.norm'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'keep.norm' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['keep.norm'] != None) else "NULL"
     GRP_NDRE_FEATURES_N = config['Grp_Norm_DimRed_Eval_GE']['features.n'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'features.n' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['features.n'] != None) else "NULL"
-    GRP_NDRE_NORM_METHOD = config['Grp_Norm_DimRed_Eval_GE']['norm.method'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'norm.method' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['norm.method'] != None) else 'SCTransform'
+    if ('Grp_Norm_DimRed_Eval_GE' in config and 'norm.method' in config['Grp_Norm_DimRed_Eval_GE']):
+        if (config['Grp_Norm_DimRed_Eval_GE']['norm.method'] is None):
+            GRP_NDRE_NORM_METHOD = "NULL"
+        else:
+            GRP_NDRE_NORM_METHOD = config['Grp_Norm_DimRed_Eval_GE']['norm.method']
+    else:
+        GRP_NDRE_NORM_METHOD = 'SCTransform'
     GRP_NDRE_DIMRED_METHOD = config['Grp_Norm_DimRed_Eval_GE']['dimred.method'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'dimred.method' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['dimred.method'] != None) else "pca"
-    GRP_NDRE_VTR = config['Grp_Norm_DimRed_Eval_GE']['vtr'].replace(", ", ",") if ('Grp_Norm_DimRed_Eval_GE' in config and 'vtr' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['vtr'] != None) else "NULL"
+    GRP_NDRE_VTR_BIASES = config['Grp_Norm_DimRed_Eval_GE']['vtr.biases'].replace(", ", ",") if ('Grp_Norm_DimRed_Eval_GE' in config and 'vtr.biases' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['vtr.biases'] != None) else "NULL"
     GRP_NDRE_VTR_SCALE = config['Grp_Norm_DimRed_Eval_GE']['vtr.scale'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'vtr.scale' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['vtr.scale'] != None) else "NULL"
     GRP_NDRE_DIM_MAX = config['Grp_Norm_DimRed_Eval_GE']['dims.max'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'dims.max' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['dims.max'] != None) else 49
     GRP_NDRE_DIM_MIN = config['Grp_Norm_DimRed_Eval_GE']['dims.min'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'dims.min' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['dims.min'] != None) else 3
@@ -760,11 +778,11 @@ if "Grp_Norm_DimRed_Eval_GE" in STEPS:
     #Names
     if (GRP_NDRE_KEEP_NORM == "TRUE" or str(GRP_NDRE_KEEP_NORM) == "True"):
         GRP_NDRE_NORM_VTR = "NORMKEPT"
-    elif (GRP_NDRE_NORM_METHOD == "LogNormalize" or GRP_NDRE_VTR == "NULL"):
+    elif (GRP_NDRE_NORM_METHOD == "LogNormalize" or GRP_NDRE_VTR_BIASES == "NULL"):
         GRP_NDRE_NORM_VTR = GRP_NDRE_NORM_METHOD
     else :
-        GRP_NDRE_NORM_VTR =  GRP_NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(GRP_NDRE_VTR.split(",")))))
-    GRP_NDRE_DIMRED_VTR = GRP_NDRE_DIMRED_METHOD if (GRP_NDRE_DIMRED_METHOD == "pca" or GRP_NDRE_VTR == "NULL") else (GRP_NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(GRP_NDRE_VTR.split(","))))))
+        GRP_NDRE_NORM_VTR =  GRP_NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(GRP_NDRE_VTR_BIASES.split(",")))))
+    GRP_NDRE_DIMRED_VTR = GRP_NDRE_DIMRED_METHOD if (GRP_NDRE_DIMRED_METHOD == "pca" or GRP_NDRE_DIMRED_METHOD == "ica" or GRP_NDRE_DIMRED_METHOD == "mds" or GRP_NDRE_VTR_BIASES == "NULL") else (GRP_NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(GRP_NDRE_VTR_BIASES.split(","))))))
 
 if "Grp_Clust_Markers_Annot_GE" in STEPS:
     ### Sample/Project

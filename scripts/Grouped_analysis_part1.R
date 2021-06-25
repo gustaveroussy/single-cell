@@ -21,7 +21,7 @@ option_list <- list(
   make_option("--features.n", help="Number of High Variable Genes to consider"),
   make_option("--norm.method", help="Name of normalization method (LogNormalize or SCTransform)"),
   make_option("--dimred.method", help="Name of dimension reduction method (scbfa or bpca or pca or ica or mds)"),
-  make_option("--vtr", help="List of biases to regress (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
+  make_option("--vtr.biases", help="List of biases to regress (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
   make_option("--vtr.scale", help="TRUE to center biaises to regress (for scbfa and bpca only)"),
   make_option("--dims.max", help="Number max of dimensions to compute (depends on sample complexity and number of cells)"),
   make_option("--dims.min", help="Number min of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
@@ -65,7 +65,7 @@ keep.norm <- args$options$keep.norm
 features.n <- if (!is.null(args$options$features.n)) as.numeric(args$options$features.n)
 norm.method <- args$options$norm.method
 dimred.method <- args$options$dimred.method
-vtr <- sort(unlist(stringr::str_split(args$options$vtr, ",")))
+vtr.biases <- sort(unlist(stringr::str_split(args$options$vtr.biases, ",")))
 vtr.scale <- args$options$vtr.scale
 dims.max <- if (!is.null(args$options$dims.max)) as.numeric(args$options$dims.max)
 dims.min <- if (!is.null(args$options$dims.min)) as.numeric(args$options$dims.min)
@@ -108,7 +108,7 @@ if (is.null(keep.norm)) keep.norm <- FALSE
 if (is.null(features.n)) features.n <- 3000
 if (is.null(norm.method) && !keep.norm) norm.method <- 'SCTransform'
 if (is.null(dimred.method)) dimred.method <- 'pca'
-if (is.null(vtr)) vtr <- NULL
+if (is.null(vtr.biases)) vtr.biases <- NULL
 if (is.null(vtr.scale)) vtr.scale <- TRUE
 if (vtr.scale && !(dimred.method %in% c('scbfa', 'bpca', 'mds'))) vtr.scale <- FALSE
 if (is.null(dims.max)) dims.max <- 49
@@ -130,10 +130,10 @@ if (keep.norm && !is.null(norm.method)){
 }
 if (!is.null(norm.method) && !(norm.method %in% c('SCTransform','LogNormalize'))) stop("Normalization method unknown! (LogNormalize or SCTransform)")
 if (!is.null(dimred.method) && !(dimred.method %in% c('pca','scbfa','bpca','mds', 'Liger'))) stop("Dimension Reduction method unknown! (pca, scbfa, bpca, mds or Liger)")
-normalization.vtr <- if (!is.null(norm.method) && norm.method == 'SCTransform') vtr else NULL
-reduction.vtr <- if (!is.null(dimred.method) && dimred.method %in% c('scbfa','bpca','mds')) vtr else NULL
-if (!((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca', 'mds'))) && !is.null(vtr)) stop("vtr can be used only with SCTransform, scbfa, bpca or mds methods!")
-if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
+normalization.vtr <- if (!is.null(norm.method) && norm.method == 'SCTransform') vtr.biases else NULL
+reduction.vtr <- if (!is.null(dimred.method) && dimred.method %in% c('scbfa','bpca','mds')) vtr.biases else NULL
+if (all(!any((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca'))) && !is.null(vtr.biases))) stop("vtr.biases can be used only with SCTransform, scbfa or bpca methods!")
+if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr.biases were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
 
 ## Sourcing functions
 source(paste0(pipeline.path, "/scripts/bustools2seurat_preproc_functions.R"))
@@ -215,10 +215,10 @@ if(keep.norm){
   for (x in seq_along(sobj.list)){
     ## Scaling if necessary
     if (sum(dim(sobj.list[[x]]@assays[[assay]]@scale.data)) < 3) {
-      #Check vtr
+      #Check vtr.biases
       scale.vtr.all <- NULL
-      if(!any(is.na(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr))) {
-        scale.vtr.all <- c(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr)
+      if(!any(is.na(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr.biases))) {
+        scale.vtr.all <- c(sobj.list[[x]]@assays[[assay]]@misc$scaling$vtr.biases)
         message(paste0("Found scaling coveriate(s) '", paste(scale.vtr.all, collapse = "', '"), "' to regress from normalization ..."))
       }
       #Scaling
@@ -248,22 +248,22 @@ if(keep.norm){
   Seurat::VariableFeatures(sobj[[assay]]) <- rownames(sobj[[assay]]@scale.data)
   sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = norm.method, assay.ori = "RNA", assay.out = assay, features.used = NA)
   sobj@misc$params$normalization$normalization.method <- norm.method
-  sobj@assays[[assay]]@misc$scaling$vtr <- NA
+  sobj@assays[[assay]]@misc$scaling$vtr.biases <- NA
   norm_vtr = "NORMKEPT"
 }else{
   ## Normalisation
   cat("\nNormalization...\n")
-  sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr = normalization.vtr)
+  sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr.biases = normalization.vtr)
   if(tolower(norm.method) == 'sctransform') assay <- 'SCT'
-  norm_vtr = paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL)
+  norm_vtr = paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL)
 }
 
 ### Reduction dimension
 cat("\nDimensions reduction...\n")
-sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = dims.max, vtr = reduction.vtr, vtr.scale = vtr.scale)
+sobj <- dimensions.reduction(sobj = sobj, reduction.method = dimred.method, assay = assay, max.dims = dims.max, vtr.biases = reduction.vtr, vtr.scale = vtr.scale)
 
 ### Building reduced normalized output dir
-dimred_vtr = paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr[1])) paste(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
+dimred_vtr = paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr.biases[1])) paste(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr.biases, collapse = '_') else NULL), collapse = '_')
 norm.dim.red.dir = paste0(data.path, norm_vtr, '/', dimred_vtr)
 dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -274,17 +274,17 @@ sobj@misc$technical_info$Seurat <- utils::packageVersion('Seurat')
 
 ### Materials and Methods
 MM_tmp <- if(dimred.method == 'pca') 'PCA' else dimred.method
-if(!is.null(vtr)){
-  vtr <- stringr::str_replace(vtr, "sizeFactor", "the number of detected transcripts")
-  vtr <- stringr::str_replace(vtr, "nFeature_RNA", "the number of detected genes")
-  vtr <- stringr::str_replace(vtr, "percent_mt", "the proportion of mitochondrial transcripts")
-  vtr <- stringr::str_replace(vtr, "percent_rb", "the proportion of ribosomal transcripts")
-  vtr <- stringr::str_replace(vtr, "percent_st", "the proportion of mechanical stress response transcripts")
-  vtr <- stringr::str_replace(vtr, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
-  vtr <- stringr::str_replace(vtr, "Seurat.Phase", "the cell cycle phase determined by Seurat")
+if(!is.null(vtr.biases)){
+  vtr.biases <- stringr::str_replace(vtr.biases, "sizeFactor", "the number of detected transcripts")
+  vtr.biases <- stringr::str_replace(vtr.biases, "nFeature_RNA", "the number of detected genes")
+  vtr.biases <- stringr::str_replace(vtr.biases, "percent_mt", "the proportion of mitochondrial transcripts")
+  vtr.biases <- stringr::str_replace(vtr.biases, "percent_rb", "the proportion of ribosomal transcripts")
+  vtr.biases <- stringr::str_replace(vtr.biases, "percent_st", "the proportion of mechanical stress response transcripts")
+  vtr.biases <- stringr::str_replace(vtr.biases, "Cyclone.Phase", "the cell cycle phase determined by Cyclone")
+  vtr.biases <- stringr::str_replace(vtr.biases, "Seurat.Phase", "the cell cycle phase determined by Seurat")
 
-  MM_tmp2 <- if(norm.method == 'SCTransform') paste0(" and regress out bias factors (",paste0(vtr, collapse = ", "),")") else NULL
-  MM_tmp3 <- if(dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
+  MM_tmp2 <- if(norm.method == 'SCTransform') paste0(" and regress out bias factors (",paste0(vtr.biases, collapse = ", "),")") else NULL
+  MM_tmp3 <- if(dimred.method == 'scbfa') paste0("Per-cell bias factors (including ", paste0(vtr.biases, collapse = ", "),") were regressed out during the scBFA dimension reduction.") else NULL
 }else{
   MM_tmp2 <- NULL
   MM_tmp3 <- NULL

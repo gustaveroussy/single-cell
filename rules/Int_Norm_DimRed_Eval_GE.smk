@@ -36,11 +36,7 @@ rule int_norm_dimred_ge:
     input:
         int_rda_file = int_norm_dimred_input_ge_snakemake
     output:
-        int_ndre_Eval_rda_file = os.path.normpath("{output_int_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/INTEGRATED/{name_int}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/" + "{name_int}_" + INT_NDRE_NORM_VTR + "_" + INT_NDRE_DIMRED_VTR + ".rda"),
-        int_ndre_Eval_cor_file = os.path.normpath("{output_int_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/INTEGRATED/{name_int}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/" + "{name_int}_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "_dims.bias.cor.png"),
-        int_ndre_Eval_dimensions_file =  expand(os.path.normpath("{{output_int_norm_dimred_dir_ge}}" + "/GROUPED_ANALYSIS/INTEGRATED/{{name_int}}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/clustree_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "/dimensions/{{name_int}}_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD+ "{dims}.png"), dims=INT_POSSIBLE_DIM),
-        int_ndre_Eval_louvain_resolution_file =  expand(os.path.normpath("{{output_int_norm_dimred_dir_ge}}" + "/GROUPED_ANALYSIS/INTEGRATED/{{name_int}}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/clustree_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "/louvain_resolution/{{name_int}}_" + INT_ASSAY + "_res{res}.png"), res=INT_POSSIBLE_RES),
-        int_ndre_Eval_uMAPs_file =  expand(os.path.normpath("{{output_int_norm_dimred_dir_ge}}" + "/GROUPED_ANALYSIS/INTEGRATED/{{name_int}}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/clustree_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD + "/uMAPs/{{name_int}}_uMAPs_" + INT_ASSAY + "_" + INT_NDRE_DIMRED_METHOD + "_" + INT_NDRE_INT_METHOD+ "{dims}_ALLres.png"), dims=INT_POSSIBLE_DIM)
+        int_ndre_Eval_rda_file = os.path.normpath("{output_int_norm_dimred_dir_ge}" + "/GROUPED_ANALYSIS/INTEGRATED/{name_int}/" + INT_NDRE_NORM_VTR + "/" + INT_NDRE_DIMRED_VTR + "/" + "{name_int}_" + INT_NDRE_NORM_VTR + "_" + INT_NDRE_DIMRED_VTR + ".rda")
     params:
         sing_int_bind = int_norm_dimred_params_sing,
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
@@ -69,11 +65,11 @@ rule int_norm_dimred_ge:
         --eval.markers {INT_NDRE_EVAL_MARKERS} \
         --min.cells {INT_NDRE_MIN_CELLS} \
         --integration.method {INT_NDRE_INT_METHOD}  \
-        --batch.vtr {INT_NDRE_BATCH_VTR} \
+        --vtr.batch {INT_NDRE_VTR_BATCH} \
         --features.n {INT_NDRE_FEATURES_N} \
         --norm.method {INT_NDRE_NORM_METHOD} \
         --dimred.method {INT_NDRE_DIMRED_METHOD} \
-        --vtr {INT_NDRE_VTR} \
+        --vtr.biases {INT_NDRE_VTR_BIASES} \
         --vtr.scale {INT_NDRE_VTR_SCALE} \
         --dims.max {INT_NDRE_DIM_MAX} \
         --dims.min {INT_NDRE_DIM_MIN} \

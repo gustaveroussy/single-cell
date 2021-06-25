@@ -101,8 +101,8 @@ if (is.null(nthreads)) nthreads <- 4
 assay <- Seurat::DefaultAssay(sobj)
 norm.method <- sobj@assays[[assay]]@misc$params$normalization$normalization.method
 dimred.method <- sobj@assays[[assay]]@misc$params$reductions$method
-norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr, collapse = '_') else NULL), collapse = '_')
-dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr[1])) paste(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr, collapse = '_') else NULL), collapse = '_')
+norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL), collapse = '_')
+dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr.biases[1])) paste(sobj@reductions[[paste(c(assay, dimred.method), collapse = '_')]]@misc$vtr.biases, collapse = '_') else NULL), collapse = '_')
 # Annotation
 if (is.null(cfr.minscore)) cfr.minscore <- 0.35
 if (is.null(sr.minscore)) sr.minscore <- 0.25

@@ -68,7 +68,7 @@ rule grp_norm_dimred_ge:
         --features.n {GRP_NDRE_FEATURES_N} \
         --norm.method {GRP_NDRE_NORM_METHOD} \
         --dimred.method {GRP_NDRE_DIMRED_METHOD} \
-        --vtr {GRP_NDRE_VTR} \
+        --vtr.biases {GRP_NDRE_VTR_BIASES} \
         --vtr.scale {GRP_NDRE_VTR_SCALE} \
         --dims.max {GRP_NDRE_DIM_MAX} \
         --dims.min {GRP_NDRE_DIM_MIN} \
