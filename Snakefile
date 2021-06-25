@@ -542,7 +542,6 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
             INT_NDRE_NORM_METHOD = config['Int_Norm_DimRed_Eval_GE']['norm.method']
     else:
         INT_NDRE_NORM_METHOD = 'SCTransform'
-    sys.stderr.write(INT_NDRE_NORM_METHOD)
     INT_NDRE_DIMRED_METHOD = config['Int_Norm_DimRed_Eval_GE']['dimred.method'] if ('Int_Norm_DimRed_Eval_GE' in config and 'dimred.method' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['dimred.method'] != None) else "pca"
     INT_NDRE_VTR_BIASES = config['Int_Norm_DimRed_Eval_GE']['vtr.biases'].replace(", ", ",") if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr.biases' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr.biases'] != None) else "NULL"
     INT_NDRE_VTR_SCALE = config['Int_Norm_DimRed_Eval_GE']['vtr.scale'] if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr.scale' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr.scale'] != None) else "NULL"
