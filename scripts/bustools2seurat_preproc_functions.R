@@ -2766,7 +2766,7 @@ Prop.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), o
     assign(paste0("plot_clust_clprop_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalProportion(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
   }
   ### Save
-  png(paste0(out.dir,'/clust_clprop', sample.name, '.png'), width =2000, height = 800)
+  png(paste0(out.dir,'/clust_clprop_', sample.name, '.png'), width =2000, height = 800)
   print(( (plot_clust_clprop_gene_nt | plot_clust_clprop_gene | plot_clust_clprop_nt | plot_clust_clprop_aa ) /
        gridExtra::grid.arrange(gridExtra::tableGrob(clust_clprop_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clprop_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clprop_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_clprop_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
       plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
@@ -2886,7 +2886,7 @@ Overlap.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa")
       }
     }
     ### Save
-    write.table(overlap_res, file = paste0(out.dir,"/overlap_",sub("\\+","_",x),"_",sample.name,".txt"), quote = FALSE, sep = "\t", na = "NA", row.names = FALSE, col.names = TRUE, append=FALSE, dec=",")
+    write.table(overlap_res, file = paste0(out.dir,"/clust_overlap_",sub("\\+","_",x),"_",sample.name,".txt"), quote = FALSE, sep = "\t", na = "NA", row.names = FALSE, col.names = TRUE, append=FALSE, dec=",")
   }
 }
 
@@ -2947,7 +2947,7 @@ Physicochemical_properties.c <- function(sobj = NULL, list_type_clT = c("gene+nt
     }
   }
   ### Save
-  png(paste0(out.dir,'/aaProperties_', sample.name, '.png'), width =2500, height = 1000)
+  png(paste0(out.dir,'/clust_aaProperties_', sample.name, '.png'), width =2500, height = 1000)
   if(type == 'TCR'){
     print( (plot_clust_aaProperties_TRA_cdr3_1 / plot_clust_aaProperties_TRA_cdr3_2 / plot_clust_aaProperties_TRB_cdr3_1 / plot_clust_aaProperties_TRB_cdr3_2 ) +
              plot_annotation(title = sample.name, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
