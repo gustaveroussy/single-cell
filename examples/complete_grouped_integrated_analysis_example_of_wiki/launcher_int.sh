@@ -13,9 +13,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=1G
-#SBATCH --partition=mediumq
-#SBATCH --mem=1G
-#SBATCH --exclude=n01,n03,n05,n07,n09,n11,n13,n15,n17,n19,n21,n23,n25
+#SBATCH --partition=longq
 
 source /mnt/beegfs/software/conda/etc/profile.d/conda.sh
 conda activate /mnt/beegfs/userdata/m_aglave/.environnement_conda/scRNAseq_10X_user
@@ -30,5 +28,6 @@ path_to_configfile="/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/
 path_to_pipeline="/mnt/beegfs/pipelines/single-cell"
 
 #launch
-snakemake --profile ${path_to_pipeline}/profiles/slurm -s ${path_to_pipeline}/Snakefile --configfile ${path_to_configfile} #--unlock
+snakemake --profile ${path_to_pipeline}/profiles/slurm -s ${path_to_pipeline}/Snakefile --configfile ${path_to_configfile}
+
 conda deactivate
