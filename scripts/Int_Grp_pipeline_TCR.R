@@ -277,7 +277,7 @@ for (i in seq(samples.name)){
   ### Plots
   for(x in list_type_clT) assign(paste0("plot_cluster_abundanceContig_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::abundanceContig(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, scale = F) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.6, face="bold"))) ))
   ### Save
-  png(paste0(clusters_output,'/abundanceContig.png'), width = 2000, height = 600)
+  png(paste0(clusters_output,'/clust_abundanceContig.png'), width = 2000, height = 600)
   (plot_cluster_abundanceContig_gene_nt | plot_cluster_abundanceContig_gene | plot_cluster_abundanceContig_nt | plot_cluster_abundanceContig_aa ) +
     plot_annotation(title = samples.name[i], caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold")))
   dev.off()
@@ -326,7 +326,7 @@ cat("\nAbundance analysis...\n")
 ### Plots
 for(x in list_type_clT) assign(paste0("plot_cluster_abundanceContig_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::abundanceContig(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, scale = F) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.6, face="bold"))) ))
 ### Save
-png(paste0(clusters_output,'/abundanceContig.png'), width = 2000, height = 600)
+png(paste0(clusters_output,'/clust_abundanceContig.png'), width = 2000, height = 600)
 (plot_cluster_abundanceContig_gene_nt | plot_cluster_abundanceContig_gene | plot_cluster_abundanceContig_nt | plot_cluster_abundanceContig_aa ) +
   plot_annotation(title = sample.name.INT_GRP, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold")))
 dev.off()
