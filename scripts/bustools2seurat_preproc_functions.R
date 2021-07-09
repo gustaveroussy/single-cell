@@ -1507,10 +1507,13 @@ markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir
     for (mn in marknames) {
       mini.markers <- markers[names(markers) == mn]
       mn.plotlist <- sapply(mini.markers, function(x) {Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = x, cols = dimplot.cols) + Seurat::DarkTheme() }, simplify = FALSE)
-      grid.xy <- grid.scalers(length(mn.plotlist) + plot.num.add)
+      if (length(mini.markers)==1) sum.exp <- sobj@assays[[assay]]@data[mini.markers, ] else sum.exp <- Matrix::colSums(x = sobj@assays[[assay]]@data[mini.markers, ])
+      sobj <- Seurat::AddMetaData(sobj, sum.exp, col.name = paste0("SumExp_",mn))
+      mn.plotsum <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = paste0("SumExp_",mn), cols = dimplot.cols) + ggplot2::ggtitle(paste0("Sum of the ", mn, " markers expression")) + Seurat::DarkTheme()
+      grid.xy <- grid.scalers(length(mn.plotlist) + plot.num.add + 1) # +1 for the sum of expression
       png(paste0(mark.dir, '/', sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
       # if(!is.null(ident)) print(upCLUST + mn.plotlist) else print(mn.plotlist)
-      if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST), mn.plotlist))) + patchwork::plot_layout(ncol = grid.xy[1]) else print(patchwork::wrap_plots(mn.plotlist)) + patchwork::plot_layout(ncol = grid.xy[1])
+      if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST, mn.plotsum), mn.plotlist)) + patchwork::plot_layout(ncol = grid.xy[1])) else print(patchwork::wrap_plots(mn.plotlist)) + patchwork::plot_layout(ncol = grid.xy[1])
       dev.off()
       marklist <- c(marklist, list(mn.plotlist))
     }
