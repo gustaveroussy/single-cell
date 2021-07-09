@@ -133,12 +133,14 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
       }
     }
 
-    ## df for plot saturation and Kneeplot beging
+    ## df for saturation plots and Kneeplot beging
     if(draw_plots){
       suppressMessages(library(dplyr))
       nb_umi_genes_by_barcode <- data.frame(nb_genes=Matrix::colSums(scmat>0), nb_umi=Matrix::colSums(scmat), barcodes=colnames(scmat))
       nb_umi_genes_by_barcode <- nb_umi_genes_by_barcode %>% arrange(desc(nb_umi,nb_genes)) %>% dplyr::mutate(num_barcode=seq.int(ncol(scmat)))
+      nb_umi_genes_by_barcode$log10GenesPerlog10UMI <- log10(nb_umi_genes_by_barcode$nb_genes) / log10(nb_umi_genes_by_barcode$nb_umi)
     }
+    
     if (!is.null(droplets.limit) && ncol(scmat) > droplets.limit && !is.null(emptydrops.fdr)) {
       ## Removing empty droplets
       message("Removing empty droplets with emptyDrops")
@@ -172,11 +174,12 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
 
     ## plot saturation and Kneeplot
     if(draw_plots){
+      library(patchwork)
       nb_umi_genes_by_barcode$droplets_state = "Empty Droplets"
       nb_umi_genes_by_barcode[nb_umi_genes_by_barcode$barcodes %in% colnames(scmat), "droplets_state"] ="Full Droplets"
   
       kneeplot <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(y=nb_umi, x=num_barcode, color=droplets_state)) +
-        ggplot2::geom_point() + ggplot2::ggtitle(sample.name) + ggplot2::theme(legend.title = ggplot2::element_blank()) +
+        ggplot2::geom_point() + ggplot2::ggtitle(paste0("Kneeplot of ",sample.name)) + ggplot2::theme(legend.title = ggplot2::element_blank()) +
         ggplot2::scale_y_log10(name = "Number of umi by droplet (log scale)") + ggplot2::scale_x_log10(name = "Droplet rank (log scale)") +
         ggplot2::expand_limits(x = 0, y = 0)
       if(plot_emptydrops){
@@ -193,13 +196,22 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
       ## Cleaning
       rm(bc_rank)
   
-      saturation_plot <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(y = nb_genes ,x = nb_umi, color = droplets_state)) +
-        ggplot2::geom_point() + ggplot2::ggtitle(sample.name) + ggplot2::theme(legend.title = ggplot2::element_blank()) +
+      saturation_plot1 <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(y = nb_genes ,x = nb_umi, color = droplets_state)) +
+        ggplot2::geom_point() + ggplot2::theme(legend.title = ggplot2::element_blank()) +
         ggplot2::geom_smooth(colour = "red") +
         ggplot2::scale_y_log10(name = "Number of genes by droplet (log scale)") + ggplot2::scale_x_log10(name = "Number of umi by droplet (log scale)") +
         ggplot2::expand_limits(x = 0, y = 0) +
-        ggplot2::scale_colour_manual(values = c("cyan3","royalblue3"))
-      ggplot2::ggsave(paste0(out.dir, sample.name, "_saturation_plot.png"), plot = saturation_plot, width = 7, height = 5)
+        ggplot2::scale_colour_manual(values = c("cyan3","royalblue4"))
+      saturation_plot2 <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(x=log10GenesPerlog10UMI, color = droplets_state)) +
+    	ggplot2::geom_density() + 
+    	ggplot2::theme(legend.title = ggplot2::element_blank()) +
+  	    ggplot2::geom_vline(xintercept = 0.8, linetype="dashed", color = "red") +
+  	    ggplot2::annotate(geom="text", x=0.84, y=-1, label="0.8", color="red") +
+  	    ggplot2::ylab("Density") + ggplot2::xlab("log(Number of genes)/log(Number of umi)") +
+        ggplot2::scale_colour_manual(values = c("cyan3","royalblue4"))
+      satplots = saturation_plot1 + saturation_plot2 + plot_annotation(title = paste0("Saturation of ",sample.name))
+      ggplot2::ggsave(paste0(out.dir, sample.name, "_saturation_plot.png"), plot = satplots, width = 14, height = 5)
+      
       rm(nb_umi_genes_by_barcode)
     }
     
