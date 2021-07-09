@@ -188,9 +188,11 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
           ggplot2::geom_hline(ggplot2::aes(yintercept = bc_rank@metadata$inflection, colour = "Inflection Line"), linetype = "solid", show.legend = FALSE) +
           ggplot2::scale_colour_manual(values = c("cyan3","royalblue4","slateblue3","deeppink3"), guide='legend') +
           ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(linetype = c(0, 0, 1, 1), shape = c(16, 16, 16, 16))))
+        sat_color=c("cyan3","royalblue4")
       }else{
         kneeplot <- kneeplot +
-          ggplot2::scale_colour_manual(values = c("cyan3","royalblue4"))
+          ggplot2::scale_colour_manual(values = c("royalblue4"))
+        sat_color=c("royalblue4")
       }
       ggplot2::ggsave(paste0(out.dir, sample.name, "_kneeplot.png"), plot = kneeplot, width = 7, height = 5)
       ## Cleaning
@@ -201,14 +203,14 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
         ggplot2::geom_smooth(colour = "red") +
         ggplot2::scale_y_log10(name = "Number of genes by droplet (log scale)") + ggplot2::scale_x_log10(name = "Number of umi by droplet (log scale)") +
         ggplot2::expand_limits(x = 0, y = 0) +
-        ggplot2::scale_colour_manual(values = c("cyan3","royalblue4"))
+        ggplot2::scale_colour_manual(values = sat_color)
       saturation_plot2 <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(x=log10GenesPerlog10UMI, color = droplets_state)) +
     	ggplot2::geom_density() + 
     	ggplot2::theme(legend.title = ggplot2::element_blank()) +
   	    ggplot2::geom_vline(xintercept = 0.8, linetype="dashed", color = "red") +
   	    ggplot2::annotate(geom="text", x=0.84, y=-1, label="0.8", color="red") +
   	    ggplot2::ylab("Density") + ggplot2::xlab("log(Number of genes)/log(Number of umi)") +
-        ggplot2::scale_colour_manual(values = c("cyan3","royalblue4"))
+        ggplot2::scale_colour_manual(values = sat_color)
       satplots = saturation_plot1 + saturation_plot2 + plot_annotation(title = paste0("Saturation of ",sample.name))
       ggplot2::ggsave(paste0(out.dir, sample.name, "_saturation_plot.png"), plot = satplots, width = 14, height = 5)
       
