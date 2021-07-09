@@ -312,9 +312,10 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     # Params
     sobj@assays[[assay]]@misc$scaling$vtr.biases[1] <- NA
     sobj@reductions[[red.name]]@misc$vtr.biases <- vtr.batch
+    sobj@reductions[[red.name]]@misc$vtr.scale <- NA
     sobj@reductions[[red.name]]@misc$from.assay <- assay
     sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = norm.method, assay.ori = NA, assay.out = NA, features.used = NA)
-    sobj@assays[[assay]]@misc$params$reductions <- list(method = integration.method, assay = assay, max.dims = dims.max, vtr.biases = vtr.batch, scale_regressed_variables = NA)
+    sobj@assays[[assay]]@misc$params$reductions <- list(method = integration.method, assay = assay, max.dims = dims.max, vtr.biases = vtr.batch, vtr.scale = NA)
     sobj@misc$params$integration$method <- integration.method
     sobj@misc$params$integration$orig.assay <- assay
     sobj@misc$params$integration$out.assay <- assay
