@@ -1,4 +1,4 @@
-genes	logFC	p_val	adj.P.Val	pct.1	pct.2	tested_cluster	control_cluster	min.pct
+genes	avg_log2FC	p_val	adj.P.Val	pct.1	pct.2	tested_cluster	control_cluster	min.pct
 LYZ	4.38380545916525	3.41928039829776e-170	5.8059381163096e-166	0.982	0.032	0	All	0.75
 CST3	3.97586934636379	1.34264751677011e-169	2.27981548347564e-165	0.996	0.045	0	All	0.75
 FCN1	3.36833372785252	1.29593027895674e-166	2.20048961366855e-162	0.942	0.008	0	All	0.75
