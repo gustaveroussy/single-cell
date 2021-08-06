@@ -1574,7 +1574,7 @@ norm.red.plot.quick <- function(sobj = NULL, assay = 'RNA', sample.name.GE = NUL
   save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(sample.name.GE, file.name, norm.method, dimred.method), collapse = '_'), '.rda'), compress = "bzip2")
 
   ### Building clustered output dir
-  clust.dir <- paste(norm.dim.red.dir, paste(c(dimred.method, keep.dims, keep.res), collapse = '_'), sep = '/')
+  clust.dir <- paste(output.dir.ge, paste0("dims", keep.dims, "_res", keep.res), sep = '/')
   dir.create(path = clust.dir, recursive = TRUE, showWarnings = FALSE)
 
   ## Clustering + uMAP
