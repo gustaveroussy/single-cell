@@ -2626,12 +2626,12 @@ Freq.g <- function(sobj=NULL, out.dir = NULL, sample.name=NULL, reduction=NULL, 
   sobj$highlight=NULL
   #Top 10 frequencies, and top 10 to top 20 frequencies
   top20_freq = sobj@meta.data %>% select(.data[[freq_col]],CTaa,highlight_aa_all) %>% distinct() %>% arrange(desc(.data[[freq_col]])) %>% na.omit() %>% top_n(n = 20, wt = .data[[freq_col]])
-  top20_freq = top20_freq[1:20,]
+  if(dim(top20_freq)[1]>20) top20_freq = top20_freq[1:20,]
   rownames(top20_freq)=top20_freq$highlight_aa_all
   sobj$highlight_aa_top10_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[1:10], sobj$highlight_aa_all, NA)
-  sobj$highlight_aa_top11to20_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[11:length(top20_freq$highlight)], sobj$highlight_aa_all, NA)
+  if(dim(top20_freq)[1]>10) sobj$highlight_aa_top11to20_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[11:length(top20_freq$highlight)], sobj$highlight_aa_all, NA)
   sobj$highlight_aa_top20_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[1:length(top20_freq$highlight)], sobj$highlight_aa_all, NA)
-  
+
   #UMAP of top 10 frequencies
   png(paste0(out.dir,'/Frequency_top_10_umap',sample.name,'.png'), width = 800, height = (400+350))
   print(patchwork::wrap_elements( (Seurat::DimPlot(sobj, reduction = reduction, group.by = "highlight_aa_top10_freq")  + Seurat::DarkTheme()) / gridExtra::tableGrob(top20_freq[1:10,c(freq_col,"CTaa")], theme = gridExtra::ttheme_default(base_size = 10)) +
@@ -2639,11 +2639,14 @@ Freq.g <- function(sobj=NULL, out.dir = NULL, sample.name=NULL, reduction=NULL, 
                                     plot_layout(heights = c(2, 1))))
   dev.off()
   #UMAP of top 11 to 20 frequencies
-  png(paste0(out.dir,'/Frequency_top11to20_umap',sample.name,'.png'), width = 800, height = (400+350))
-  print(patchwork::wrap_elements( (Seurat::DimPlot(sobj, reduction = reduction, group.by = "highlight_aa_top11to20_freq")  + Seurat::DarkTheme()) / gridExtra::tableGrob(top20_freq[11:length(top20_freq$CTaa),c(freq_col,"CTaa")], theme = gridExtra::ttheme_default(base_size = 10)) +
-                                    plot_annotation(title = paste0("Top 11 to ", dim(top20_freq)[1], " Clonotypes (by frequencies)"),  subtitle = paste0("(",dim(sobj)[2]," cells)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0.5, face="bold"))) +
-                                    plot_layout(heights = c(2, 1))))
-  dev.off()
+  if(dim(top20_freq)[1]>10){
+    png(paste0(out.dir,'/Frequency_top11to20_umap',sample.name,'.png'), width = 800, height = (400+350))
+    print(patchwork::wrap_elements( (Seurat::DimPlot(sobj, reduction = reduction, group.by = "highlight_aa_top11to20_freq")  + Seurat::DarkTheme()) / gridExtra::tableGrob(top20_freq[11:length(top20_freq$CTaa),c(freq_col,"CTaa")], theme = gridExtra::ttheme_default(base_size = 10)) +
+                                      plot_annotation(title = paste0("Top 11 to ", dim(top20_freq)[1], " Clonotypes (by frequencies)"),  subtitle = paste0("(",dim(sobj)[2]," cells)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0.5, face="bold"))) +
+                                      plot_layout(heights = c(2, 1))))
+    dev.off()
+  }
+  
   return(sobj)
 }
 

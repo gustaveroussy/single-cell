@@ -348,7 +348,7 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
         dic_NDRE_INFO[NDRE_SAMPLE_NAME_GE[i]]['NDRE_OUTPUT_DIR'] = NDRE_OUTPUT_DIR_GE[i]
     #Names
     NDRE_NORM_VTR = NDRE_NORM_METHOD if (NDRE_NORM_METHOD == "LogNormalize" or NDRE_VTR_BIASES == "NULL") else (NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
-    NDRE_DIMRED_VTR = NDRE_DIMRED_METHOD if (NDRE_DIMRED_METHOD == "pca" or GRP_NDRE_DIMRED_METHOD == "ica" or GRP_NDRE_DIMRED_METHOD == "mds" or NDRE_VTR_BIASES == "NULL") else (NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
+    NDRE_DIMRED_VTR = NDRE_DIMRED_METHOD if (NDRE_DIMRED_METHOD == "pca" or NDRE_DIMRED_METHOD == "ica" or NDRE_DIMRED_METHOD == "mds" or NDRE_VTR_BIASES == "NULL") else (NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
     POSSIBLE_DIM = ["%.0f" % number for number in numpy.arange(NDRE_DIM_MIN,NDRE_DIM_MAX+1,NDRE_DIM_STEPS)]
     POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_RES_MIN*10,NDRE_RES_MAX*10+1,NDRE_RES_STEPS*10)/10] #*10 then /10 because numpy.arange doesn't handle floats well
     ASSAY = "RNA" if NDRE_NORM_METHOD == "LogNormalize" else "SCT"
@@ -493,7 +493,7 @@ if "Adding_BCR" in STEPS:
     if 'Adding_BCR' in config and 'vdj.input.file.bcr' in config['Adding_BCR'] :
         ADD_BCR_INPUT_CSV_BCR = config['Adding_BCR']['vdj.input.file.bcr']
     elif "Alignment_annotations_TCR_BCR" in STEPS:
-        sys.stderr.write("Note: No vdj.input.file.bcr find in Adding_BCR section of configfile; vdj.input.file.bcr will be determine from Alignment_annotations_BCR_BCR step for Adding_BCR step!\n")
+        sys.stderr.write("Note: No vdj.input.file.bcr find in Adding_BCR section of configfile; vdj.input.file.bcr will be determine from Alignment_annotations_TCR_BCR step for Adding_BCR step!\n")
         ALIGN_SAMPLE_NAME_BCR = [sample for sample in ALIGN_SAMPLE_NAME_TCR_BCR if bool(re.match(".+_BCR", sample))]
         ADD_BCR_INPUT_CSV_BCR = [ os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + x + "/" + x + "_CellRanger/outs/filtered_contig_annotations.csv") for x in ALIGN_SAMPLE_NAME_BCR]
     else:
