@@ -57,7 +57,6 @@ Filtering_GE:
   cc.cyclone.file :
   metadata.file :
 
-
 Norm_DimRed_Eval_GE:
   sample.name.ge :
   input.rda.ge :
@@ -68,7 +67,7 @@ Norm_DimRed_Eval_GE:
   features.n :
   norm.method :
   dimred.method :
-  vtr :
+  vtr.biases :
   vtr.scale :
   dims.max :
   dims.min :

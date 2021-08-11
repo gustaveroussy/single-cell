@@ -16,7 +16,7 @@ Grp_Norm_DimRed_Eval_GE:
   features.n :
   norm.method :
   dimred.method :
-  vtr :
+  vtr.biases :
   vtr.scale :
   dims.max :
   dims.min :
