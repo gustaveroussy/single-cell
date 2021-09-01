@@ -72,7 +72,6 @@ sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, l
 ## Normalization and dimension reduction
 dimred.method <- sobj@misc$params$reductions$method
 ## Clustering
-GE_file <- sub("\\.rda$", "", input.rda)
 dimred.method <- sobj@misc$params$reductions$method
 ident.name <- sobj@misc$params$clustering$ident
 INT_GRP.reduction <- sobj@misc$params$clustering$umap
@@ -381,5 +380,5 @@ write_MandM(sobj=sobj, output.dir=output.dir)
 
 ### Saving GE_ADT_TCR object
 cat("\nSaving object...\n")
-GE_TCR_file <- paste0(output.dir, basename(GE_file), '_TCR')
+GE_TCR_file <- paste0(output.dir, sub("\\.rda$|\\.RData$", "", basename(input.rda)), '_TCR')
 save(sobj, file = paste0(GE_TCR_file, '.rda'), compress = "bzip2")

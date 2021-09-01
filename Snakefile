@@ -321,6 +321,8 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
         sys.stderr.write("Note: No output.dir.ge find in Norm_DimRed_Eval_GE section of configfile; output.dir.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
     else :
         sys.exit("Error: No output.dir.ge find in configfile!\n")
+
+
     ### Analysis Parameters
     NDRE_AUTHOR_NAME = config['Norm_DimRed_Eval_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Norm_DimRed_Eval_GE' in config and 'author.name' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['author.name'] != None) else "NULL"
     NDRE_AUTHOR_MAIL = config['Norm_DimRed_Eval_GE']['author.mail'].replace(", ", ",") if ('Norm_DimRed_Eval_GE' in config and 'author.mail' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['author.mail'] != None) else "NULL"
@@ -349,9 +351,9 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     #Names
     NDRE_NORM_VTR = NDRE_NORM_METHOD if (NDRE_NORM_METHOD == "LogNormalize" or NDRE_VTR_BIASES == "NULL") else (NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
     NDRE_DIMRED_VTR = NDRE_DIMRED_METHOD if (NDRE_DIMRED_METHOD == "pca" or NDRE_DIMRED_METHOD == "ica" or NDRE_DIMRED_METHOD == "mds" or NDRE_VTR_BIASES == "NULL") else (NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
-    POSSIBLE_DIM = ["%.0f" % number for number in numpy.arange(NDRE_DIM_MIN,NDRE_DIM_MAX+1,NDRE_DIM_STEPS)]
-    POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_RES_MIN*10,NDRE_RES_MAX*10+1,NDRE_RES_STEPS*10)/10] #*10 then /10 because numpy.arange doesn't handle floats well
-    ASSAY = "RNA" if NDRE_NORM_METHOD == "LogNormalize" else "SCT"
+    #POSSIBLE_DIM = ["%.0f" % number for number in numpy.arange(NDRE_DIM_MIN,NDRE_DIM_MAX+1,NDRE_DIM_STEPS)]
+    #POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_RES_MIN*10,NDRE_RES_MAX*10+1,NDRE_RES_STEPS*10)/10] #*10 then /10 because numpy.arange doesn't handle floats well
+    #ASSAY = "RNA" if NDRE_NORM_METHOD == "LogNormalize" else "SCT"
 
 if "Clust_Markers_Annot_GE" in STEPS: #alias CMA
     ### Sample/Project
@@ -379,6 +381,8 @@ if "Clust_Markers_Annot_GE" in STEPS: #alias CMA
     CMA_AUTHOR_NAME = config['Clust_Markers_Annot_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Clust_Markers_Annot_GE' in config and 'author.name' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['author.name'] != None) else "NULL"
     CMA_AUTHOR_MAIL = config['Clust_Markers_Annot_GE']['author.mail'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'author.mail' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['author.mail'] != None) else "NULL"
     CMA_MARKFILE = config['Clust_Markers_Annot_GE']['markfile'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'markfile' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['markfile'] != None) else "NULL" # formated "file1,file2,file3"
+    CMA_CUSTOM_SCE_REF = config['Clust_Markers_Annot_GE']['custom.sce.ref'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'custom.sce.ref' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['custom.sce.ref'] != None) else "NULL" # formated "file1,file2,file3"
+    CMA_CUSTOM_MARKERS_REF = config['Clust_Markers_Annot_GE']['custom.markers.ref'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'custom.markers.ref' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['custom.markers.ref'] != None) else "NULL" # formated "file1,file2,file3"
     # Normalization and dimension reduction
     CMA_KEEP_DIM = config['Clust_Markers_Annot_GE']['keep.dims'] if ('Clust_Markers_Annot_GE' in config and 'keep.dims' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['keep.dims'] != None) else "NULL"
     CMA_KEEP_RES = config['Clust_Markers_Annot_GE']['keep.res'] if ('Clust_Markers_Annot_GE' in config and 'keep.res' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['keep.res'] != None) else "NULL"
@@ -582,7 +586,6 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
         else :
             INT_NDRE_DIMRED_VTR = INT_NDRE_INT_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(INT_NDRE_VTR_BIASES.split(","))) + list(dict.fromkeys(INT_NDRE_VTR_BATCH.split(",")))))
 
-
 if "Int_Clust_Markers_Annot_GE" in STEPS:
     ### Sample/Project
     if ('Int_Clust_Markers_Annot_GE' in config) and ('name.int' in config['Int_Clust_Markers_Annot_GE']) and ('input.rda.int' in config['Int_Clust_Markers_Annot_GE']) :
@@ -605,6 +608,8 @@ if "Int_Clust_Markers_Annot_GE" in STEPS:
     INT_CMA_AUTHOR_NAME = config['Int_Clust_Markers_Annot_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Clust_Markers_Annot_GE' in config and 'author.name' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['author.name'] != None) else "NULL"
     INT_CMA_AUTHOR_MAIL = config['Int_Clust_Markers_Annot_GE']['author.mail'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'author.mail' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['author.mail'] != None) else "NULL"
     INT_CMA_MARKFILE = config['Int_Clust_Markers_Annot_GE']['markfile'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'markfile' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['markfile'] != None) else "NULL" # formated "file1,file2,file3"
+    INT_CMA_CUSTOM_SCE_REF = config['Int_Clust_Markers_Annot_GE']['custom.sce.ref'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'custom.sce.ref' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['custom.sce.ref'] != None) else "NULL" # formated "file1,file2,file3"
+    INT_CMA_CUSTOM_MARKERS_REF = config['Int_Clust_Markers_Annot_GE']['custom.markers.ref'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'custom.markers.ref' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['custom.markers.ref'] != None) else "NULL" # formated "file1,file2,file3"
     # Normalization and dimension reduction
     INT_CMA_KEEP_DIM = config['Int_Clust_Markers_Annot_GE']['keep.dims'] if ('Int_Clust_Markers_Annot_GE' in config and 'keep.dims' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['keep.dims'] != None) else "NULL"
     INT_CMA_KEEP_RES = config['Int_Clust_Markers_Annot_GE']['keep.res'] if ('Int_Clust_Markers_Annot_GE' in config and 'keep.res' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['keep.res'] != None) else "NULL"
@@ -805,6 +810,8 @@ if "Grp_Clust_Markers_Annot_GE" in STEPS:
     GRP_CMA_AUTHOR_NAME = config['Grp_Clust_Markers_Annot_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Clust_Markers_Annot_GE' in config and 'author.name' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['author.name'] != None) else "NULL"
     GRP_CMA_AUTHOR_MAIL = config['Grp_Clust_Markers_Annot_GE']['author.mail'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'author.mail' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['author.mail'] != None) else "NULL"
     GRP_CMA_MARKFILE = config['Grp_Clust_Markers_Annot_GE']['markfile'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'markfile' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['markfile'] != None) else "NULL" # formated "file1,file2,file3"
+    GRP_CMA_CUSTOM_SCE_REF = config['Grp_Clust_Markers_Annot_GE']['custom.sce.ref'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'custom.sce.ref' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['custom.sce.ref'] != None) else "NULL" # formated "file1,file2,file3"
+    GRP_CMA_CUSTOM_MARKERS_REF = config['Grp_Clust_Markers_Annot_GE']['custom.markers.ref'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'custom.markers.ref' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['custom.markers.ref'] != None) else "NULL" # formated "file1,file2,file3"
     # Normalization and dimension reduction
     GRP_CMA_KEEP_DIM = config['Grp_Clust_Markers_Annot_GE']['keep.dims'] if ('Grp_Clust_Markers_Annot_GE' in config and 'keep.dims' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['keep.dims'] != None) else "NULL"
     GRP_CMA_KEEP_RES = config['Grp_Clust_Markers_Annot_GE']['keep.res'] if ('Grp_Clust_Markers_Annot_GE' in config and 'keep.res' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['keep.res'] != None) else "NULL"

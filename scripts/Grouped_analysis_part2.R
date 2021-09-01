@@ -17,6 +17,8 @@ option_list <- list(
   make_option("--keep.dims", help="Number of dimension to keep for clustering (from 0 to keep.dims)"),
   make_option("--keep.res", help="Resolution value for clustering"),
   # Annotation
+  make_option("--custom.sce.ref", help="List of .RData files containing SingleCellExpriment objects with your reference"),
+  make_option("--custom.markers.ref", help="List of .xlsx files containing your reference"),
   make_option("--cfr.minscore", help="Minimum correlation score for clustifyr to consider"),
   make_option("--sr.minscore", help="Minimum correlation score for SingleR to consider"),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
@@ -52,6 +54,8 @@ metadata.file <- unlist(stringr::str_split(args$options$metadata.file, ","))
 keep.dims <- if (!is.null(args$options$keep.dims)) as.numeric(args$options$keep.dims)
 keep.res <- if (!is.null(args$options$keep.res)) as.numeric(args$options$keep.res)
 # Annotation
+custom.sce.ref <- if (!is.null(args$options$custom.sce.ref)) unlist(stringr::str_split(args$options$custom.sce.ref, ","))
+custom.markers.ref <- if (!is.null(args$options$custom.markers.ref)) unlist(stringr::str_split(args$options$custom.markers.ref, ","))
 cfr.minscore <- if (!is.null(args$options$cfr.minscore)) as.numeric(args$options$cfr.minscore)
 sr.minscore <- if (!is.null(args$options$sr.minscore)) as.numeric(args$options$sr.minscore)
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
@@ -101,11 +105,8 @@ if (is.null(nthreads)) nthreads <- 4
 # Normalization and dimension reduction
 norm.method <- sobj@misc$params$normalization$normalization.method
 assay <- if(norm.method == 'SCTransform') 'SCT' else 'RNA'
-norm_vtr <- paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL), collapse = '_')
-if(isTRUE(sobj@misc$params$group$keep.norm)) norm_vtr <- "NORMKEPT"
 dimred.method <- sobj@assays[[assay]]@misc$params$reductions$method
 red.name <- paste0(assay, "_", dimred.method)
-dimred_vtr <- paste0(c(dimred.method, if(!is.na(sobj@reductions[[red.name]]@misc$vtr.biases[1])) paste(sobj@reductions[[red.name]]@misc$vtr.biases, collapse = '_') else NULL), collapse = '_')
 # Annotation
 if (is.null(cfr.minscore)) cfr.minscore <- 0.35
 if (is.null(sr.minscore)) sr.minscore <- 0.25
@@ -113,16 +114,20 @@ if (is.null(sr.minscore)) sr.minscore <- 0.25
 #### Fixed parameters ####
 # Annotation
 if (species == "homo_sapiens") {
-  singler.setnames <- c("HumanPrimaryCellAtlasData", "NovershternHematopoieticData", "DatabaseImmuneCellExpressionData", "MonacoImmuneData")
-  clustifyr.setnames <- c("pbmc_avg", "hema_microarray_matrix", "gtex_bulk_matrix")
+  singler.setnames <- c("HumanPrimaryCellAtlasData", "BlueprintEncodeData", "NovershternHematopoieticData", "DatabaseImmuneCellExpressionData", "MonacoImmuneData")
+  clustifyr.setnames <- c("pbmc_avg", "ref_hema_microarray", "ref_cortex_dev","ref_pan_indrop") # ref_hema_microarray same as hema_microarray_matrix
+  scrnaseq.setnames <- c("BaronPancreasData(human)","MuraroPancreasData","SegerstolpePancreasData")
 }
+
 if (species == "mus_musculus") {
   singler.setnames <- c("MouseRNAseqData", "ImmGenData")
   clustifyr.setnames <- c("ref_MCA", "ref_tabula_muris_drop", "ref_tabula_muris_facs", "ref_moca_main", "ref_immgen", "ref_mouse.rnaseq")
+  scrnaseq.setnames <- c("BaronPancreasData(mouse)","ShekharRetinaData","ZeiselBrainData")
 }
 if (species == "rattus_norvegicus") {
   singler.setnames <- c("MouseRNAseqData", "ImmGenData")
   clustifyr.setnames <- c("ref_MCA", "ref_tabula_muris_drop", "ref_tabula_muris_facs", "ref_moca_main", "ref_immgen", "ref_mouse.rnaseq")
+  scrnaseq.setnames <- c("BaronPancreasData(mouse)","ShekharRetinaData","ZeiselBrainData")
 }
 
 #### Fixed parameters ####
@@ -190,7 +195,7 @@ technical.plot(sobj = sobj, ident = ident.name, out.dir = clust.dir, multi.pt.si
 sobj <- find.markers.quick(sobj = sobj, ident = ident.name, test.use = 'wilcox', min.pct = .75, logfc.threshold = .5, only.pos = TRUE, adjp.p.max = 5E-02, topn = 10, heatmap.cols = gradient.cols, out.dir = clust.dir)
 
 ### Automatic cell type annotation
-sobj <- cells.annot(sobj = sobj, ident = ident.name, singler.setnames = singler.setnames, clustifyr.setnames = clustifyr.setnames, sr.minscore = sr.minscore, cfr.minscore = cfr.minscore, out.dir = clust.dir, solo.pt.size = solo.pt.size)
+sobj <- cells.annot(sobj = sobj, ident = ident.name, singler.setnames = singler.setnames, clustifyr.setnames = clustifyr.setnames, scrnaseq.setnames = scrnaseq.setnames, custom.sce.ref = custom.sce.ref, custom.markers.ref = custom.markers.ref,sr.minscore = sr.minscore, cfr.minscore = cfr.minscore, out.dir = clust.dir, solo.pt.size = solo.pt.size, nthreads = nthreads)
 
 ### Assessing clusters : Plotting provided marker genes
 if(!is.null(markers)) sobj <- markers.umap.plot(sobj = sobj, markers = markers, ident = ident.name, out.dir = clust.dir, dimplot.cols = gradient.cols, multi.pt.size = 2)
@@ -205,6 +210,6 @@ write_MandM(sobj=sobj, output.dir=clust.dir)
 
 ### Saving final object
 cat("\nSaving object...\n")
-GE_file=paste0(clust.dir, '/', paste(c(name.grp, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = "_"))
+GE_file=paste0(clust.dir, '/', paste(c(sub(pattern = "(.*)\\..*$", replacement = "\\1", basename(input.rda.ge)), keep.dims, keep.res), collapse = "_"))
 save(sobj, file = paste0(GE_file, '.rda'), compress = "bzip2")
 

@@ -49,7 +49,7 @@ def get_targets(STEPS):
         targets["Filtering_GE"]=[
             expand(os.path.normpath("{output_filtering_dir_ge}/" + FILTERS_FOLDER + "/DOUBLETSKEPT/" + "{sample_name_ge}_QChist.png"), zip, output_filtering_dir_ge=FILERING_OUTPUT_DIR_GE, sample_name_ge=FILERING_SAMPLE_NAME_GE),
             expand(os.path.normpath("{output_filtering_dir_ge}/" + FILTERS_FOLDER + "/DOUBLETSKEPT/" + "{sample_name_ge}_DOUBLETSKEPT_NON-NORMALIZED.rda"), zip, output_filtering_dir_ge=FILERING_OUTPUT_DIR_GE, sample_name_ge=FILERING_SAMPLE_NAME_GE),
-            expand(os.path.normpath("{output_filtering_dir_ge}/" + FILTERS_FOLDER + "/DOUBLETSKEPT/LogNormalize/pca/pca_15_0.8/technical/" + "{sample_name_ge}_technical_MULTI_ALL_uMAPs.png"), zip, output_filtering_dir_ge=FILERING_OUTPUT_DIR_GE, sample_name_ge=FILERING_SAMPLE_NAME_GE)
+            expand(os.path.normpath("{output_filtering_dir_ge}/" + FILTERS_FOLDER + "/DOUBLETSKEPT/LogNormalize/pca/dims15_res0.8/technical/" + "{sample_name_ge}_technical_MULTI_ALL_uMAPs.png"), zip, output_filtering_dir_ge=FILERING_OUTPUT_DIR_GE, sample_name_ge=FILERING_SAMPLE_NAME_GE)
         ]
         if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             targets["Filtering_GE"].append(expand(os.path.normpath("{output_filtering_dir_ge}/" + FILTERS_FOLDER + "/DOUBLETSKEPT/" + "/{sample_name_ge}_stat.txt"), zip, output_filtering_dir_ge=FILERING_OUTPUT_DIR_GE, sample_name_ge=FILERING_SAMPLE_NAME_GE))
@@ -59,11 +59,7 @@ def get_targets(STEPS):
             targets["Filtering_GE"].append(expand(os.path.normpath("{output_filtering_dir_ge}/" + FILTERS_FOLDER + "/DOUBLETSFILTER_" + FILERING_DOUBLET_FILTER_METHOD_NAME + "/{sample_name_ge}_stat.txt"), zip, output_filtering_dir_ge=FILERING_OUTPUT_DIR_GE, sample_name_ge=FILERING_SAMPLE_NAME_GE))
     if "Norm_DimRed_Eval_GE" in STEPS:
         targets["Norm_DimRed_Eval_GE"]=[
-        expand(os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/" + "{sample_name_ge}_" + NDRE_NORM_VTR + "_" + NDRE_DIMRED_VTR + ".rda"), zip, output_norm_dimred_dir_ge=NDRE_OUTPUT_DIR_GE, sample_name_ge=NDRE_SAMPLE_NAME_GE),
-        expand(os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/" + "{sample_name_ge}_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "_dims.bias.cor.png"), zip, output_norm_dimred_dir_ge=NDRE_OUTPUT_DIR_GE, sample_name_ge=NDRE_SAMPLE_NAME_GE),
-        expand(os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/clustree_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "/dimensions/{sample_name_ge}_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "{dims}.png"), zip, output_norm_dimred_dir_ge=NDRE_OUTPUT_DIR_GE*len(POSSIBLE_DIM), sample_name_ge=NDRE_SAMPLE_NAME_GE*len(POSSIBLE_DIM), dims=POSSIBLE_DIM*len(NDRE_SAMPLE_NAME_GE)),
-        expand(os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/clustree_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "/louvain_resolution/{sample_name_ge}_" + ASSAY + "_res{res}.png"), zip, output_norm_dimred_dir_ge=NDRE_OUTPUT_DIR_GE*len(POSSIBLE_DIM), sample_name_ge=NDRE_SAMPLE_NAME_GE*len(POSSIBLE_DIM), res=POSSIBLE_RES*len(NDRE_SAMPLE_NAME_GE)),
-        expand(os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/clustree_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "/uMAPs/{sample_name_ge}_uMAPs_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "{dims}_ALLres.png"), zip, output_norm_dimred_dir_ge=NDRE_OUTPUT_DIR_GE*len(POSSIBLE_DIM), sample_name_ge=NDRE_SAMPLE_NAME_GE*len(POSSIBLE_DIM), dims=POSSIBLE_DIM*len(NDRE_SAMPLE_NAME_GE))
+        expand(os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/" + "{sample_name_ge}_" + NDRE_NORM_VTR + "_" + NDRE_DIMRED_VTR + ".rda"), zip, output_norm_dimred_dir_ge=NDRE_OUTPUT_DIR_GE, sample_name_ge=NDRE_SAMPLE_NAME_GE)
         ]
     if "Clust_Markers_Annot_GE" in STEPS:
         targets["Clust_Markers_Annot_GE"]=[

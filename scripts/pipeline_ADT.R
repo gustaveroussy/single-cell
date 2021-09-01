@@ -90,7 +90,6 @@ dimred.method <- sobj@misc$params$reductions$method
 norm.method_GE <- sobj@misc$params$normalization$normalization.method
 assay <- if(norm.method_GE == "SCTransform") 'SCT' else 'RNA'
 ## Clustering
-GE_file <- sub("\\.rda$", "", input.rda.ge)
 RNA.reduction <- sobj@misc$params$clustering$umap
 ## ADT
 if (is.null(ADT.min.cutoff))  ADT.min.cutoff <- rep("q30", length(gene.names))
@@ -226,5 +225,5 @@ write_MandM(sobj=sobj, output.dir=output.dir)
 
 ### Saving GE_ADT object
 cat("\nSaving object...\n")
-GE_ADT_file <- paste0(output.dir, basename(GE_file), '_ADT')
+GE_ADT_file <- paste0(output.dir, sub("\\.rda$|\\.RData$", "", basename(input.rda.ge)), '_ADT')
 save(sobj, file = paste0(GE_ADT_file, '.rda'), compress = "bzip2")

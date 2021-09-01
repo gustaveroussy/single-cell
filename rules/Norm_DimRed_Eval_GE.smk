@@ -33,11 +33,7 @@ rule norm_dimred_ge:
     input:
         rda_file = norm_dimred_input_ge
     output:
-        ndre_Eval_rda_file = os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/" + "{sample_name_ge}_" + NDRE_NORM_VTR + "_" + NDRE_DIMRED_VTR + ".rda"),
-        ndre_Eval_cor_file = os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/" + "{sample_name_ge}_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "_dims.bias.cor.png"),
-        ndre_Eval_dimensions_file =  expand(os.path.normpath("{{output_norm_dimred_dir_ge}}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/clustree_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "/dimensions/{{sample_name_ge}}_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "{dims}.png"), dims=POSSIBLE_DIM),
-        ndre_Eval_louvain_resolution_file =  expand(os.path.normpath("{{output_norm_dimred_dir_ge}}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/clustree_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "/louvain_resolution/{{sample_name_ge}}_" + ASSAY + "_res{res}.png"), res=POSSIBLE_RES),
-        ndre_Eval_uMAPs_file =  expand(os.path.normpath("{{output_norm_dimred_dir_ge}}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/clustree_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "/uMAPs/{{sample_name_ge}}_uMAPs_" + ASSAY + "_" + NDRE_DIMRED_METHOD + "{dims}_ALLres.png"), dims=POSSIBLE_DIM)
+        ndre_Eval_rda_file = os.path.normpath("{output_norm_dimred_dir_ge}" + "/" + NDRE_NORM_VTR + "/" + NDRE_DIMRED_VTR + "/" + "{sample_name_ge}_" + NDRE_NORM_VTR + "_" + NDRE_DIMRED_VTR + ".rda")
     params:
         sing_bind = norm_dimred_params_sing,
         pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),

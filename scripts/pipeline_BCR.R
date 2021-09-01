@@ -72,7 +72,7 @@ sobj <- Add_name_mail_author(sobj = sobj, list.author.name = list.author.name, l
 ## Normalization and dimension reduction
 dimred.method <- sobj@misc$params$reductions$method
 ## Clustering
-GE_file <- sub("\\.rda$", "", input.rda)
+GE_file <- sub("\\.rda$|\\.RData$", "", input.rda)
 dimred.method <- sobj@misc$params$reductions$method
 ident.name <- sobj@misc$params$clustering$ident
 RNA.reduction <- sobj@misc$params$clustering$umap

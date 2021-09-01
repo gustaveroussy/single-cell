@@ -28,6 +28,14 @@ def int_clust_markers_annot_params_sing(wildcards):
         for metadatafile in list(dict.fromkeys(INT_CMA_METADATA_FILE.split(","))):
             metadatafile = os.path.dirname(metadatafile)
             concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
+    if INT_CMA_CUSTOM_SCE_REF != "NULL":
+        for custom_cse_ref in list(dict.fromkeys(INT_CMA_CUSTOM_SCE_REF.split(","))):
+            custom_cse_ref = os.path.dirname(custom_cse_ref)
+            concat = concat + " -B " + custom_cse_ref + ":" + os.path.normpath("/WORKDIR/" + custom_cse_ref)
+    if INT_CMA_CUSTOM_MARKERS_REF != "NULL":
+        for custom_marker_ref in list(dict.fromkeys(INT_CMA_CUSTOM_MARKERS_REF.split(","))):
+            custom_marker_ref = os.path.dirname(custom_marker_ref)
+            concat = concat + " -B " + custom_marker_ref + ":" + os.path.normpath("/WORKDIR/" + custom_marker_ref)
     return concat
 
 """
@@ -44,7 +52,10 @@ rule int_clust_markers_annot_ge:
         int_input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         int_output_folder = os.path.normpath("/WORKDIR/" + "{output_int_clust_markers_annot_dir_ge}") + "/",
         SING_INT_CMA_MARKFILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_MARKFILE.split(',')]) if INT_CMA_MARKFILE != "NULL" else "NULL",
-        SING_INT_CMA_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_METADATA_FILE.split(',')]) if INT_CMA_METADATA_FILE != "NULL" else "NULL"
+        SING_INT_CMA_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_METADATA_FILE.split(',')]) if INT_CMA_METADATA_FILE != "NULL" else "NULL",
+        SING_INT_CMA_CUSTOM_SCE_REF = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_CUSTOM_SCE_REF.split(',')]) if INT_CMA_CUSTOM_SCE_REF != "NULL" else "NULL",
+        SING_INT_CMA_CUSTOM_MARKERS_REF = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_CUSTOM_MARKERS_REF.split(',')]) if INT_CMA_CUSTOM_MARKERS_REF != "NULL" else "NULL"
+
     threads:
         1
     resources:
@@ -63,7 +74,9 @@ rule int_clust_markers_annot_ge:
         --author.mail {INT_CMA_AUTHOR_MAIL} \
         --nthreads {threads} \
         --pipeline.path {params.pipeline_folder} \
-        --markfile  {params.SING_INT_CMA_MARKFILE} \
+        --markfile {params.SING_INT_CMA_MARKFILE} \
+        --custom.sce.ref {params.SING_INT_CMA_CUSTOM_SCE_REF} \
+        --custom.markers.ref {params.SING_INT_CMA_CUSTOM_MARKERS_REF} \
         --keep.dims {INT_CMA_KEEP_DIM} \
         --keep.res {INT_CMA_KEEP_RES} \
         --cfr.minscore {INT_CMA_CFR_MINSCORE} \

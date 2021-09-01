@@ -169,7 +169,7 @@ sobj <- cells.QC.filter(sobj = sobj, min.features = min.features, min.counts = m
 
 ### Cell cycle prediction
 cat("\nCell cycle prediction...\n")
-sobj <- cell.cycle.predict(sobj = sobj, assay = assay, cc.cyclone.file = cc.cyclone.file, cc.seurat.file = cc.seurat.file, nbin = 10, BPPARAM = cl)
+sobj <- cell.cycle.predict(sobj = sobj, assay = assay, cc.cyclone.file = cc.cyclone.file, cc.seurat.file = cc.seurat.file, nbin = 10, nthreads = nthreads)
 
 ### Filtering features (based on minimum cells covering)
 cat("\nFiltering features...\n")
@@ -185,6 +185,7 @@ filtered.dir <- paste0(output.dir.ge, paste0('F', min.features, '_C', min.counts
 
 ### C. DOUBLETS KEPT:
 ##-------------------
+cat("\nDoublets kept part:\n")
 
 ### Building doublet kept output directory
 doublet.kept.dir <- paste0(filtered.dir, '/DOUBLETSKEPT/')
@@ -225,6 +226,7 @@ norm.red.plot.quick(sobj = sobj, sample.name.GE = sample.name.GE, pre.out.dir = 
 
 ### D. DOUBLETS REMOVED:
 ##-------------------
+cat("\nDoublets removed part:\n")
 
 if(doublets.filter.method != 'none'){
 

@@ -21,14 +21,21 @@ def clust_markers_annot_params_sing(wildcards):
     output_folder = wildcards.output_clust_markers_annot_dir_ge
     concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + rda_folder + ":" + os.path.normpath("/WORKDIR/" + rda_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder)
     if CMA_MARKFILE != "NULL":
-        CMA_MARKFILE_LIST = list(dict.fromkeys(CMA_MARKFILE.split(",")))
-        for markfile in CMA_MARKFILE_LIST:
+        for markfile in list(dict.fromkeys(CMA_MARKFILE.split(","))):
             markfile = os.path.dirname(markfile)
             concat = concat + " -B " + markfile + ":" + os.path.normpath("/WORKDIR/" + markfile)
     if CMA_METADATA_FILE != "NULL":
         for metadatafile in list(dict.fromkeys(CMA_METADATA_FILE.split(","))):
             metadatafile = os.path.dirname(metadatafile)
             concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
+    if CMA_CUSTOM_SCE_REF != "NULL":
+        for custom_cse_ref in list(dict.fromkeys(CMA_CUSTOM_SCE_REF.split(","))):
+            custom_cse_ref = os.path.dirname(custom_cse_ref)
+            concat = concat + " -B " + custom_cse_ref + ":" + os.path.normpath("/WORKDIR/" + custom_cse_ref)
+    if CMA_CUSTOM_MARKERS_REF != "NULL":
+        for custom_marker_ref in list(dict.fromkeys(CMA_CUSTOM_MARKERS_REF.split(","))):
+            custom_marker_ref = os.path.dirname(custom_marker_ref)
+            concat = concat + " -B " + custom_marker_ref + ":" + os.path.normpath("/WORKDIR/" + custom_marker_ref)
     return concat
 
 """
@@ -45,7 +52,9 @@ rule clust_markers_annot_ge:
         input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         output_folder = os.path.normpath("/WORKDIR/" + "{output_clust_markers_annot_dir_ge}") + "/",
         SING_CMA_MARKFILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_MARKFILE.split(',')]) if CMA_MARKFILE != "NULL" else "NULL",
-        SING_CMA_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_METADATA_FILE.split(',')]) if CMA_METADATA_FILE != "NULL" else "NULL"
+        SING_CMA_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_METADATA_FILE.split(',')]) if CMA_METADATA_FILE != "NULL" else "NULL",
+        SING_CMA_CUSTOM_SCE_REF = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_CUSTOM_SCE_REF.split(',')]) if CMA_CUSTOM_SCE_REF != "NULL" else "NULL",
+        SING_CMA_CUSTOM_MARKERS_REF = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CMA_CUSTOM_MARKERS_REF.split(',')]) if CMA_CUSTOM_MARKERS_REF != "NULL" else "NULL"
     threads:
         1
     resources:
@@ -55,7 +64,7 @@ rule clust_markers_annot_ge:
         """
         export TMPDIR={GLOBAL_TMP}
         TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
+        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR:/home/$USER {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part4.R \
         --input.rda.ge {params.input_rda} \
@@ -65,6 +74,8 @@ rule clust_markers_annot_ge:
         --nthreads {threads} \
         --pipeline.path {params.pipeline_folder} \
         --markfile  {params.SING_CMA_MARKFILE} \
+        --custom.sce.ref {params.SING_CMA_CUSTOM_SCE_REF} \
+        --custom.markers.ref {params.SING_CMA_CUSTOM_MARKERS_REF} \
         --keep.dims {CMA_KEEP_DIM} \
         --keep.res {CMA_KEEP_RES} \
         --cfr.minscore {CMA_CFR_MINSCORE} \

@@ -8,4 +8,4 @@ reason: true
 printshellcmds: true
 jobname: "{name}.{jobid}.snakejob.sh"
 use-conda: true
-conda-prefix: $HOME/.snakemake/conda
+conda-prefix: ".snakemake/conda"

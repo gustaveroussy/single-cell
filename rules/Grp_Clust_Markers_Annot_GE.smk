@@ -28,6 +28,14 @@ def grp_clust_markers_annot_params_sing(wildcards):
         for metadatafile in list(dict.fromkeys(GRP_CMA_METADATA_FILE.split(","))):
             metadatafile = os.path.dirname(metadatafile)
             concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
+    if GRP_CMA_CUSTOM_SCE_REF != "NULL":
+        for custom_cse_ref in list(dict.fromkeys(GRP_CMA_CUSTOM_SCE_REF.split(","))):
+            custom_cse_ref = os.path.dirname(custom_cse_ref)
+            concat = concat + " -B " + custom_cse_ref + ":" + os.path.normpath("/WORKDIR/" + custom_cse_ref)
+    if GRP_CMA_CUSTOM_MARKERS_REF != "NULL":
+        for custom_marker_ref in list(dict.fromkeys(GRP_CMA_CUSTOM_MARKERS_REF.split(","))):
+            custom_marker_ref = os.path.dirname(custom_marker_ref)
+            concat = concat + " -B " + custom_marker_ref + ":" + os.path.normpath("/WORKDIR/" + custom_marker_ref)
     return concat
 
 """
@@ -44,7 +52,9 @@ rule grp_clust_markers_annot_ge:
         grp_input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
         grp_output_folder = os.path.normpath("/WORKDIR/" + "{output_grp_clust_markers_annot_dir_ge}") + "/",
         SING_GRP_CMA_MARKFILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in GRP_CMA_MARKFILE.split(',')]) if GRP_CMA_MARKFILE != "NULL" else "NULL",
-        SING_GRP_CMA_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in GRP_CMA_METADATA_FILE.split(',')]) if GRP_CMA_METADATA_FILE != "NULL" else "NULL"
+        SING_GRP_CMA_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in GRP_CMA_METADATA_FILE.split(',')]) if GRP_CMA_METADATA_FILE != "NULL" else "NULL",
+        SING_GRP_CMA_CUSTOM_SCE_REF = ','.join([os.path.normpath("/WORKDIR/" + x) for x in GRP_CMA_CUSTOM_SCE_REF.split(',')]) if GRP_CMA_CUSTOM_SCE_REF != "NULL" else "NULL",
+        SING_GRP_CMA_CUSTOM_MARKERS_REF = ','.join([os.path.normpath("/WORKDIR/" + x) for x in GRP_CMA_CUSTOM_MARKERS_REF.split(',')]) if GRP_CMA_CUSTOM_MARKERS_REF != "NULL" else "NULL"
     threads:
         1
     resources:
@@ -64,6 +74,8 @@ rule grp_clust_markers_annot_ge:
         --nthreads {threads} \
         --pipeline.path {params.pipeline_folder} \
         --markfile  {params.SING_GRP_CMA_MARKFILE} \
+        --custom.sce.ref {params.SING_GRP_CMA_CUSTOM_SCE_REF} \
+        --custom.markers.ref {params.SING_GRP_CMA_CUSTOM_MARKERS_REF} \
         --keep.dims {GRP_CMA_KEEP_DIM} \
         --keep.res {GRP_CMA_KEEP_RES} \
         --cfr.minscore {GRP_CMA_CFR_MINSCORE} \
