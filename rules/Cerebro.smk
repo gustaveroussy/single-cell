@@ -42,7 +42,7 @@ rule cerebro:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(5120 * attempt , 51200)),
+        mem_mb = (lambda wildcards, attempt: min(5120 * attempt , 102400)),
         time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
     shell:
         """

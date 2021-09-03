@@ -130,12 +130,12 @@ if (species == "homo_sapiens") {
 if (species == "mus_musculus") {
   singler.setnames <- c("MouseRNAseqData", "ImmGenData")
   clustifyr.setnames <- c("ref_MCA", "ref_tabula_muris_drop", "ref_tabula_muris_facs", "ref_moca_main", "ref_immgen", "ref_mouse.rnaseq")
-  scrnaseq.setnames <- c("BaronPancreasData(mouse)","ShekharRetinaData","ZeiselBrainData")
+  scrnaseq.setnames <- c("BaronPancreasData(mouse)","ZeiselBrainData") #,"ShekharRetinaData"
 }
 if (species == "rattus_norvegicus") {
   singler.setnames <- c("MouseRNAseqData", "ImmGenData")
   clustifyr.setnames <- c("ref_MCA", "ref_tabula_muris_drop", "ref_tabula_muris_facs", "ref_moca_main", "ref_immgen", "ref_mouse.rnaseq")
-  scrnaseq.setnames <- c("BaronPancreasData(mouse)","ShekharRetinaData","ZeiselBrainData")
+  scrnaseq.setnames <- c("BaronPancreasData(mouse)","ZeiselBrainData") #,"ShekharRetinaData"
 }
 
 #### Fixed parameters ####
