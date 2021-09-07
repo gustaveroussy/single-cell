@@ -1002,10 +1002,13 @@ if "Cerebro" in STEPS:
     if CEREBRO_REMOVE_MT == "TRUE" or CEREBRO_REMOVE_MT == "True": CEREBRO_COMPLEMENT = CEREBRO_COMPLEMENT + "_noMT"
     if CEREBRO_REMOVE_CRB == "TRUE" or CEREBRO_REMOVE_CRB == "True": CEREBRO_COMPLEMENT = CEREBRO_COMPLEMENT + "_noRB"
     if CEREBRO_REMOVE_STR == "TRUE" or CEREBRO_REMOVE_STR == "True": CEREBRO_COMPLEMENT = CEREBRO_COMPLEMENT + "_noSTR"
-    CEREBRO_COMPLEMENT_CRB = [CEREBRO_COMPLEMENT + ".crb"]
-    if (CEREBRO_GROUPS != None or CEREBRO_GROUPS != "NULL") and CEREBRO_VERSION == "v1.2":
+    if CEREBRO_VERSION == "v1.2":
+        CEREBRO_COMPLEMENT_CRB = [CEREBRO_COMPLEMENT + "_v1.2.crb"]
+    else:
+        CEREBRO_COMPLEMENT_CRB = [CEREBRO_COMPLEMENT + ".crb"]
+    if CEREBRO_GROUPS != None and CEREBRO_GROUPS != "NULL" and CEREBRO_VERSION == "v1.2":
         for group in CEREBRO_GROUPS.split(','):
-            CEREBRO_COMPLEMENT_CRB.append(CEREBRO_COMPLEMENT +  '_clusterIs_' + group + ".crb")
+            CEREBRO_COMPLEMENT_CRB.append(CEREBRO_COMPLEMENT +  '_clusterIs_' + group + "_v1.2.crb")
     #Correspondance sample/input/output
     CEREBRO_INPUT_RDA_NO_EXTENTION = [os.path.splitext(x)[0] for x in CEREBRO_INPUT_RDA]
     #Singularity environnement

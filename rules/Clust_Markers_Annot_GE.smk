@@ -59,7 +59,7 @@ rule clust_markers_annot_ge:
         1
     resources:
         mem_mb = (lambda wildcards, attempt: min(10240 + attempt * 5120, 81920)),
-        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
+        time_min = (lambda wildcards, attempt: min(attempt * 120, 420))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}

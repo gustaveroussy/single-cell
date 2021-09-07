@@ -2594,7 +2594,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
 
   ## Conversion in cerebro objet
   cat("\nConversion in cerebro objet...\n")
-  file = paste(c(file, if(remove.mt.genes) 'noMT' else NULL, if(remove.crb.genes) 'noRB' else NULL, if(remove.str.genes) 'noSTR' else NULL, if(!is.null(clusters.colnames)) paste0('clusterIs_', clusters.colnames) else NULL), collapse = '_')
+  file = paste(c(file, if(remove.mt.genes) 'noMT' else NULL, if(remove.crb.genes) 'noRB' else NULL, if(remove.str.genes) 'noSTR' else NULL, if(is.null(clusters.colnames)) NULL else paste0('clusterIs_', clusters.colnames)), collapse = '_')
   cerebroApp::exportFromSeurat(object = sobj, assay = assay, experiment_name = sample.name, organism = species, file = paste0(file, '_v1.2.crb'), add_all_meta_data = TRUE)
   message("Cerebro file done!")
 }
