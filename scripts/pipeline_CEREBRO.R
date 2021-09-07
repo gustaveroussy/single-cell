@@ -130,7 +130,7 @@ if (is.null(gmt.file)) gmt.file <- paste0(pipeline.path, "/resources/DATABASE/MS
 #### Fixed parameters ####
 # Cerebro
 if (species == "homo_sapiens") species.rdx <- 'hg'
-if (species == "mus_musculus") species.rdx <- 'rn'
+if (species == "mus_musculus") species.rdx <- 'mm'
 if (species == "rattus_norvegicus") species.rdx <- 'rn'
 
 #########

@@ -2752,6 +2752,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
         }
       }
       ## Download bbd for "genes on cell surface" column for get markers
+      print(species)
       if (species == 'hg'){
         temp_attributes <- 'hgnc_symbol'
         temp_dataset <- 'hsapiens_gene_ensembl'
