@@ -2401,7 +2401,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
     tmp_markers <- tmp_markers[tmp_markers$p_val_adj < thresh_p_val, ]
     if (dim(tmp_markers)[1]!=0){
       tmp_markers <- tmp_markers[order(tmp_markers$cluster, tmp_markers$p_val_adj),] 
-      sobj@misc$marker_genes$by_sample <- data.frame(cluster=tmp_markers$cluster, gene=tmp_markers$gene, p_val=tmp_markers$p_val, avg_logFC=tmp_markers$avg_log2FC, pct.1=tmp_markers$pct.1, pct.2=tmp_markers$pct.2, p_val_adj=tmp_markers$p_val_adj)
+      sobj@misc$marker_genes$by_sample <- data.frame(sample=tmp_markers$cluster, gene=tmp_markers$gene, p_val=tmp_markers$p_val, avg_logFC=tmp_markers$avg_log2FC, pct.1=tmp_markers$pct.1, pct.2=tmp_markers$pct.2, p_val_adj=tmp_markers$p_val_adj)
       sobj@misc$marker_genes$by_sample <- sobj@misc$marker_genes$by_sample %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_sample$gene %in% genes_on_cell_surface)
     } else sobj@misc$marker_genes$by_sample <- 'no_markers_found'
     #restore ident and clean
