@@ -223,5 +223,5 @@ write_MandM(sobj=sobj, output.dir=clust.dir)
 
 ### Saving final object
 cat("\nSaving object...\n")
-GE_file=paste0(clust.dir, '/', paste(c(sub(pattern = "(.*)\\..*$", replacement = "\\1", basename(input.rda.ge)), keep.dims, keep.res), collapse = "_"))
+GE_file=paste0(clust.dir, '/', paste(c(sub(pattern = "(.*)\\..*$", replacement = "\\1", basename(input.rda.int)), keep.dims, keep.res), collapse = "_"))
 save(sobj, file = paste0(GE_file, '.rda'), compress = "bzip2")

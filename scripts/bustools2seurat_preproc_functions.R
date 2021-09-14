@@ -2314,8 +2314,8 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   sobj@meta.data$sample <- as.factor(sobj@meta.data[[sample.colname]])
   sobj@meta.data$cluster <- if(is.null(clusters.colnames)) sobj@meta.data[[ident]] else sobj@meta.data[[clusters.colnames]]
   Seurat::Idents(sobj) <- sobj@meta.data$cluster
-  sobj@meta.data$nUMI <- if(paste0('nCount_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nCount_', assay)]] else sobj@meta.data$nCount_RNA
-  sobj@meta.data$nGene <- if(paste0('nFeature_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nFeature_', assay)]] else sobj@meta.data$nFeature_RNA
+  sobj@meta.data$nUMI <- sobj@meta.data$nCount_RNA #satija déconseille d'utiliser le nCount_SCT et nFeature_SCT qui n'ont pas de réelle signification
+  sobj@meta.data$nGene <- sobj@meta.data$nFeature_RNA
   if('percent_rb' %in% colnames(sobj@meta.data)) sobj@meta.data$percent_ribo <- sobj$percent_rb
   if('Seurat.Phase' %in% colnames(sobj@meta.data)) sobj@meta.data$cell_cycle_seurat <- as.factor(sobj$Seurat.Phase)
   if('Cyclone.Phase' %in% colnames(sobj@meta.data)) sobj@meta.data$cell_cycle_cyclone <- as.factor(sobj$Cyclone.Phase)
@@ -2334,8 +2334,10 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   cat("\nClean meta.data...\n")
   # sobj@meta.data[[sample.colname]] <- NULL
   # if(is.null(clusters.colnames) && remove.other.idents) sobj[[ident]] <- NULL
-  if(paste0('nCount_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nCount_', assay)]] <- NULL else sobj@meta.data$nCount_RNA <- NULL
-  if(paste0('nFeature_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nFeature_', assay)]] <- NULL else sobj@meta.data$nFeature_RNA <- NULL
+  if('nCount_SCT' %in% colnames(sobj@meta.data)) sobj@meta.data$nCount_SCT <- NULL
+  sobj@meta.data$nCount_RNA <- NULL
+  if('nFeature_SCT' %in% colnames(sobj@meta.data)) sobj@meta.data$nFeature_SCT <- NULL
+  sobj@meta.data$nFeature_RNA <- NULL
   if('percent_rb' %in% colnames(sobj@meta.data)) sobj@meta.data$percent_rb <- NULL
   if('Seurat.Phase' %in% colnames(sobj@meta.data)) sobj@meta.data$Seurat.Phase <- NULL
   if('Cyclone.Phase' %in% colnames(sobj@meta.data)) sobj@meta.data$Cyclone.Phase <- NULL
@@ -2347,9 +2349,9 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   percent_top_col = grep("percent_top_", colnames(sobj@meta.data), value = TRUE)
   if(length(percent_top_col) > 0) sobj@meta.data[percent_top_col] <- NULL
 
-  ## Get most expressed genes
+  ## Get most expressed genes (@counts slot)
   cat("\nGet most expressed genes...\n")
-  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj, assay = if(assay == "integrated") "SCT" else assay), silent = TRUE)
+  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj), silent = TRUE) #RNA assay by default
   if('most_expressed_genes' %in% names(sobj@misc)) {
     ## Removing MT genes (if requested)
     if (remove.mt.genes) {
@@ -2373,7 +2375,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
 
   ## Get Marker Genes
   cat("\nGet Marker Genes...\n")
-  # sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = assay, organism = species, only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
+  # sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", organism = species, only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
   
   # Download bbd for "genes on cell surface" column for get markers
   require(dplyr)
@@ -2491,8 +2493,8 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
     }
   }
 
-  ## Perform Enchichment by Cerebro
-  cat("\nPerform Enchichment...\n")
+  ## Perform Enrichment by Cerebro
+  cat("\nPerform Enrichment...\n")
    #save real clusters and sample name
   true_clusters <- sobj$cluster
   true_sample <- sobj$sample
@@ -2520,7 +2522,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   
   ## Perform GSEA by Cerebro
   cat("\nPerform GSEA...\n")
-  if(!is.null(gmt.file)) sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = assay, GMT_file = gmt.file, parallel.sz = nthreads)
+  if(!is.null(gmt.file)) sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", GMT_file = gmt.file, parallel.sz = nthreads)
 
   ## Add some experiment information
   cat("\nAdd experiment information...\n")
@@ -2595,7 +2597,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   ## Conversion in cerebro objet
   cat("\nConversion in cerebro objet...\n")
   file = paste(c(file, if(remove.mt.genes) 'noMT' else NULL, if(remove.crb.genes) 'noRB' else NULL, if(remove.str.genes) 'noSTR' else NULL, if(is.null(clusters.colnames)) NULL else paste0('clusterIs_', clusters.colnames)), collapse = '_')
-  cerebroApp::exportFromSeurat(object = sobj, assay = assay, experiment_name = sample.name, organism = species, file = paste0(file, '_v1.2.crb'), add_all_meta_data = TRUE)
+  cerebroApp::exportFromSeurat(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", experiment_name = sample.name, organism = species, file = paste0(file, '_v1.2.crb'), add_all_meta_data = TRUE)
   message("Cerebro file done!")
 }
 
@@ -2641,8 +2643,8 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   sample.name <- Seurat::Project(sobj)
   sobj@meta.data$sample <- as.factor(sobj@meta.data[[sample.colname]])
   if(length(setdiff(Seurat::Idents(sobj), sobj@meta.data[[ident]])) !=0) Seurat::Idents(sobj) <- sobj@meta.data[[ident]]
-  sobj@meta.data$nUMI <- if(paste0('nCount_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nCount_', assay)]] else sobj@meta.data$nCount_RNA
-  sobj@meta.data$nGene <- if(paste0('nFeature_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nFeature_', assay)]] else sobj@meta.data$nFeature_RNA
+  sobj@meta.data$nUMI <- sobj@meta.data$nCount_RNA #satija déconseille d'utiliser le nCount_SCT et nFeature_SCT qui n'ont pas de réelle signification
+  sobj@meta.data$nGene <- sobj@meta.data$nFeature_RNA
   if('percent_rb' %in% colnames(sobj@meta.data)) sobj$percent_ribo <- sobj$percent_rb
   projections_available <- names(sobj@reductions)
   if(length(projections_available) >= 1){
@@ -2676,8 +2678,10 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   ## Clean meta.data
   cat("\nClean meta.data...\n")
   sobj@meta.data[[sample.colname]] <- NULL
-  if(paste0('nCount_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nCount_', assay)]] <- NULL else sobj@meta.data$nCount_RNA <- NULL
-  if(paste0('nFeature_', assay) %in% colnames(sobj@meta.data)) sobj@meta.data[[paste0('nFeature_', assay)]] <- NULL else sobj@meta.data$nFeature_RNA <- NULL
+  if('nCount_SCT' %in% colnames(sobj@meta.data)) sobj@meta.data$nCount_SCT <- NULL
+  sobj@meta.data$nCount_RNA <- NULL
+  if('nFeature_SCT' %in% colnames(sobj@meta.data)) sobj@meta.data$nFeature_SCT <- NULL
+  sobj@meta.data$nFeature_RNA <- NULL
   if('percent_rb' %in% colnames(sobj@meta.data)) sobj@meta.data$percent_rb <- NULL
   if('pcmito_inrange' %in% colnames(sobj@meta.data)) sobj@meta.data$pcmito_inrange <- NULL
   if('pcribo_inrange' %in% colnames(sobj@meta.data)) sobj@meta.data$pcribo_inrange <- NULL
@@ -2687,9 +2691,9 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   percent_top_col = grep("percent_top_", colnames(sobj@meta.data), value = TRUE)
   if(length(percent_top_col) > 0) sobj@meta.data[percent_top_col] <- NULL
   
-  ## Get most expressed genes
+  ## Get most expressed genes (@counts slot)
   cat("\nGet most expressed genes...\n")
-  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj, assay = assay, groups = groups), silent = TRUE)
+  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj), silent = TRUE) #RNA assay by default
   if('most_expressed_genes' %in% names(sobj@misc)) {
     ## Removing MT genes (if requested)
     if (remove.mt.genes) {
@@ -2713,7 +2717,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   
   ## Get Marker Genes
   cat("\nGet Marker Genes...\n")
-  sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = assay, organism = species, groups = groups, name = 'classical_markers', only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
+  sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", organism = species, groups = groups, name = 'classical_markers', only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
   
   ## Add test DEG results
   if(!remove.custom.DE){
@@ -2776,8 +2780,8 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
     }
   }
   
-  ## Perform Enchichment by Cerebro
-  cat("\nPerform Enchichment...\n")
+  ## Perform Enrichment by Cerebro
+  cat("\nPerform Enrichment...\n")
   tryCatch( { sobj <- cerebroApp::getEnrichedPathways(object = sobj, marker_genes_input = 'classical_markers') },
             error=function(error_message) { message("Error in cerebroApp::getEnrichedPathways function.")} )
   if(!is.null(sobj@misc$marker_genes[["differential_custom"]])) tryCatch( { sobj <- cerebroApp::getEnrichedPathways(object = sobj, marker_genes_input = 'differential_custom') },
@@ -2785,7 +2789,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   
   ## Perform GSEA by Cerebro
   cat("\nPerform GSEA...\n")
-  if(!is.null(gmt.file)) for (group in groups){ try(sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = assay, groups = group, name = 'GSVA', GMT_file = gmt.file, parallel.sz = nthreads)) }
+  if(!is.null(gmt.file)) for (group in groups){ try(sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", groups = group, name = 'GSVA', GMT_file = gmt.file, parallel.sz = nthreads)) }
   
   ## Add some experiment information
   cat("\nAdd experiment information...\n")
@@ -2876,7 +2880,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   ## Conversion in cerebro objet
   cat("\nConversion in cerebro objet...\n")
   file = paste(c(file, if(remove.mt.genes) 'noMT' else NULL, if(remove.crb.genes) 'noRB' else NULL, if(remove.str.genes) 'noSTR' else NULL), collapse = '_')
-  cerebroApp::exportFromSeurat(object = sobj, assay = assay, groups = groups, cell_cycle = c("Seurat.Phase","Cyclone.Phase"), experiment_name = sample.name, organism = organism, file = paste0(file, '.crb'), add_all_meta_data = TRUE)
+  cerebroApp::exportFromSeurat(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", groups = groups, cell_cycle = c("Seurat.Phase","Cyclone.Phase"), experiment_name = sample.name, organism = organism, file = paste0(file, '.crb'), add_all_meta_data = TRUE)
   message("Cerebro file done!")
 }
 

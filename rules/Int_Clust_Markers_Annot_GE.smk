@@ -65,7 +65,7 @@ rule int_clust_markers_annot_ge:
         """
         export TMPDIR={GLOBAL_TMP}
         TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_int_bind} \
+        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR:$HOME {params.sing_int_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Integration_part2.R \
         --input.rda.int {params.int_input_rda} \

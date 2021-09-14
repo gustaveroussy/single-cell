@@ -235,7 +235,7 @@ if(keep.norm){
 }
 
 ### Merge
-sobj <- merge(x = sobj.list[[1]], y = sobj.list[[-1]], add.cell.ids = names(sobj.list), project = name.grp, merge.data = TRUE)
+sobj <- merge(x = sobj.list[[1]], y = sobj.list[-1], add.cell.ids = names(sobj.list), project = name.grp, merge.data = TRUE)
 sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
 
 ### Clean
