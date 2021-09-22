@@ -48,8 +48,7 @@ rule cerebro:
         """
         export TMPDIR={GLOBAL_TMP}
         TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        mkdir -p $HOME/.sc_cache && \
-        singularity exec --contain --home $HOME/.sc_cache:$HOME -B $TMP_DIR:/tmp {params.sing_bind} \
+        singularity exec --contain --home $TMP_DIR:$HOME -B $TMP_DIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV_CEREBRO} \
         Rscript {params.pipeline_folder}/scripts/pipeline_CEREBRO.R \
         --input.rda.ge {params.input_rda} \

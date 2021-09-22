@@ -43,7 +43,7 @@ rule norm_dimred_ge:
     threads:
         4
     resources:
-        mem_mb = (lambda wildcards, attempt: min(5120 + attempt * 3072, 30720)),
+        mem_mb = (lambda wildcards, attempt: min(5120 + attempt * 5120, 61440)),
         time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
     shell:
         """

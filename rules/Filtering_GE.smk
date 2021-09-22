@@ -53,7 +53,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
         threads:
             4
         resources:
-            mem_mb = (lambda wildcards, attempt: min(6144 + attempt * 3072, 20480)),
+            mem_mb = (lambda wildcards, attempt: min(5121 + attempt * 5121, 51200)),
             time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
         shell:
             """
@@ -105,7 +105,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
         threads:
             4
         resources:
-            mem_mb = (lambda wildcards, attempt: min(6144 + attempt * 2048, 20480)),
+            mem_mb = (lambda wildcards, attempt: min(5121 + attempt * 5121, 51200)),
             time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
         shell:
             """
