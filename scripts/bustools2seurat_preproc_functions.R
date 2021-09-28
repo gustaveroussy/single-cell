@@ -1063,20 +1063,6 @@ louvain.cluster <- function(sobj = NULL, reduction = 'RNA_scbfa', max.dim = 100L
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #vérifie la bonne formation des objets singlecellexperiment et calcul les log(counts) si besoin:
 verif_counts_log <- function(sce = NULL){
   if ("logcounts" %in% assayNames(sce)){ #si slot "log_counts" non vide
@@ -1171,202 +1157,6 @@ known_exp_ref <- function(setname = NULL, singler.setnames = NULL, clustifyr.set
     return(scrnaseq_ref)
   }
 }
-
-## Automatic annotation of cells/clusters
-### NOTE : Already tried to use @scale.data (with regression) instead of @data : IT IS NOT A GOOD IDEA,  VERY FEW CELLS SCORED!
-cells.annot_vrai <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnames = NULL, clustifyr.setnames = NULL, scrnaseq.setnames = scrnaseq.setnames, custom.sce.ref = NULL, sr.minscore = .25, cfr.minscore = .35, out.dir = NULL, solo.pt.size = 2) {
-  if (is.null(out.dir)) stop('No output dir provided !')
-  if (!dir.exists(out.dir)) stop('Output directory does not exist !')
-  if (is.null(sobj)) stop('No Seurat object provided !')
-  if (is.null(ident)) stop("No ident name provided !")
-  if (!ident %in% colnames(sobj@meta.data)) stop(paste0("Ident '", ident, "' not fond in Seurat object !"))
-  umap.name <- sobj@misc$ident2reduction[[ident]]
-  if (!umap.name %in% names(sobj@reductions)) stop(paste0("Could not find expected uMAP reduction '", umap.name, "' from ident !"))
-  reduction <- sobj@reductions[[umap.name]]@misc$from.reduction
-  if (!reduction %in% names(sobj@reductions)) stop(paste0("Could not find reduction '", reduction, "' from ident !"))
-  assay <- sobj@reductions[[reduction]]@misc$from.assay
-  if (!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist in the provided Seurat object !'))
-  if (!"seed" %in% names(sobj@misc$params)) stop("No seed found in Seurat object !")
-  
-  ## Save command
-  sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("cells.annot(sobj = sobj, ident = ", ident, ", slot = ", slot, ", singler.setnames = ", paste0("c(", paste(singler.setnames, collapse = ","),")"), ", clustifyr.setnames = ", paste0("c(", paste(clustifyr.setnames, collapse = ","),")"), ", scrnaseq.setnames = ", paste0("c(", paste(scrnaseq.setnames, collapse = ","),")"), ", custom.sce.ref = ", paste0("c(", paste(custom.sce.ref, collapse = ","),")"), ", sr.minscore = ", sr.minscore, ", cfr.minscore = ", cfr.minscore, ", out.dir = ", out.dir, ", solo.pt.size = ", solo.pt.size, ")"))
-  
-  ## NEVER CHANGE THIS !!
-  # slot <- 'data'
-  library(patchwork)
-  
-  ## Restoring seed and sample name from within the object
-  my.seed <- sobj@misc$params$seed
-  set.seed(my.seed)
-  sample.name <- Seurat::Project(sobj)
-  
-  ## Building output structure
-  cellannot.dir <- paste0(out.dir, "/cells_annotation/")
-  sr.cellannot.dir <- paste0(cellannot.dir, "singleR")
-  cfr.cellannot.dir <- paste0(cellannot.dir, "clustifyR")
-  dir.create(sr.cellannot.dir, recursive = TRUE, showWarnings = FALSE)
-  dir.create(cfr.cellannot.dir, recursive = TRUE, showWarnings = FALSE)
-  
-  ## Retrieving data
-  mydata <- methods::slot(sobj@assays[[assay]], slot)
-  
-  ## Format custom references
-  if(!is.null(custom.sce.ref)){
-    custom.setnames <- sapply(seq_along(custom.sce.ref), function(x) { sub("(.*)\\..*$", "\\1", basename(custom.sce.ref[x])) })
-    names(custom.sce.ref) <- custom.setnames
-  }else custom.setnames <- NULL
-  
-  ## Group references names
-  builtin.setnames <- c(singler.setnames,clustifyr.setnames,scrnaseq.setnames)
-  all.setnames <- c(builtin.setnames,custom.setnames)
-  
-  ## Annotation
-  for (setname in all.setnames) {
-    print(setname)
-    
-    ### Get reference
-    suppressMessages(require(celldex))
-    suppressMessages(require(clustifyrdata))
-    suppressMessages(require(scRNAseq))
-    if (setname %in% builtin.setnames){
-      ref <- suppressMessages(suppressWarnings(known_exp_ref(setname = setname, singler.setnames = singler.setnames, clustifyr.setnames = clustifyr.setnames, scrnaseq.setnames = scrnaseq.setnames))) #SCE object
-    }else if(setname %in% custom.setnames){
-      name_ref <- load(custom.sce.ref[setname]) #SCE object
-      ref <- get(name_ref)
-      rm(list = c(name_ref,'name_ref'))
-      ref <- verif_counts_log(ref)
-    }else stop("Unknown reference!")
-    
-    ### SingleR
-    if(!setname == "ref_hema_microarray"){ #there is an error with I don't know why
-      
-      ## format ref
-      SR_ref <- ref
-      
-      ## per cell
-      entryname <- paste0("SR_", setname, "_cells")
-      tryCatch( {
-        #annotation
-        singler.res <- SingleR::SingleR(test = mydata, ref = SR_ref, labels = SR_ref$labels)
-        singler.res$pruned.labels[singler.res@listData$tuning.scores$first < sr.minscore] <- NA
-        sobj@meta.data[[entryname]] <- as.factor(unname(singler.res$pruned.labels))
-        png(paste0(sr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-        if (all(is.na(sobj@meta.data[[entryname]]))) { #no annotation find
-          suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("SingleR predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-        } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("SingleR predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-        dev.off()
-      },  error=function(error_message) { message(paste0("Error in singleR function for cells with database ", setname," : ", error_message))} )
-      
-      ## per cluster
-      entryname <- paste0("SR_", setname, "_clust")
-      tryCatch( {
-        sobj@meta.data[[entryname]] <- sobj@meta.data[[ident]]
-        singler.res <- SingleR::SingleR(test = mydata, ref = SR_ref, labels = SR_ref$labels, clusters = sobj[[entryname, drop = TRUE]])
-        singler.res$pruned.labels[singler.res@listData$tuning.scores$first < sr.minscore] <- NA
-        levels(sobj@meta.data[[entryname]]) <- singler.res$pruned.labels
-        if (all(is.na(sobj@meta.data[[entryname]]))) {
-          png(paste0(sr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-          suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("SingleR predicted cell types (", setname, ") for ", length(unique(sobj$seurat_clusters)), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-          dev.off()
-        } else {
-          png(paste0(sr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-          suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("SingleR predicted cell types (", setname, ") for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-          dev.off()
-          
-          annot_col <- data.frame(labels = singler.res$pruned.labels, clusters = rownames(singler.res), row.names = rownames(singler.res))
-          df_annot <- t(singler.res$scores)
-          colnames(df_annot) <- rownames(singler.res)
-          pheat <- cowplot::plot_grid(ggplotify::as.grob(pheatmap::pheatmap(df_annot, annotation_col = annot_col, color = grDevices::colorRampPalette(viridis::viridis(100))(100), border_color = NA, fontsize = 15)), ncol = 1)
-          pheat <- pheat + plot_annotation(title = 'Heatmap of correlation scores',
-                                           subtitle = paste0('To detect the ambiguity of the cell type assignment (labels from ', setname, ')'),
-                                           theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 30),plot.subtitle = ggplot2::element_text(size = 20)))
-          png(paste0(sr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '_heatmap.png'), width = 1100, height = 1100)
-          print(pheat) #the pheatmap must be created ousite png() function and print into it, else the first pheatmap is never saved (I don't know why...)
-          dev.off()
-        }
-      },  error=function(error_message) { message(paste0("Error in singleR function for clusters with database ", setname," : ", error_message))} )
-      
-    }
-    
-    ### CLUSTIFYR
-    
-    ## format ref
-    if(any(duplicated(ref$labels))){
-      CFR_ref <- clustifyr::average_clusters(mat = ref@assays@data$logcounts, metadata = ref$labels, if_log = TRUE) #necessary if the cell type is present several times
-    }else{
-      CFR_ref <- ref@assays@data$logcounts
-      colnames(CFR_ref) <- ref$labels
-    }
-    
-    ## get non-variable genes
-    non.var.genes <- rownames(sobj@assays[[assay]]@data)[!(rownames(sobj@assays[[assay]]@data) %in% sobj@assays[[assay]]@var.features)]
-    
-    ## per cell
-    entryname <- paste0("CFR_", setname, "_cells")
-    tryCatch( {
-      sobj@meta.data[[entryname]] <- sobj@meta.data[[ident]]
-      cfyr.res <- suppressMessages(clustifyr::clustify(input = mydata, metadata = sobj[[entryname, drop = TRUE]], ref_mat = CFR_ref, per_cell = TRUE, dr = umap.name, exclude_genes = non.var.genes))
-      cfyr.res.tbl <- clustifyr::cor_to_call(cfyr.res)
-      cfyr.res.tbl$type[cfyr.res.tbl$r < cfr.minscore] <- NA
-      cfyr.res.tbl <- cfyr.res.tbl[order(cfyr.res.tbl$cluster),]
-      sobj@meta.data[[entryname]] <- cfyr.res.tbl$type
-      png(paste0(cfr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-      if (all(is.na(sobj@meta.data[[entryname]]))) {
-        suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("clustifyr predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-      } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("clustifyr predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-      dev.off()
-    },  error=function(error_message) { message(paste0("Error in clustifyR function for cells with database ", setname," : ", error_message))} )
-    
-    ## per cluster
-    entryname <- paste0("CFR_", setname, "_clust")
-    tryCatch( {
-      sobj@meta.data[[entryname]] <- sobj@meta.data[[ident]]
-      cfyr.res <- suppressMessages(clustifyr::clustify(input = mydata, metadata = sobj[[entryname, drop = TRUE]], ref_mat = CFR_ref, per_cell = FALSE, dr = umap.name, exclude_genes = non.var.genes))
-      cfyr.res.tbl <- clustifyr::cor_to_call(cfyr.res)
-      cfyr.res.tbl$type[cfyr.res.tbl$r < cfr.minscore] <- NA
-      cfyr.res.tbl <- cfyr.res.tbl[order(as.numeric(cfyr.res.tbl$cluster)),]
-      levels(sobj@meta.data[[entryname]]) <- cfyr.res.tbl$type
-      if (all(is.na(sobj@meta.data[[entryname]]))) {
-        png(paste0(cfr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-        suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("clustifyr predicted cell types (", setname, ") for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-        dev.off()
-      } else {
-        png(paste0(cfr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-        suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("clustifyr predicted cell types (", setname, ") for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-        dev.off()
-        
-        annot_col <- data.frame(labels = cfyr.res.tbl$type, clusters = cfyr.res.tbl$cluster, row.names = cfyr.res.tbl$cluster)
-        df_annot <- t(cfyr.res)
-        pheat <- cowplot::plot_grid(ggplotify::as.grob(pheatmap::pheatmap(df_annot, annotation_col = annot_col, color = grDevices::colorRampPalette(viridis::viridis(100))(100), border_color = NA, fontsize = 15)), ncol = 1)
-        pheat <- pheat + plot_annotation(title = 'Heatmap of correlation scores',
-                                         subtitle = paste0('To detect the ambiguity of the cell type assignment (labels from ', setname, ')'),
-                                         theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 30),plot.subtitle = ggplot2::element_text(size = 20)))
-        png(paste0(cfr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '_heatmap.png'), width = 1100, height = 1100)
-        print(pheat)
-        dev.off()
-      }
-    },  error=function(error_message) { message(paste0("Error in clustifyR function for clusters with database ", setname," : ", error_message))} )
-    
-    ### OTHER TOOL
-    
-  }
-  
-  ## Save parameters
-  sobj@misc$params$annot <- list(ident = ident,
-                                 slot = slot,
-                                 singler.setnames = singler.setnames,
-                                 clustifyr.setnames = clustifyr.setnames,
-                                 sr.minscore = sr.minscore,
-                                 cfr.minscore = cfr.minscore)
-  sobj@misc$params$annot$Rsession <- utils::capture.output(devtools::session_info())
-  ## Save packages versions
-  sobj@misc$technical_info$SingleR <- utils::packageVersion('SingleR')
-  sobj@misc$technical_info$clustifyrdata <- utils::packageVersion('clustifyrdata')
-  sobj@misc$technical_info$clustifyr <- utils::packageVersion('clustifyr')
-  
-  return(sobj)
-}
-
 
 pangloa_markers_ref <- function(species = NULL) {
   library(dplyr)
@@ -1778,27 +1568,6 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## Find markers
 find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.use = 'wilcox', min.pct = .75, logfc.threshold = .5, only.pos = TRUE, adjp.p.max = 5E-02, topn = 10, heatmap.cols = c("gold", "blue"), out.dir = NULL) {
   if (is.null(out.dir)) stop('No output directory provided !')
@@ -1902,21 +1671,29 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
           dev.off()
         }
       }
-    }else message("No markers pass the pvalue adjusted threshold!")
-  }else message("No markers identified!")
+      
+      ## Save table
+      df_res=data.frame(genes = fmark$gene, logFC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All", min.pct = min.pct)
+      write.table(df_res,file = paste0(fmark.dir, '/', sample.name, '_', ident, '_findmarkers_all.txt'), sep = "\t",quote = FALSE, row.names = FALSE, col.names = TRUE, dec = ",")
+      sobj@misc$find.markers.quick <- df_res
+    
+    }else{
+      message("No markers pass the pvalue adjusted threshold!")
+      sobj@misc$find.markers.quick <- matrix(nrow = 0, ncol = 0)
+    }
+  }else{
+    message("No markers identified!")
+    sobj@misc$find.markers.quick <- matrix(nrow = 0, ncol = 0)
+  }
 
   ## Restoring original ident
   Seurat::Idents(sobj) <- ori.ident
 
-  ## Save table
-  df_res=data.frame(genes = fmark$gene, logFC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All", min.pct = min.pct)
-  write.table(df_res,file = paste0(fmark.dir, '/', sample.name, '_', ident, '_findmarkers_all.txt'), sep = "\t",quote = FALSE, row.names = FALSE, col.names = TRUE, dec = ",")
   
   ## Cleaning
   sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
 
-  ## Save results and parameters
-  sobj@misc$find.markers.quick <- df_res
+  ## Save parameters
   sobj@misc$params$find.markers.quick <- list(ident = ident,
                                               method = test.use,
                                               min.pct = min.pct,
@@ -2388,9 +2165,12 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   }
   genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
   #clusters
-  sobj@misc$marker_genes$by_cluster <- data.frame(cluster=sobj@misc$find.markers.quick$tested_cluster, gene=sobj@misc$find.markers.quick$genes, p_val=sobj@misc$find.markers.quick$p_val, avg_logFC=sobj@misc$find.markers.quick$avg_log2FC, pct.1=sobj@misc$find.markers.quick$pct.1, pct.2=sobj@misc$find.markers.quick$pct.2, p_val_adj=sobj@misc$find.markers.quick$adj.P.Val)
-  sobj@misc$marker_genes$by_cluster <- sobj@misc$marker_genes$by_cluster %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_cluster$gene %in% genes_on_cell_surface)
-  
+  if (dim(sobj@misc$find.markers.quick[1]!=0){
+    sobj@misc$marker_genes$by_cluster <- data.frame(cluster=sobj@misc$find.markers.quick$tested_cluster, gene=sobj@misc$find.markers.quick$genes, p_val=sobj@misc$find.markers.quick$p_val, avg_logFC=sobj@misc$find.markers.quick$avg_log2FC, pct.1=sobj@misc$find.markers.quick$pct.1, pct.2=sobj@misc$find.markers.quick$pct.2, p_val_adj=sobj@misc$find.markers.quick$adj.P.Val)
+    sobj@misc$marker_genes$by_cluster <- sobj@misc$marker_genes$by_cluster %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_cluster$gene %in% genes_on_cell_surface)
+  }else{
+      sobj@misc$marker_genes$by_cluster <- 'no_markers_found'
+  }
   #samples
   if (length(unique(sort(sobj@meta.data[[sample.colname]])))>1){ #if more than one sample
     #save ident
