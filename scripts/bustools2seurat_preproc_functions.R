@@ -1431,44 +1431,44 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
       
     },  error=function(error_message) { message(paste0("Error in CelliD function for cells with database ", setname," : ", error_message))} )
     
-    ## per cluster : be careful the tool is not made for that
-    entryname <- paste0("CID_", setname, "_clust")
-    tryCatch( {
-      #format a new seurat object with mean expression by cluster
-      sobj_clust_table_log <- clustifyr::average_clusters(mat = sobj@assays[[assay]]@data, metadata = sobj@meta.data[[ident]], if_log = TRUE)
-      clust_sobj <- suppressWarnings(Seurat::CreateSeuratObject(counts = sobj_clust_table_log, project = "clust_sobj", min.cells = 0, min.features = 0))
-      clust_sobj@assays$RNA@data <- clust_sobj@assays$RNA@counts
-      clust_sobj@meta.data[[ident]] <- colnames(clust_sobj)
-      clust_sobj <- Seurat::ScaleData(clust_sobj, features = rownames(clust_sobj))
-      #annotation
-      clust_sobj <- suppressWarnings(CelliD::RunMCA(X = clust_sobj, nmcs = (length(colnames(clust_sobj))-2), slot = 'data', assay = 'RNA', reduction = "mca"))
-      cid.res <- CelliD::RunCellHGT(clust_sobj, pathways = CID_ref, reduction = "mca", dims = 1:(length(colnames(clust_sobj))-2), n.features = 200, minSize = 0)
-      cid.labels <- rownames(cid.res)[apply(cid.res, 2, which.max)] #assign the best label (best pvalue)
-      cid.labels <- ifelse(apply(cid.res, 2, max)>2, yes = cid.labels, NA) #assign NA if pvalue is not significant (p-value is <1e-02 (-log10(p-value)>2))
-      #save results
-      sobj@meta.data[[entryname]] <- sobj@meta.data[[ident]]
-      levels(sobj@meta.data[[entryname]]) <- as.factor(unname(cid.labels))
-      #umap
-      png(paste0(cid.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-      if (all(is.na(sobj@meta.data[[entryname]]))) { #no annotation find
-        suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ")for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-      } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ") for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-      dev.off()
-      #heatmap
-      if (!all(is.na(cid.labels))){
-        annot_col <- data.frame(labels = cid.labels, clusters = names(cid.labels), row.names = names(cid.labels))
-        if(length(which(Matrix::rowSums(cid.res)==0)) == length(rownames(cid.res))) df_annot <- cid.res else df_annot <- cid.res[-which(Matrix::rowSums(cid.res) == 0),] #del if 0 on all line
-        pheat <- cowplot::plot_grid(ggplotify::as.grob(pheatmap::pheatmap(df_annot, annotation_col = annot_col, color = grDevices::colorRampPalette(viridis::viridis(100))(100), border_color = NA, fontsize = 15)), ncol = 1)
-        pheat <- pheat + plot_annotation(title = 'Heatmap of correlation scores',
-                                         subtitle = paste0('To detect the ambiguity of the cell type assignment (labels from ', setname, ')'),
-                                         theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 30),plot.subtitle = ggplot2::element_text(size = 20)))
-        png(paste0(cid.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '_heatmap.png'), width = if(setname == "pangloa") 1500 else 1100, height = if(setname == "pangloa") 2000 else 1100)
-        print(pheat)
-        dev.off()
-      }
-      #clean
-      rm(sobj_clust_table_log, clust_sobj, cid.res, cid.labels)
-    },  error=function(error_message) { message(paste0("Error in CelliD function for clusters with database ", setname," : ", error_message))} )
+    # ## per cluster : be careful the tool is not made for that
+    # entryname <- paste0("CID_", setname, "_clust")
+    # tryCatch( {
+    #   #format a new seurat object with mean expression by cluster
+    #   sobj_clust_table_log <- clustifyr::average_clusters(mat = sobj@assays[[assay]]@data, metadata = sobj@meta.data[[ident]], if_log = TRUE)
+    #   clust_sobj <- suppressWarnings(Seurat::CreateSeuratObject(counts = sobj_clust_table_log, project = "clust_sobj", min.cells = 0, min.features = 0))
+    #   clust_sobj@assays$RNA@data <- clust_sobj@assays$RNA@counts
+    #   clust_sobj@meta.data[[ident]] <- colnames(clust_sobj)
+    #   clust_sobj <- Seurat::ScaleData(clust_sobj, features = rownames(clust_sobj))
+    #   #annotation
+    #   clust_sobj <- suppressWarnings(CelliD::RunMCA(X = clust_sobj, nmcs = (length(colnames(clust_sobj))-2), slot = 'data', assay = 'RNA', reduction = "mca"))
+    #   cid.res <- CelliD::RunCellHGT(clust_sobj, pathways = CID_ref, reduction = "mca", dims = 1:(length(colnames(clust_sobj))-2), n.features = 200, minSize = 0)
+    #   cid.labels <- rownames(cid.res)[apply(cid.res, 2, which.max)] #assign the best label (best pvalue)
+    #   cid.labels <- ifelse(apply(cid.res, 2, max)>2, yes = cid.labels, NA) #assign NA if pvalue is not significant (p-value is <1e-02 (-log10(p-value)>2))
+    #   #save results
+    #   sobj@meta.data[[entryname]] <- sobj@meta.data[[ident]]
+    #   levels(sobj@meta.data[[entryname]]) <- as.factor(unname(cid.labels))
+    #   #umap
+    #   png(paste0(cid.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
+    #   if (all(is.na(sobj@meta.data[[entryname]]))) { #no annotation find
+    #     suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ")for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
+    #   } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ") for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
+    #   dev.off()
+    #   #heatmap
+    #   if (!all(is.na(cid.labels))){
+    #     annot_col <- data.frame(labels = cid.labels, clusters = names(cid.labels), row.names = names(cid.labels))
+    #     if(length(which(Matrix::rowSums(cid.res)==0)) == length(rownames(cid.res))) df_annot <- cid.res else df_annot <- cid.res[-which(Matrix::rowSums(cid.res) == 0),] #del if 0 on all line
+    #     pheat <- cowplot::plot_grid(ggplotify::as.grob(pheatmap::pheatmap(df_annot, annotation_col = annot_col, color = grDevices::colorRampPalette(viridis::viridis(100))(100), border_color = NA, fontsize = 15)), ncol = 1)
+    #     pheat <- pheat + plot_annotation(title = 'Heatmap of correlation scores',
+    #                                      subtitle = paste0('To detect the ambiguity of the cell type assignment (labels from ', setname, ')'),
+    #                                      theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 30),plot.subtitle = ggplot2::element_text(size = 20)))
+    #     png(paste0(cid.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '_heatmap.png'), width = if(setname == "pangloa") 1500 else 1100, height = if(setname == "pangloa") 2000 else 1100)
+    #     print(pheat)
+    #     dev.off()
+    #   }
+    #   #clean
+    #   rm(sobj_clust_table_log, clust_sobj, cid.res, cid.labels)
+    # },  error=function(error_message) { message(paste0("Error in CelliD function for clusters with database ", setname," : ", error_message))} )
     
     # ### CellAssign
     # 
@@ -1562,7 +1562,7 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
   sobj@misc$technical_info$clustifyrdata <- utils::packageVersion('clustifyrdata')
   sobj@misc$technical_info$clustifyr <- utils::packageVersion('clustifyr')
   sobj@misc$technical_info$CelliD <- utils::packageVersion('CelliD')
-  sobj@misc$technical_info$cellassign <- utils::packageVersion('cellassign')
+  # sobj@misc$technical_info$cellassign <- utils::packageVersion('cellassign')
   
   return(sobj)
 }
@@ -2152,7 +2152,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
 
   ## Get Marker Genes
   cat("\nGet Marker Genes...\n")
-  # sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", organism = species, only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
+  # sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", organism = species, only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
   
   # Download bbd for "genes on cell surface" column for get markers
   require(dplyr)
@@ -2165,7 +2165,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   }
   genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
   #clusters
-  if (dim(sobj@misc$find.markers.quick[1]!=0){
+  if (dim(sobj@misc$find.markers.quick)[1]!=0){
     sobj@misc$marker_genes$by_cluster <- data.frame(cluster=sobj@misc$find.markers.quick$tested_cluster, gene=sobj@misc$find.markers.quick$genes, p_val=sobj@misc$find.markers.quick$p_val, avg_logFC=sobj@misc$find.markers.quick$avg_log2FC, pct.1=sobj@misc$find.markers.quick$pct.1, pct.2=sobj@misc$find.markers.quick$pct.2, p_val_adj=sobj@misc$find.markers.quick$adj.P.Val)
     sobj@misc$marker_genes$by_cluster <- sobj@misc$marker_genes$by_cluster %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_cluster$gene %in% genes_on_cell_surface)
   }else{
@@ -2302,7 +2302,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   
   ## Perform GSEA by Cerebro
   cat("\nPerform GSEA...\n")
-  if(!is.null(gmt.file)) sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", GMT_file = gmt.file, parallel.sz = nthreads)
+  if(!is.null(gmt.file)) sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", GMT_file = gmt.file, parallel.sz = nthreads)
 
   ## Add some experiment information
   cat("\nAdd experiment information...\n")
@@ -2377,7 +2377,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   ## Conversion in cerebro objet
   cat("\nConversion in cerebro objet...\n")
   file = paste(c(file, if(remove.mt.genes) 'noMT' else NULL, if(remove.crb.genes) 'noRB' else NULL, if(remove.str.genes) 'noSTR' else NULL, if(is.null(clusters.colnames)) NULL else paste0('clusterIs_', clusters.colnames)), collapse = '_')
-  cerebroApp::exportFromSeurat(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", experiment_name = sample.name, organism = species, file = paste0(file, '_v1.2.crb'), add_all_meta_data = TRUE)
+  cerebroApp::exportFromSeurat(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", experiment_name = sample.name, organism = species, file = paste0(file, '_v1.2.crb'), add_all_meta_data = TRUE)
   message("Cerebro file done!")
 }
 
@@ -2497,7 +2497,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   
   ## Get Marker Genes
   cat("\nGet Marker Genes...\n")
-  sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", organism = species, groups = groups, name = 'classical_markers', only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
+  sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", organism = species, groups = groups, name = 'classical_markers', only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
   
   ## Add test DEG results
   if(!remove.custom.DE){
@@ -2569,7 +2569,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   
   ## Perform GSEA by Cerebro
   cat("\nPerform GSEA...\n")
-  if(!is.null(gmt.file)) for (group in groups){ try(sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", groups = group, name = 'GSVA', GMT_file = gmt.file, parallel.sz = nthreads)) }
+  if(!is.null(gmt.file)) for (group in groups){ try(sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", groups = group, name = 'GSVA', GMT_file = gmt.file, parallel.sz = nthreads)) }
   
   ## Add some experiment information
   cat("\nAdd experiment information...\n")
@@ -2660,7 +2660,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   ## Conversion in cerebro objet
   cat("\nConversion in cerebro objet...\n")
   file = paste(c(file, if(remove.mt.genes) 'noMT' else NULL, if(remove.crb.genes) 'noRB' else NULL, if(remove.str.genes) 'noSTR' else NULL), collapse = '_')
-  cerebroApp::exportFromSeurat(object = sobj, assay = if("SCT" %in% Assays(sobj)) "SCT" else "RNA", groups = groups, cell_cycle = c("Seurat.Phase","Cyclone.Phase"), experiment_name = sample.name, organism = organism, file = paste0(file, '.crb'), add_all_meta_data = TRUE)
+  cerebroApp::exportFromSeurat(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", groups = groups, cell_cycle = c("Seurat.Phase","Cyclone.Phase"), experiment_name = sample.name, organism = organism, file = paste0(file, '.crb'), add_all_meta_data = TRUE)
   message("Cerebro file done!")
 }
 
@@ -3150,7 +3150,7 @@ Quantif.unique.c <- function(sobj = NULL, ident.name=NULL, list_type_clT = c("ge
   for(x in list_type_clT){
     ### Tables
     tmp = scRepertoire::quantContig(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall=x, scale = T, exportTable = T)
-    tmp = data.frame(lapply((tmp %>% select("total_contigs_numbers"="total","unique_contig_numbers"="contigs","unique_contig_percents"="scaled") %>% round(2)), as.character), row.names = paste0("Cluster ", tmp$values))
+    tmp = data.frame(lapply((tmp %>% select("total_nb_contigs"="total","unique_nb_contig"="contigs","unique_contig_pct"="scaled") %>% round(2)), as.character), row.names = paste0("Cluster ", tmp$values))
     tmp = merge(df_nb_cells, tmp, by="row.names", all=TRUE) %>% arrange(desc(nb_cells))
     rownames(tmp)=tmp$Row.names
     tmp$Row.names=NULL

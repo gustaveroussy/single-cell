@@ -163,7 +163,7 @@ rule alignment_annotations_tcr_bcr:
         3
     resources:
         mem_mb = (lambda wildcards, attempt: min(1024 + attempt * 2048, 10240)),
-        time_min = (lambda wildcards, attempt: min(10*60 + attempt * 120, 24*60))
+        time_min = (lambda wildcards, attempt: min(22*60 + attempt * 180, 48*60))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:

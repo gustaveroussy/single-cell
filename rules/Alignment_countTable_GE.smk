@@ -81,7 +81,7 @@ This rule makes the multiqc from the fastqc and the fastq-screen results.
 The function allows to get all QC input files for one specific sample (wildcards).
 """
 def multiqc_inputs_ge(wildcards):
-    name_R1_R2=[elem for elem in ALIGN_SYMLINK_FILES_NAME_GE if re.search(wildcards.sample_name_ge, elem)]
+    name_R1_R2=[elem for elem in ALIGN_SYMLINK_FILES_NAME_GE if re.search(str( "^" + wildcards.sample_name_ge), elem)]
     name_R2=[elem for elem in name_R1_R2 if re.search("R2", elem)]
     files=[]
     for name in name_R1_R2:
