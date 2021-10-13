@@ -424,7 +424,7 @@ if "Adding_ADT" in STEPS:
         ADD_ADT_SAMPLE_NAME_ADT_RAW = config['Adding_ADT']['sample.name.adt']
         #check samples names and add "_ADT" if needed
         ADD_ADT_SAMPLE_NAME_ADT = []
-        for i in range(0,len(ADD_ADT_SAMPLE_NAME_GE_RAW),1):
+        for i in range(0,len(ADD_ADT_SAMPLE_NAME_ADT_RAW),1):
             ADD_ADT_SAMPLE_NAME_ADT.append(ADD_ADT_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (ADD_ADT_SAMPLE_NAME_ADT_RAW[i][len(ADD_ADT_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else ADD_ADT_SAMPLE_NAME_ADT.append(ADD_ADT_SAMPLE_NAME_ADT_RAW[i])
     elif "Alignment_countTable_ADT" in STEPS:
         sys.stderr.write("Note: No sample.name.adt or input.dir.adt find in Adding_ADT section of configfile; sample.name.adt and input.dir.adt will be determine from Alignment_countTable_ADT step for Adding_ADT step!\n")
