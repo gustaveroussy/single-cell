@@ -30,75 +30,32 @@ if os.path.normpath(GLOBAL_TMP) != "/tmp" :
         sys.stderr.write(GLOBAL_TMP + " doesn't exist! Temporary directory is set to /tmp \n")
         GLOBAL_TMP = "/tmp"
 
-if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS:
-    # 10X Technology
-    if 'Alignment_countTable_GE' in config and 'sctech' in config['Alignment_countTable_GE']:
-        SCTECH = config['Alignment_countTable_GE']['sctech']
-    elif 'Alignment_countTable_ADT' in config and 'sctech' in config['Alignment_countTable_ADT']:
-        SCTECH = config['Alignment_countTable_ADT']['sctech']
-    else:
-        SCTECH = '10xv3' # '10xv1_3' '10xv1_5' '10xv2' '10xv3'
-    # whitelist
-    if SCTECH == '10xv3' :
-        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/3M-february-2018.txt' # '737K-august-2016.txt' '3M-february-2018.txt'
-    elif SCTECH == '10xv2':
-        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/737K-august-2016.txt'
-    elif SCTECH == '10xv1_5':
-        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/737K-august-2016.txt'
-        SCTECH=SCTECH.split("_")[0]
-    elif SCTECH == '10xv1_3':
-        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/737K-april-2014_rc.txt'
-        SCTECH=SCTECH.split("_")[0]
-    else :
-        sys.exit("Error: sctech doesn't exist! Only '10xv1_3','10xv1_5','10xv2' and '10xv3' are available.\n")
-
-if "Alignment_countTable_GE" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
-    # Fastq-screen Index
-    if 'Alignment_countTable_GE' in config and 'fastqscreen_index' in config['Alignment_countTable_GE']:
-        FASTQSCREEN_INDEX = config['Alignment_countTable_GE']['fastqscreen_index']
-    elif 'Alignment_annotations_TCR_BCR' in config and 'fastqscreen_index' in config['Alignment_annotations_TCR_BCR']:
-        FASTQSCREEN_INDEX = config['Alignment_annotations_TCR_BCR']['fastqscreen_index']
-    else :
-        FASTQSCREEN_INDEX = "/mnt/beegfs/database/bioinfo/single-cell/INDEX/FASTQ_SCREEN/0.14.0/fastq_screen.conf"
-
-if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
-    # Cutadapt parameters
-    ADAPTERSEQ='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'
-    MINBASEQ=28
-    # Name of conda environment
-    CONDA_ENV_QC_ALIGN_GE_ADT = PIPELINE_FOLDER + "/envs/conda/QC_Alignment.yml"
-
 if "Alignment_countTable_GE" in STEPS:
-    if SCTECH == '10xv1':
-        ### Sample/Project
-        if 'Alignment_countTable_GE' in config and 'sample.name.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No sample.name.ge in configfile (Alignment_countTable_GE)!")
-    else:
-        ### Sample/Project
-        if 'Alignment_countTable_GE' in config and 'sample.name.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No sample.name.ge in configfile (Alignment_countTable_GE)!")
-        if 'Alignment_countTable_GE' in config and 'input.dir.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No input.dir.ge in configfile (Alignment_countTable_GE)!")
-        if 'Alignment_countTable_GE' in config and 'output.dir.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No output.dir.ge in configfile (Alignment_countTable_GE)!")
-        ALIGN_SAMPLE_NAME_GE_RAW = config['Alignment_countTable_GE']['sample.name.ge']
-        ALIGN_INPUT_DIR_GE_RAW = os.path.normpath(config['Alignment_countTable_GE']['input.dir.ge'])
-        ALIGN_OUTPUT_DIR_GE = os.path.normpath(config['Alignment_countTable_GE']['output.dir.ge'])
-        ALIGN_INPUT_DIR_GE = os.path.normpath(GLOBAL_TMP + "/fastq/")
-        ### Index
-        KINDEX_GE = config['Alignment_countTable_GE']['kindex.ge'] if 'Alignment_countTable_GE' in config and 'kindex.ge' in config['Alignment_countTable_GE'] else sys.exit("Error: No kindex.ge in configfile (Alignment_countTable_GE)!")
-        TR2GFILE_GE = config['Alignment_countTable_GE']['tr2g.file.ge'] if 'Alignment_countTable_GE' in config and 'tr2g.file.ge' in config['Alignment_countTable_GE'] else sys.exit("Error: No tr2g.file.ge in configfile (Alignment_countTable_GE)!")
-        REF_TXT_GE = config['Alignment_countTable_GE']['reference.txt'] if 'reference.txt' in config['Alignment_countTable_GE'] else "<insert_you_reference_here>"
-        ### File names
-        ALIGN_SAMPLE_NAME_GE = []
-        ALIGN_SYMLINK_FILES_GE = []
-        ALIGN_SYMLINK_FILES_NAME_GE = []
-        for i in range(0,len(ALIGN_SAMPLE_NAME_GE_RAW),1):
-            #check samples names and add "_GE" if needed
-            ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i] + "_GE") if (ALIGN_SAMPLE_NAME_GE_RAW[i][len(ALIGN_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i])
-            #get files with path and extention
-            #ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R2_*.f*q*"))
-            ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_[1-4]_S*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_S[0-9]*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_[1-4]_S*_R2_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_S[0-9]*_R2_*.f*q*"))
-            #new files with path and extention
-            ALIGN_SYMLINK_FILES_GE = ALIGN_SYMLINK_FILES_GE + [ os.path.normpath(ALIGN_INPUT_DIR_GE + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_GE_RAW[i], ALIGN_SAMPLE_NAME_GE[i])) for file in ORIG_FILES]
-        #new files without path and extention
-        ALIGN_SYMLINK_FILES_NAME_GE = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_GE]
+    ### Sample/Project
+    if 'Alignment_countTable_GE' in config and 'sample.name.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No sample.name.ge in configfile (Alignment_countTable_GE)!")
+    if 'Alignment_countTable_GE' in config and 'input.dir.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No input.dir.ge in configfile (Alignment_countTable_GE)!")
+    if 'Alignment_countTable_GE' in config and 'output.dir.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No output.dir.ge in configfile (Alignment_countTable_GE)!")
+    ALIGN_SAMPLE_NAME_GE_RAW = config['Alignment_countTable_GE']['sample.name.ge']
+    ALIGN_INPUT_DIR_GE_RAW = os.path.normpath(config['Alignment_countTable_GE']['input.dir.ge'])
+    ALIGN_OUTPUT_DIR_GE = os.path.normpath(config['Alignment_countTable_GE']['output.dir.ge'])
+    ALIGN_INPUT_DIR_GE = os.path.normpath(GLOBAL_TMP + "/fastq/")
+    ### Index
+    KINDEX_GE = config['Alignment_countTable_GE']['kindex.ge'] if 'Alignment_countTable_GE' in config and 'kindex.ge' in config['Alignment_countTable_GE'] else sys.exit("Error: No kindex.ge in configfile (Alignment_countTable_GE)!")
+    TR2GFILE_GE = config['Alignment_countTable_GE']['tr2g.file.ge'] if 'Alignment_countTable_GE' in config and 'tr2g.file.ge' in config['Alignment_countTable_GE'] else sys.exit("Error: No tr2g.file.ge in configfile (Alignment_countTable_GE)!")
+    REF_TXT_GE = config['Alignment_countTable_GE']['reference.txt'] if 'reference.txt' in config['Alignment_countTable_GE'] else "<insert_you_reference_here>"
+    ### File names
+    ALIGN_SAMPLE_NAME_GE = []
+    ALIGN_SYMLINK_FILES_GE = []
+    ALIGN_SYMLINK_FILES_NAME_GE = []
+    for i in range(0,len(ALIGN_SAMPLE_NAME_GE_RAW),1):
+        #check samples names and add "_GE" if needed
+        ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i] + "_GE") if (ALIGN_SAMPLE_NAME_GE_RAW[i][len(ALIGN_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i])
+        #ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R2_*.f*q*"))
+        ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_[1-4]_S*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_S[0-9]*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_[1-4]_S*_R2_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_S[0-9]*_R2_*.f*q*"))
+        #files with path and extention
+        ALIGN_SYMLINK_FILES_GE = ALIGN_SYMLINK_FILES_GE + [ os.path.normpath(ALIGN_INPUT_DIR_GE + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_GE_RAW[i], ALIGN_SAMPLE_NAME_GE[i])) for file in ORIG_FILES]
+    #files without path and extention
+    ALIGN_SYMLINK_FILES_NAME_GE = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_GE]
 
 if "Alignment_countTable_ADT" in STEPS:
     ### Sample/Project
@@ -119,12 +76,10 @@ if "Alignment_countTable_ADT" in STEPS:
     for i in range(0,len(ALIGN_SAMPLE_NAME_ADT_RAW),1):
         #check samples names and add "_ADT" if needed
         ALIGN_SAMPLE_NAME_ADT.append(ALIGN_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (ALIGN_SAMPLE_NAME_ADT_RAW[i][len(ALIGN_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else ALIGN_SAMPLE_NAME_ADT.append(ALIGN_SAMPLE_NAME_ADT_RAW[i])
-        #get files with path and extention
-        #ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R2_*.f*q*"))
-        ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "_[1-4]_S*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "_S[0-9]*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "_[1-4]_S*_R2_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "_S[0-9]*_R2_*.f*q*"))
-        #new files with path and extention
+        ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R2_*.f*q*"))
+        #files with path and extention
         ALIGN_SYMLINK_FILES_ADT = ALIGN_SYMLINK_FILES_ADT + [ os.path.normpath(ALIGN_INPUT_DIR_ADT + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_ADT_RAW[i], ALIGN_SAMPLE_NAME_ADT[i])) for file in ORIG_FILES]
-    #new files without path and extention
+    #files without path and extention
     ALIGN_SYMLINK_FILES_NAME_ADT = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_ADT]
 
 if "Alignment_annotations_TCR_BCR" in STEPS:
@@ -150,24 +105,18 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
         for i in range(0,len(ALIGN_SAMPLE_NAME_TCR_RAW),1):
             #check samples names and add "_TCR" if needed
             ALIGN_SAMPLE_NAME_TCR.append(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_TCR") if (ALIGN_SAMPLE_NAME_TCR_RAW[i][len(ALIGN_SAMPLE_NAME_TCR_RAW[i])-4:] != "_TCR") else ALIGN_SAMPLE_NAME_TCR.append(ALIGN_SAMPLE_NAME_TCR_RAW[i])
-            #get files with path and extention
             ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_R2_*.f*q*"))
-            if SCTECH == '10xv1':
-                ORIG_FILES = ORIG_FILES + glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_I1_*.f*q*"))
-            #new files with path and extention
+             #files with path and extention
             ALIGN_ORIG_FILES_TCR = ALIGN_ORIG_FILES_TCR + ORIG_FILES
             for file in ORIG_FILES:
-                if re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_S[0-9]+_L00[0-9]{1}_[R|I][1-2]{1}_.*"), os.path.basename(file)) is not None: #good name format
+                if re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_S[0-9]+_L00[0-9]{1}_R[1-2]{1}_.*"), os.path.basename(file)) is not None: #good name format
                     ALIGN_SYMLINK_FILES_TCR = ALIGN_SYMLINK_FILES_TCR + [ os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_TCR_RAW[i], ALIGN_SAMPLE_NAME_TCR[i])) ]
                 elif re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_[0-9]{1}_S[0-9]+_R[1-2]{1}_.*"), os.path.basename(file)) is not None: # => reformat
                     res_match = re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_(?P<nb>[0-9]{1})_(?P<S>S[0-9]+)_(?P<R_compl>R[1-2]{1}_.*)"), os.path.basename(file))
                     ALIGN_SYMLINK_FILES_TCR = ALIGN_SYMLINK_FILES_TCR + [ os.path.normpath(str(ALIGN_INPUT_DIR_TCR_BCR + "/" + ALIGN_SAMPLE_NAME_TCR[i] + "_" + res_match.group('S') + "_L00" + res_match.group('nb') + "_" + res_match.group('R_compl'))) ]
-                elif re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_[0-9]{1}_S[0-9]+_I[1-2]{1}_.*"), os.path.basename(file)) is not None: # => reformat
-                    res_match = re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_(?P<nb>[0-9]{1})_(?P<S>S[0-9]+)_(?P<I_compl>I[1-2]{1}_.*)"), os.path.basename(file))
-                    ALIGN_SYMLINK_FILES_TCR = ALIGN_SYMLINK_FILES_TCR + [ os.path.normpath(str(ALIGN_INPUT_DIR_TCR_BCR + "/" + ALIGN_SAMPLE_NAME_TCR[i] + "_" + res_match.group('S') + "_L00" + res_match.group('nb') + "_" + res_match.group('I_compl'))) ]
                 else:
                     sys.exit("File names for TCR not recognized. It must be like mysample_2_S1_R1_001.fastq.gz or mysample_S1_L002_R1_001.fastq.gz")
-        #new files without path and extention
+        #files without path and extention
         ALIGN_SYMLINK_FILES_NAME_TCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_TCR]
     else:
         ALIGN_SAMPLE_NAME_TCR_RAW = []
@@ -180,11 +129,8 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
         for i in range(0,len(ALIGN_SAMPLE_NAME_BCR_RAW),1):
             #check samples names and add "_BCR" if needed
             ALIGN_SAMPLE_NAME_BCR.append(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_BCR") if (ALIGN_SAMPLE_NAME_BCR_RAW[i][len(ALIGN_SAMPLE_NAME_BCR_RAW[i])-4:] != "_BCR") else ALIGN_SAMPLE_NAME_BCR.append(ALIGN_SAMPLE_NAME_BCR_RAW[i])
-            #get files with path and extention
             ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_R2_*.f*q*"))
-            if SCTECH == '10xv1':
-                ORIG_FILES = ORIG_FILES + glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_I1_*.f*q*"))
-            #new files with path and extention
+            #files with path and extention
             ALIGN_ORIG_FILES_BCR = ALIGN_ORIG_FILES_BCR + ORIG_FILES
             for file in ORIG_FILES:
                 if re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_S[0-9]+_L00[0-9]{1}_R[1-2]{1}_.*"), os.path.basename(file)) is not None: #good name format
@@ -192,12 +138,9 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
                 elif re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_[0-9]{1}_S[0-9]+_R[1-2]{1}_.*"), os.path.basename(file)) is not None: # => reformat
                     res_match = re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_(?P<nb>[0-9]{1})_(?P<S>S[0-9]+)_(?P<R_compl>R[1-2]{1}_.*)"), os.path.basename(file))
                     ALIGN_SYMLINK_FILES_BCR = ALIGN_SYMLINK_FILES_BCR + [ os.path.normpath(str(ALIGN_INPUT_DIR_TCR_BCR + "/" + ALIGN_SAMPLE_NAME_BCR[i] + "_" + res_match.group('S') + "_L00" + res_match.group('nb') + "_" + res_match.group('R_compl'))) ]
-                elif re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_[0-9]{1}_S[0-9]+_I[1-2]{1}_.*"), os.path.basename(file)) is not None: # => reformat
-                    res_match = re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_(?P<nb>[0-9]{1})_(?P<S>S[0-9]+)_(?P<I_compl>I[1-2]{1}_.*)"), os.path.basename(file))
-                    ALIGN_SYMLINK_FILES_BCR = ALIGN_SYMLINK_FILES_BCR + [ os.path.normpath(str(ALIGN_INPUT_DIR_TCR_BCR + "/" + ALIGN_SAMPLE_NAME_BCR[i] + "_" + res_match.group('S') + "_L00" + res_match.group('nb') + "_" + res_match.group('I_compl'))) ]
                 else:
                     sys.exit("File names for BCR not recognized. It must be like mysample_2_S1_R1_001.fastq.gz or mysample_S1_L002_R1_001.fastq.gz")
-        #new files without path and extention
+        #files without path and extention
         ALIGN_SYMLINK_FILES_NAME_BCR = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_BCR]
     else:
         ALIGN_SAMPLE_NAME_BCR_RAW = []
@@ -207,6 +150,37 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
     ALIGN_ORIG_FILES_TCR_BCR = ALIGN_ORIG_FILES_TCR + ALIGN_ORIG_FILES_BCR
     ALIGN_SYMLINK_FILES_TCR_BCR = ALIGN_SYMLINK_FILES_TCR + ALIGN_SYMLINK_FILES_BCR
     ALIGN_SYMLINK_FILES_NAME_TCR_BCR = ALIGN_SYMLINK_FILES_NAME_TCR + ALIGN_SYMLINK_FILES_NAME_BCR
+
+if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS:
+    # 10X Technology
+    if 'Alignment_countTable_GE' in config and 'sctech' in config['Alignment_countTable_GE']:
+        SCTECH = config['Alignment_countTable_GE']['sctech']
+    elif 'Alignment_countTable_ADT' in config and 'sctech' in config['Alignment_countTable_ADT']:
+        SCTECH = config['Alignment_countTable_ADT']['sctech']
+    else:
+        SCTECH = '10xv3' # '10xv2' '10xv3'
+    if SCTECH == '10xv3' :
+        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/3M-february-2018.txt' # '737K-august-2016.txt' '3M-february-2018.txt'
+    elif SCTECH == '10xv2' :
+        WHITELISTNAME = PIPELINE_FOLDER + '/resources/WHITELISTS/737K-august-2016.txt'
+    else :
+        sys.exit("Error: sctech doesn't exist! Only '10xv2' and '10xv3' are available.\n")
+
+if "Alignment_countTable_GE" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
+    # Fastq-screen Index
+    if 'Alignment_countTable_GE' in config and 'fastqscreen_index' in config['Alignment_countTable_GE']:
+        FASTQSCREEN_INDEX = config['Alignment_countTable_GE']['fastqscreen_index']
+    elif 'Alignment_annotations_TCR_BCR' in config and 'fastqscreen_index' in config['Alignment_annotations_TCR_BCR']:
+        FASTQSCREEN_INDEX = config['Alignment_annotations_TCR_BCR']['fastqscreen_index']
+    else :
+        FASTQSCREEN_INDEX = "/mnt/beegfs/database/bioinfo/single-cell/INDEX/FASTQ_SCREEN/0.14.0/fastq_screen.conf"
+
+if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
+    # Cutadapt parameters
+    ADAPTERSEQ='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'
+    MINBASEQ=28
+    # Name of conda environment
+    CONDA_ENV_QC_ALIGN_GE_ADT = PIPELINE_FOLDER + "/envs/conda/QC_Alignment.yml"
 
 if "Droplets_QC_GE" in STEPS:
     ### Sample/Project
@@ -737,7 +711,7 @@ if "Int_Adding_BCR" in STEPS:
     elif "Int_Adding_TCR" in STEPS:
         sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_TCR step for Int_Adding_BCR step!\n")
         INT_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in INT_ADD_TCR_OUTPUT]
-    elif "Int_Adding_ADT" in STEPS:
+    elif "Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_ADT step for Int_Adding_BCR step!\n")
         INT_ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in INT_ADD_ADT_OUTPUT]
     elif "Int_Clust_Markers_Annot_GE" in STEPS:
@@ -939,7 +913,7 @@ if "Grp_Adding_BCR" in STEPS:
     elif "Grp_Adding_TCR" in STEPS:
         sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_TCR step for Grp_Adding_BCR step!\n")
         GRP_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in GRP_ADD_TCR_OUTPUT]
-    elif "Grp_Adding_ADT" in STEPS:
+    elif "Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_ADT step for Grp_Adding_BCR step!\n")
         GRP_ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in GRP_ADD_ADT_OUTPUT]
     elif "Grp_Clust_Markers_Annot_GE" in STEPS:
@@ -1065,7 +1039,7 @@ rule all:
 
 
 ### real rules ###################################################################################################################################
-if "Alignment_countTable_GE" in STEPS and SCTECH != '10xv1':
+if "Alignment_countTable_GE" in STEPS:
     include: "rules/Alignment_countTable_GE.smk"
 
 if "Alignment_countTable_ADT" in STEPS:
