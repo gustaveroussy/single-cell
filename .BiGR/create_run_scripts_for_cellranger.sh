@@ -2,7 +2,7 @@
 # script to create cellranger scripts (one by sample), and launch it on flamingo cluster.
 # usage: 
 # script_folder="path_to_script_folder"
-# bash create_scripts_for_cellranger.sh "name_sample1" "name_sample2" "name_sample3"
+# bash create_run_scripts_for_cellranger.sh "name_sample1" "name_sample2" "name_sample3"
 
 all_samples=${*}
 
