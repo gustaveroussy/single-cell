@@ -1,7 +1,7 @@
 #!/bin/bash
 #usage: 
 #script_folder="path_to_script_folder"
-#bash create_scripts_for_cellranger.sh
+#bash create_scripts_for_cellranger.sh "name_sample1" "name_sample2" "name_sample3"
 
 all_samples=${*}
 
