@@ -34,6 +34,8 @@ cd ${CR_output}
 
 EOT
 
+sbatch ${script_folder}'/launcher_'${sample}'.sh'
+
 done
 
-sbatch ${script_folder}'/launcher_'${sample}'.sh'
+
