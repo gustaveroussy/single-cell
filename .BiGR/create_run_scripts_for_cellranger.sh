@@ -31,3 +31,5 @@ cd /mnt/beegfs/scratch/bioinfo_core/B21060_NADR_10/CellRanger
 EOT
 
 done
+
+sbatch ${script_folder}'/launcher_'${sample}'.sh'
