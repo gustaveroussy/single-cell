@@ -2,6 +2,7 @@
 # script to create cellranger scripts (one by sample), and launch it on flamingo cluster.
 # usage: 
 # CR_input_fq="path_to_fastq_files"
+# CR_output="path_to_output"
 # script_folder="path_to_script_folder"
 # bash create_run_scripts_for_cellranger.sh "name_sample1" "name_sample2" "name_sample3"
 
@@ -17,9 +18,10 @@ cat << EOT > ${script_folder}'/launcher_'${sample}'.sh'
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --partition=longq
+#SBATCH --partition=mediumq
 
-cd /mnt/beegfs/scratch/bioinfo_core/B21060_NADR_10/CellRanger
+mkdir -p ${CR_output}
+cd ${CR_output}
 
 /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger count \
 --id=${sample} \
