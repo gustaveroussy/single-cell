@@ -7,7 +7,7 @@
 ## OUTPUT_PATH="/mnt/beegfs/scratch/bioinfo_core/B21061_NADR_11/CellRanger/0_rename_fastq/"
 ## bash script_to_rename_fq_for_cellranger.sh
 ##
-## examples:
+## examples fo results:
 ## srun rsync -cvr HIP_1_S13_I1_001.fastq.gz > HIP_S13_L001_I1_001.fastq.gz
 ## srun rsync -cvr HIP_2_S13_I1_001.fastq.gz > HIP_S13_L002_I1_001.fastq.gz
 ## srun rsync -cvr HIP_3_S13_I1_001.fastq.gz > HIP_S13_L003_I1_001.fastq.gz
