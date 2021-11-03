@@ -211,7 +211,7 @@ for (i in seq(samples.name)){
   #### Analysis
   #Top 10 frequencies, and top 10 to top 20 frequencies
   top20_freq = sub_sobj@meta.data %>% select(Frequency_indiv,CTaa,highlight_aa_all) %>% distinct() %>% arrange(desc(Frequency_indiv)) %>% na.omit() %>% top_n(n = 20, wt = Frequency_indiv)
-  top20_freq = top20_freq[1:20,]
+  if (dim(top20_freq)[1]>20) top20_freq = top20_freq[1:20,]
   rownames(top20_freq)=top20_freq$highlight_aa_all
   sub_sobj$highlight_aa_top10_freq <- ifelse(sub_sobj$highlight_aa_all %in% top20_freq$highlight[1:10], sub_sobj$highlight_aa_all, NA)
   sub_sobj$highlight_aa_top11to20_freq <- ifelse(sub_sobj$highlight_aa_all %in% top20_freq$highlight[11:length(top20_freq$highlight)], sub_sobj$highlight_aa_all, NA)

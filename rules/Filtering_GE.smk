@@ -54,7 +54,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME != "none":
             4
         resources:
             mem_mb = (lambda wildcards, attempt: min(5121 + attempt * 5121, 51200)),
-            time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
+            time_min = (lambda wildcards, attempt: min(attempt * 180, 1000))
         shell:
             """
             export TMPDIR={GLOBAL_TMP}
@@ -106,7 +106,7 @@ if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
             4
         resources:
             mem_mb = (lambda wildcards, attempt: min(5121 + attempt * 5121, 51200)),
-            time_min = (lambda wildcards, attempt: min(attempt * 60, 500))
+            time_min = (lambda wildcards, attempt: min(attempt * 180, 1000))
         shell:
             """
             export TMPDIR={GLOBAL_TMP}

@@ -614,6 +614,7 @@ if "Int_Clust_Markers_Annot_GE" in STEPS:
     # Normalization and dimension reduction
     INT_CMA_KEEP_DIM = config['Int_Clust_Markers_Annot_GE']['keep.dims'] if ('Int_Clust_Markers_Annot_GE' in config and 'keep.dims' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['keep.dims'] != None) else "NULL"
     INT_CMA_KEEP_RES = config['Int_Clust_Markers_Annot_GE']['keep.res'] if ('Int_Clust_Markers_Annot_GE' in config and 'keep.res' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['keep.res'] != None) else "NULL"
+    INT_CMA_KEEP_RES = str(INT_CMA_KEEP_RES).replace(".0", "")
     INT_CMA_CFR_MINSCORE = config['Int_Clust_Markers_Annot_GE']['cfr.minscore'] if ('Int_Clust_Markers_Annot_GE' in config and 'cfr.minscore' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['cfr.minscore'] != None) else "NULL"
     INT_CMA_SR_MINSCORE = config['Int_Clust_Markers_Annot_GE']['sr.minscore'] if ('Int_Clust_Markers_Annot_GE' in config and 'sr.minscore' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['sr.minscore'] != None) else "NULL"
     # Metadata file
