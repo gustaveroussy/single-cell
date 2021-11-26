@@ -866,7 +866,7 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
   if (!"seed" %in% names(sobj@misc$params)) stop("No seed found in Seurat object !")
-  if (!(reduction %in% names(sobj@reductions))) stop(paste0('Reduction "', redution, '" not present in the provided Seurat object !'))
+  if (!(reduction %in% names(sobj@reductions))) stop(paste0('Reduction "', reduction, '" not present in the provided Seurat object !'))
   assay <- sobj@reductions[[reduction]]@misc$from.assay
   if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
   if (max(dimsvec) > ncol(sobj@reductions[[reduction]]@cell.embeddings)) stop(paste0('Max dimsvec requested is ', max(dimsvec), ' whereas max dimension in "', reduction, '" reduction is ', ncol(sobj@reductions[[reduction]]@cell.embeddings)))
