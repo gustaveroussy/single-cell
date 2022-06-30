@@ -4,10 +4,11 @@
 
 
 # Single-cell RNA-seq analysis pipeline
----
+
 ---
 ### Pipeline goal:  
 Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGenomics technology data.
+
 ---
 
 ### Available Steps:
