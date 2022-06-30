@@ -22,17 +22,25 @@ Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGen
 * Adding_ADT,
 * Adding_TCR,
 * Adding_BCR,
-* Cerebro.
+* Cerebro,
+* Int_Norm_DimRed_Eval_GE,
+* Int_Clust_Markers_Annot_GE,
+* Int_Adding_ADT,
+* Int_Adding_TCR,
+* Int_Adding_BCR,
+* Grp_Norm_DimRed_Eval_GE,
+* Grp_Clust_Markers_Annot_GE,
+* Grp_Adding_ADT,
+* Grp_Adding_TCR,
+* Grp_Adding_BCR.
 
 <br>
 <br>
 
 ### Future Developments:
-* Integration analysis of several samples,
-* Grouped analysis (no integration) of several samples,
-* TCR for several samples together,
-* BCR for several samples together,
 * Improve cell annotation,
+* Update to CellRanger 6.0.0,
+* Analysis of scATAC-seq,
 * ...
 
 <br>
