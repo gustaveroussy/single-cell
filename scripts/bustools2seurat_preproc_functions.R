@@ -63,7 +63,7 @@ create.parallel.instance <- function(nthreads = 1) {
 # 4) Remove empty droplets
 # 5) Plotting saturation and Kneeplot
 # 6) Creation of the Seurat object
-load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, translation = FALSE, translation.file = NULL, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE, metadata.file = NULL) {
+load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE, metadata.file = NULL, min.counts = 1000) {
   if (file.exists(data.path) && !is.null(sample.name)) {
     message("Loading data ...")
 
@@ -83,7 +83,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
       source.format <- "Alevin"
       scmat <- Seurat::ReadAlevin(data.path)
     } else if (file.exists(paste0(data.path, "/", sample.name, "_counts.tsv.gz"))) { ### UMI-tools
-      source.format <- "UMIt-ools"
+      source.format <- "UMI-tools"
       scmat <- read.table(file = paste0(data.path, "/", sample.name, "_counts.tsv.gz"), header = TRUE, sep = "\t", quote = "", check.names = FALSE, row.names = 1)
     } else {
       stop(paste0("No data found in [", data.path, "] (wrong path ?)"))
@@ -100,39 +100,6 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     umi.total.nb <- sum(scmat)
     print(umi.total.nb)
 
-    ## Rename ensembl genes id by genes symbols
-    if (translation){
-      message('Translation to genes symbols...')
-      data = read.table(file = translation.file, header = FALSE, sep = " ")
-      gene_name=vector()
-      for(i in 1:nrow(scmat)) {
-        index = grep(gsub("\\.[0-9]*$", "",rownames(scmat)[i]), as.vector(data[,1]))
-        if(!is.na(index)) gene_name[i] = as.vector(data[index,2]) else gene_name[i] = rownames(scmat)[i]
-      }
-      ##deduplicate lines
-      #identify duplicate genes names and position
-      dup.genes <- unique(gene_name[duplicated(gene_name)])
-      if(length(dup.genes) > 0) {
-        dup.pos=grep(paste0("^",paste(dup.genes,collapse="$|^"),"$"), gene_name)
-        message(paste0("Found ", length(dup.genes), ' (', sprintf("%.2f", length(dup.genes) / nrow(scmat) * 100), "%) replicated genes causes by translation! Summing ..."))
-        #data not duplicated
-        scmat_without_dup = scmat[-dup.pos,]
-        rownames(scmat_without_dup)=gene_name[-dup.pos]
-        #data duplicated
-        dup_scmat = as.data.frame(as.matrix(scmat[dup.pos,]))
-        dup_gene_names=gene_name[dup.pos]
-        rm(scmat)
-        #transform in non duplicated data
-        dedup_scmat = Matrix::Matrix(as.matrix(rowsum(dup_scmat,group=dup_gene_names)), sparse = TRUE)
-        #merge data
-        scmat = rbind(scmat_without_dup,dedup_scmat)
-        rm(scmat_without_dup,dedup_scmat)
-      }else{
-        rownames(scmat) = gene_name
-        message('No replicated gene found.')
-      }
-    }
-
     ## df for saturation plots and Kneeplot beging
     if(draw_plots){
       suppressMessages(library(dplyr))
@@ -144,12 +111,11 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     if (!is.null(droplets.limit) && ncol(scmat) > droplets.limit && !is.null(emptydrops.fdr)) {
       ## Removing empty droplets
       message("Removing empty droplets with emptyDrops")
-      bc_rank <- DropletUtils::barcodeRanks(scmat)
       set.seed(my.seed)
-      bc_rank2 <- DropletUtils::emptyDrops(scmat, BPPARAM = BPPARAM, retain=emptydrops.retain)
-      scmat_filtered <- scmat[, which(bc_rank2$FDR < emptydrops.fdr)]
+      bc_rank <- DropletUtils::emptyDrops(scmat, BPPARAM = BPPARAM, retain=emptydrops.retain)
+      scmat_filtered <- scmat[, which(bc_rank$FDR < emptydrops.fdr)]
       if(is.null(dim(scmat_filtered))){
-        message("emptyDrops find all droplets as empty! emptyDrops don't used!")
+        message("emptyDrops find all droplets as empty! emptyDrops not used!")
         emptydrops.fdr <- NULL #for graphs
         umi.kept.nb <- umi.total.nb
         plot_emptydrops <- FALSE
@@ -165,7 +131,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
         plot_emptydrops <- TRUE
       }
       ## Cleaning
-      rm(bc_rank2)
+      rm(bc_rank)
       rm(scmat_filtered)
     } else {
       umi.kept.nb <- umi.total.nb
@@ -179,34 +145,35 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
       nb_umi_genes_by_barcode[nb_umi_genes_by_barcode$barcodes %in% colnames(scmat), "droplets_state"] ="Full Droplets"
   
       kneeplot <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(y=nb_umi, x=num_barcode, color=droplets_state)) +
-        ggplot2::geom_point() + ggplot2::ggtitle(paste0("Kneeplot of ",sample.name)) + ggplot2::theme(legend.title = ggplot2::element_blank()) +
-        ggplot2::scale_y_log10(name = "Number of umi by droplet (log scale)") + ggplot2::scale_x_log10(name = "Droplet rank (log scale)") +
+        ggplot2::geom_point() + ggplot2::ggtitle(paste0("Kneeplot of ",sample.name)) + 
+        ggplot2::theme(legend.title = ggplot2::element_blank()) +
+        ggplot2::scale_y_log10(name = "Number of umi by droplet (log scale)",breaks = c(0,1,10,100,500,1000,1500,2000,5000,10000,max(nb_umi_genes_by_barcode$nb_umi))) + 
+        ggplot2::scale_x_log10(name = "Droplet rank (log scale)", breaks = c(0,100,500,1000,2000,5000,10000,20000,max(nb_umi_genes_by_barcode$num_barcode)),guide = ggplot2::guide_axis(angle = 45)) +
         ggplot2::expand_limits(x = 0, y = 0)
       if(plot_emptydrops){
         kneeplot <- kneeplot +
-          ggplot2::geom_hline(ggplot2::aes(yintercept = bc_rank@metadata$knee, colour = "Knee Line"), linetype = "solid", show.legend = FALSE) +
-          ggplot2::geom_hline(ggplot2::aes(yintercept = bc_rank@metadata$inflection, colour = "Inflection Line"), linetype = "solid", show.legend = FALSE) +
-          ggplot2::scale_colour_manual(values = c("cyan3","royalblue4","slateblue3","deeppink3"), guide='legend') +
-          ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(linetype = c(0, 0, 1, 1), shape = c(16, 16, 16, 16))))
+          ggplot2::scale_colour_manual(values = c("cyan3","royalblue4"), guide='legend') +
+          ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(linetype = c(0, 0), shape = c(16, 16))))
         sat_color=c("cyan3","royalblue4")
       }else{
         kneeplot <- kneeplot +
-          ggplot2::scale_colour_manual(values = c("royalblue4"))
+          ggplot2::scale_colour_manual(values = c("royalblue4"), guide='legend') +
+          ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(linetype = c(0), shape = c(16))))
         sat_color=c("royalblue4")
       }
       ggplot2::ggsave(paste0(out.dir, sample.name, "_kneeplot.png"), plot = kneeplot, width = 7, height = 5)
-      ## Cleaning
-      rm(bc_rank)
-  
+      
       saturation_plot1 <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(y = nb_genes ,x = nb_umi, color = droplets_state)) +
         ggplot2::geom_point() + ggplot2::theme(legend.title = ggplot2::element_blank()) +
         ggplot2::geom_smooth(colour = "red") +
-        ggplot2::scale_y_log10(name = "Number of genes by droplet (log scale)") + ggplot2::scale_x_log10(name = "Number of umi by droplet (log scale)") +
+        ggplot2::scale_y_log10(name = "Number of genes by droplet (log scale)",breaks = c(0,1,10,50,100,200,500,1000,2000,max(nb_umi_genes_by_barcode$nb_genes))) + 
+        ggplot2::scale_x_log10(name = "Number of umi by droplet (log scale)", breaks = c(0,1,10,100,500,1000,2000,5000,10000,max(nb_umi_genes_by_barcode$nb_umi)),guide = ggplot2::guide_axis(angle = 45)) +
         ggplot2::expand_limits(x = 0, y = 0) +
         ggplot2::scale_colour_manual(values = sat_color)
+
       saturation_plot2 <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(x=log10GenesPerlog10UMI, color = droplets_state)) +
-    	ggplot2::geom_density() + 
-    	ggplot2::theme(legend.title = ggplot2::element_blank()) +
+    	  ggplot2::geom_density() + 
+    	  ggplot2::theme(legend.title = ggplot2::element_blank()) +
   	    ggplot2::geom_vline(xintercept = 0.8, linetype="dashed", color = "red") +
   	    ggplot2::annotate(geom="text", x=0.84, y=-1, label="0.8", color="red") +
   	    ggplot2::ylab("Density") + ggplot2::xlab("log(Number of genes)/log(Number of umi)") +
@@ -238,6 +205,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     }
     sobj@misc$excel$Droplet_Quality$captured_droplet <- droplets.nb
     sobj@misc$excel$Droplet_Quality$total_number_UMI <- umi.total.nb
+    if(file.exists(paste0(data.path, "/run_info.json"))) sobj@misc$excel$Droplet_Quality$sequencing_saturation <- (1 - (sobj@misc$excel$Kallisto_Bustools_alignment$Pseudo_aligned_reads / sobj@misc$excel$Droplet_Quality$total_number_UMI)) *100
     sobj@misc$excel$Droplet_Quality$estimated_cells <- ncol(sobj)
     sobj@misc$excel$Droplet_Quality$estimated_UMI <- umi.kept.nb
     sobj@misc$excel$Droplet_Quality$fraction_read_in_cells <- umi.kept.nb / umi.total.nb
@@ -245,15 +213,12 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     ## Save parameters
     sobj@misc$params$sobj_creation$emptydrops.fdr <- emptydrops.fdr
     sobj@misc$params$sobj_creation$droplets.limit <- droplets.limit
-    sobj@misc$params$sobj_creation$emptydrops.fdr <- emptydrops.fdr
     sobj@misc$params$sobj_creation$emptydrops.retain <- emptydrops.retain
-    sobj@misc$params$sobj_creation$translation <- translation
-    sobj@misc$params$sobj_creation$translation.file <- translation.file
     sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
     sobj@misc$params$seed <- my.seed
     
     ## Save command
-    sobj@misc$pipeline_commands <- paste0("load.sc.data(data.path = ", data.path, ", sample.name = ", sample.name, ", assay = ", assay, ", droplets.limit = ", droplets.limit, ", emptydrops.fdr = ", emptydrops.fdr, ", emptydrops.retain = ", emptydrops.retain, ", return.matrix = ", return.matrix, ", translation = ", translation, ",  translation.file = ", translation.file, ", BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = ", out.dir, ")")
+    sobj@misc$pipeline_commands <- paste0("load.sc.data(data.path = ", data.path, ", sample.name = ", sample.name, ", assay = ", assay, ", droplets.limit = ", droplets.limit, ", emptydrops.fdr = ", emptydrops.fdr, ", emptydrops.retain = ", emptydrops.retain, ", return.matrix = ", return.matrix, ", BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = ", out.dir, ")")
     
     ## Save packages versions
     if(file.exists(paste0(data.path, "/run_info.json"))) sobj@misc$technical_info$kallisto <- json_data$kallisto_version
@@ -263,7 +228,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     
     ## Save Materials&Methods
     if(file.exists(paste0(data.path, "/Materials_and_Methods.txt"))){
-      tmp <- tmp <- suppressMessages(readr::read_tsv(paste0(data.path, "/Materials_and_Methods.txt"), col_names = FALSE)$X1)
+      tmp <- suppressMessages(readr::read_tsv(paste0(data.path, "/Materials_and_Methods.txt"), col_names = FALSE)$X1)
       tmp2 <- ""
       for (i in 1:length(tmp)) tmp2=paste(tmp2,tmp[i], sep="")
       sobj@misc$parameters$Materials_and_Methods$part0_Alignment <- tmp2
@@ -355,15 +320,21 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
     sobj$min_features <- sobj$nFeature_RNA >= min.features
     message(paste0('Number of cells with >= ', min.features, ' features :'))
     print(table(sobj$min_features))
-    if(is.null(sobj@misc$excel$Cells_Quality$filter_cells_genes)) sobj@misc$excel$Cells_Quality$filter_cells_genes <- sum(sobj$min_features)
+    if(is.null(sobj@misc$excel$Cells_Quality$filter_cells_genes)) {
+      sobj@misc$excel$Cells_Quality$filter_cells_genes <- sum(sobj$min_features)
+      sobj@misc$excel$Cells_Quality$filter_cells_genes_pct <- (sobj@misc$excel$Cells_Quality$filter_cells_genes / sobj@misc$excel$Droplet_Quality$estimated_cells) *100
+    }
     if(is.null(sobj@misc$excel$Cells_Quality$genes_per_cell_summary)) sobj@misc$excel$Cells_Quality$genes_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@counts != 0)) else sobj@misc$excel$Final_Cells_Quality$genes_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@counts != 0))
-
+    
     ### NB COUNTS
     sobj@misc$params$QC$min.counts = min.counts
     sobj$min_counts <- sobj$nCount_RNA >= min.counts
     message(paste0('Number of cells with >= ', min.counts, ' of total counts:'))
     print(table(sobj$min_counts))
-    if(is.null(sobj@misc$excel$Cells_Quality$filter_cells_counts)) sobj@misc$excel$Cells_Quality$filter_cells_counts <- sum(sobj$min_counts)
+    if(is.null(sobj@misc$excel$Cells_Quality$filter_cells_counts)) {
+      sobj@misc$excel$Cells_Quality$filter_cells_counts <- sum(sobj$min_counts)
+      sobj@misc$excel$Cells_Quality$filter_cells_counts_pct <- (sobj@misc$excel$Cells_Quality$filter_cells_counts / sobj@misc$excel$Droplet_Quality$estimated_cells) *100
+    }
     if(is.null(sobj@misc$excel$Cells_Quality$UMI_per_cell_summary)) sobj@misc$excel$Cells_Quality$UMI_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@counts)) else sobj@misc$excel$Final_Cells_Quality$UMI_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@counts))
 
     ## Save parameters
@@ -460,8 +431,11 @@ cell.cycle.predict <- function(sobj = NULL, assay = 'RNA', cc.cyclone.file = NUL
     message("Cell cycle phases according to Cyclone: ")
     print(table(sobj$Cyclone.Phase))
     sobj@misc$excel$After_QC_cells_filtering$estim_cells_G1 <- sum(sobj$Cyclone.Phase == "G1")
+    sobj@misc$excel$After_QC_cells_filtering$estim_cells_G1_pct <- (sobj@misc$excel$After_QC_cells_filtering$estim_cells_G1 / ncol(sobj)) *100
     sobj@misc$excel$After_QC_cells_filtering$estim_cells_G2M <- sum(sobj$Cyclone.Phase == "G2M")
+    sobj@misc$excel$After_QC_cells_filtering$estim_cells_G2M_pct <- (sobj@misc$excel$After_QC_cells_filtering$estim_cells_G2M / ncol(sobj)) *100
     sobj@misc$excel$After_QC_cells_filtering$estim_cells_S <- sum(sobj$Cyclone.Phase == "S")
+    sobj@misc$excel$After_QC_cells_filtering$estim_cells_S_pct <- (sobj@misc$excel$After_QC_cells_filtering$estim_cells_S / ncol(sobj)) *100
 
     ## Save parameters
     sobj@misc$params$QC$cell.cycle$cyclone.cell.cycle.genes = cc_cyclone;
@@ -527,6 +501,7 @@ find.doublets <- function(sobj = NULL, assay = 'RNA') {
     message('Consensus doublets :')
     print(table(sobj$doublets_consensus.class))
     sobj@misc$excel$After_QC_cells_feature_filtering$estim_doublets <- sum(sobj$doublets_consensus.class)
+    sobj@misc$excel$After_QC_cells_feature_filtering$estim_doublets_pct <- (sobj@misc$excel$After_QC_cells_feature_filtering$estim_doublets / ncol(sobj)) *100
     sobj@misc$doublets <- list(scDblFinder = length(which(sobj$scDblFinder.class)), scds_hybrid = length(which(sobj$hybrid_score.class)), union = length(which(sobj$doublets_consensus.class)))
 
     ## Save parameters
@@ -789,6 +764,7 @@ decontx.process <- function(sobj, assay = 'RNA', idents = NULL, ...) {
   return(sobj)
 }
 
+
 ## Reduction dims correlation with bias sources
 ### If future gives a failure do to RAM object size :
 ### 1) Kill current future instance :
@@ -796,7 +772,7 @@ decontx.process <- function(sobj, assay = 'RNA', idents = NULL, ...) {
 ### 2) Increase max transfer size using :
 ### options(future.globals.maxSize=2*1024^3)
 ### 3) Re-run dimensions.eval()
-dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = 'spearman', meta.names = c('nCount_RNA', 'nFeature_RNA', 'percent_mt', 'MTscore', 'percent_rb', 'RBscore', 'percent_st', 'STscore', "Cyclone.S.Score", "Cyclone.G1.Score", "Cyclone.G2M.Score", "Cyclone.SmG2M.Score"), eval.markers = c('GAPDH'), slot = 'data', max.dims = 100L, out.dir = NULL, nthreads = 1) {
+dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = 'spearman', meta.names = c('nCount_RNA', 'nFeature_RNA', 'percent_mt', 'MTscore', 'percent_rb', 'RBscore', 'percent_st', 'STscore', "Cyclone.S.Score", "Cyclone.G1.Score", "Cyclone.G2M.Score", "Cyclone.SmG2M.Score", "Seurat.S.Score", "Seurat.G2M.Score", "Seurat.SmG2M.Score"), eval.markers = c('GAPDH'), slot = 'data', max.dims = 100L, out.dir = NULL, nthreads = 1) {
   if (is.null(out.dir)) stop('No output dir provided !')
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
@@ -838,16 +814,16 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
   }
 
   ## Empty plot + Parameters for meta.names plotting
-  png(paste0(out.dir, '/', sample.name, '_', reduction, '_dims.bias.cor.png'), width = 1400, height = 800)
+  png(paste0(out.dir, '/', sample.name, '_', reduction, '_dims.bias.cor.png'), width = 1200, height = 700)
   suppressWarnings(plot(0, 0, log = 'x', xlim = c(1L, ndims), ylim = c(0,1), type = "n", xlab = paste0(reduction, " dimension"), ylab = paste0(cor.method, " correlation"), xaxs = "i", yaxs = "i"))
   meta.names <- meta.names[meta.names %in% colnames(sobj@meta.data)]
   meta.cols <- if (length(meta.names) > 12) scales::hue_pal()(length(meta.names)) else RColorBrewer::brewer.pal(length(meta.names), name = "Paired")
-  ## Calculation and plottinf of meta.names correlations
+  ## Calculation and plotting of meta.names correlations
   for(myf in seq_along(meta.names)) {
     corvec <- vapply(seq_len(ndims), function(k) { (abs(cor(sobj@reductions[[reduction]]@cell.embeddings[,k], sobj[[meta.names[myf]]], method = cor.method))) }, .1)
     lines(corvec, type = "l", ylim = c(0,1), col = meta.cols[myf], lwd = 4)
   }
-  ## Calculation and plottinf of eval.markers correlations
+  ## Calculation and plotting of eval.markers correlations
   if (!is.null(eval.markers)) {
     mydata <- slot(sobj@assays[[assay]], slot)
     for(mym in seq_along(eval.markers)) {
@@ -856,7 +832,7 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
     }
   }
   ## Adding legend
-  legend(x = ndims, y = 1, legend = c(meta.names, eval.markers), col = c(meta.cols, rep(1, length(eval.markers))), lty = c(rep(1, length(meta.names)), seq_along(eval.markers)), lwd = 5, xjust = 1, yjust = 1)
+  legend(x = ndims, y = 1, legend = c(meta.names, eval.markers), col = c(meta.cols, rep(1, length(eval.markers))), lty = c(rep(1, length(meta.names)), seq_along(eval.markers)+1L), lwd = 5, xjust = 1, yjust = 1, seg.len = 8)
   dev.off()
 }
 
@@ -871,11 +847,11 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
   if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
   if (max(dimsvec) > ncol(sobj@reductions[[reduction]]@cell.embeddings)) stop(paste0('Max dimsvec requested is ', max(dimsvec), ' whereas max dimension in "', reduction, '" reduction is ', ncol(sobj@reductions[[reduction]]@cell.embeddings)))
   if (1 %in% dimsvec) stop("One should not request a reduction to a single dimension !")
-
+  
   ## Restoring seed and sample name from within the object
   my.seed <- sobj@misc$params$seed
   sample.name <- Seurat::Project(sobj)
-
+  
   ## Create output dir
   clustree.dir <- paste0(out.dir, "/clustree_", reduction, '/')
   umaps.clustree.dir <- paste0(clustree.dir, "/uMAPs/")
@@ -886,13 +862,13 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
   dir.create(res.clustree.dir, recursive = TRUE, showWarnings = FALSE)
   require(ggplot2)
   require(clustree)
-
+  
   ## Parameters
   plot.pix <- 600
   # `%dopar%` <- foreach::"%dopar%"
   `%mydo%` <- if (BiocParallel::bpworkers(BPPARAM) > 1) foreach::"%dopar%" else foreach::"%do%"
   `%do%` <- foreach::"%do%"
-
+  
   ## Builiding minimal Seurat object (for memory sake)
   miniobj <- sobj
   ### Removing other assays
@@ -910,37 +886,39 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
   miniobj@commands <- miniobj@misc <- list()
   require(Matrix)
   miniobj@assays[[assay]]@counts <- new("dgCMatrix")
-
+  
   ## Purging putative residues from a former run
   miniobj@meta.data[, grep(colnames(miniobj@meta.data), pattern = "seurat_clusters_LE_")] <- NULL
   rm(sobj)
   gc()
-
+  
   ## Reordering dimsvec if needed (as higher dims are longer to compute)
   if (which.max(dimsvec) != 1) dimsvec <- sort(dimsvec, decreasing = TRUE)
-
+  
   resclust.all <- foreach::foreach(my.dims = dimsvec, .combine = "cbind", .inorder = FALSE, .errorhandling = "stop", .packages = c("Seurat", "ggplot2")) %mydo% {
     
     miniobj@graphs <- list()
     message(paste0("Dimensions 1 to ", my.dims))
     suppressMessages(miniobj <- Seurat::FindNeighbors(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction))
-
+    
     resloop = list()
     resloop <- foreach::foreach(my.res = resvec, .inorder = FALSE, .errorhandling = "stop", .noexport = objects()) %do% {
-      # for (my.res in resvec) {
-
+      
       message(paste0("Testing resolution ", format(my.res, digits=2, nsmall=1, decimal.mark="."), " ..."))
-
+      
       miniobj <- Seurat::FindClusters(object = miniobj, random.seed = my.seed, resolution = my.res, graph.name = paste0(assay, '_snn'))
-      miniobj <- Seurat::RunUMAP(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction, seed.use = my.seed, reduction.name = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'))
-      #png(paste0(umaps.clustree.dir, '/', sample.name,'_uMAP_', reduction, my.dims, "_res", format(my.res, digits=2, nsmall=1, decimal.mark="."), '.png'), width = 1100, height = 1000)
-      resdim.plot <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = miniobj, reduction = paste(c(assay, reduction, my.dims, 'umap'), collapse = '_'), pt.size = solo.pt.size) + ggplot2::ggtitle(paste0(toupper(reduction), " dims =  ", my.dims, " ; resolution = ", format(my.res, digits=2, nsmall=1, decimal.mark="."))) + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
-      #print(resdim.plot)
-      #dev.off()
-
+      miniobj <- Seurat::RunUMAP(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction, seed.use = my.seed, reduction.name = paste(c(reduction, my.dims, 'umap'), collapse = '_'))
+      resdim.plot <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = miniobj, reduction = paste(c(reduction, my.dims, 'umap'), collapse = '_'), pt.size = solo.pt.size) + ggplot2::ggtitle(paste0(toupper(reduction), " dims =  ", my.dims, " ; resolution = ", format(my.res, digits=2, nsmall=1, decimal.mark="."))) + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
+      
+      #plot biases on each umap
+      umap.name <- paste(c(reduction, my.dims, 'umap'), collapse = '_')
+      miniobj@misc$ident2reduction[["seurat_clusters"]] <- umap.name
+      miniobj@reductions[[umap.name]]@misc$from.reduction <- reduction
+      technical.plot(sobj = miniobj, ident = "seurat_clusters", out.dir = clustree.dir, multi.pt.size = 2, end.file.name = paste0("_dims", my.dims,"_res",my.res), only.ALL.plot = TRUE)
+      
       return(list(resplot = resdim.plot, clusters = miniobj$seurat_clusters))
     }
-
+    
     ## Decomposing resloop
     resplots <- unlist(resloop, recursive = FALSE)[seq.int(1, length(resloop)*2, 2)]
     resclust <- as.data.frame(unlist(resloop, recursive = FALSE)[seq.int(2, length(resloop)*2, 2)])
@@ -948,30 +926,29 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
     rm(resloop)
     colnames(resclust) <- c(paste0(paste0("seurat_clusters_LE_", reduction, my.dims, "_res", format(resvec, digits=2, nsmall=1, decimal.mark="."))), paste0(paste0("seurat_clusters_LE_res", format(resvec, digits=2, nsmall=1, decimal.mark="."), "_", reduction, my.dims)))
     miniobj@meta.data <- cbind(miniobj@meta.data, resclust)
-
+    
     grid.xy <- grid.scalers(length(resplots))
     png(paste0(umaps.clustree.dir, '/', sample.name, '_uMAPs_', reduction, my.dims, '_ALLres.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
     print(patchwork::wrap_plots(resplots) + patchwork::plot_layout(ncol = grid.xy[1]))
     dev.off()
-
+    
     rm(resplots)
-
-
+    
     if (length(resvec) > 1) {
       cres <- clustree::clustree(subset(miniobj@meta.data, select = grepl(paste0("seurat_clusters_LE_", reduction, my.dims, "_res"), names(miniobj@meta.data))), prefix = paste0("seurat_clusters_LE_", reduction, my.dims, "_res"))
       png(paste0(pca.clustree.dir, '/', sample.name, '_', reduction, my.dims, '.png'), width = 800, height = 1000)
       print(cres + ggplot2::ggtitle(paste0(sample.name, ', ', toupper(reduction), ' = ', my.dims)))
       dev.off()
     }
-
+    
     gc(verbose = FALSE)
-
+    
     return(resclust)
   }
   miniobj@meta.data[, grep(colnames(miniobj@meta.data), pattern = "seurat_clusters_LE_")] <- NULL
   miniobj@meta.data <- cbind(miniobj@meta.data, resclust.all)
   rm(resclust.all)
-
+  
   for (my.res in resvec) {
     if (length(dimsvec) > 1) {
       cres <- clustree::clustree(miniobj, prefix = paste0("seurat_clusters_LE_res", format(my.res, digits=2, nsmall=1, decimal.mark="."), "_", reduction))
@@ -980,11 +957,10 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
       dev.off()
     }
   }
+  
   rm(miniobj)
   gc(verbose = FALSE)
-
 }
-
 
 ## Louvain clustering + UMAP
 louvain.cluster <- function(sobj = NULL, reduction = 'RNA_scbfa', max.dim = 100L, algorithm = 1, resolution = .8, out.dir = NULL, solo.pt.size = 2) {
@@ -1637,8 +1613,16 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
 
       ## Heatmap
       suppressPackageStartupMessages(require(ggplot2))
+      if (ncol(sobj)>20000){
+        df_barcodes_ident=data.frame(colnames(sobj), sobj@meta.data[ident])
+        colnames(df_barcodes_ident) = c("barcodes", "ident")
+        barcodes_tokeep <- (df_barcodes_ident %>% group_by(ident) %>% sample_frac(20000/ncol(sobj)))$barcodes
+        mini.sobj <- sobj[mytop$gene,barcodes_tokeep]
+        heatmapplot <- print(Seurat::DoHeatmap(mini.sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
+        rm(df_barcodes_ident, barcodes_tokeep, mini.sobj)
+      } else heatmapplot <- print(Seurat::DoHeatmap(sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
       png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_heatmap.png'), width = 1600, height = 1000)
-      print(Seurat::DoHeatmap(sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
+      print(heatmapplot)
       dev.off()
 
       ## Upset plots
@@ -1706,8 +1690,37 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
   return(sobj)
 }
 
+get.markers.from.markersfiles <- function(markfiles=NULL){
+  
+  markfiles <- unlist(stringr::str_split(markfiles, ","))
+  markers <- data.frame(genes=character(), signatures=character())
+  
+  #get markers
+  for (mf in markfiles){
+    file.extension <- strsplit(basename(mf), split="\\.")[[1]][-1] #get file's extension
+    if (file.extension == "xlsx"){
+      markers.tmp <- openxlsx::read.xlsx(mf, sheet = 1, startRow = 1, fillMergedCells = TRUE, colNames = TRUE)
+    } else if(file.extension == "csv"){
+      markers.tmp <- read.table(mf, header = TRUE, sep=";")
+    }else{
+      stop(paste0("Extension", file.extension, "not supported! Try with .xlsx or .csv file."))
+    }
+    names(markers.tmp) <- names(markers)
+    markers <- rbind(markers, markers.tmp)
+  }
+  
+  #remove duplicated lines
+  markers <- markers[!duplicated(markers), ]
+  #formatting
+  markers <- markers[order(markers[,2]),]
+  markers <- setNames(markers[,1], markers[,2])
+
+  return(markers)
+}
+
+
 ## Technical uMAPs
-technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.size = 1, gradient.cols = c("gold", "blue")) {
+technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.size = 1, gradient.cols = c("gold", "blue"),end.file.name = NULL, only.ALL.plot = FALSE) {
   if (is.null(out.dir)) stop('No output dir provided !')
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
@@ -1720,18 +1733,18 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
   assay <- sobj@reductions[[reduction]]@misc$from.assay
   if (!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist in the provided Seurat object !'))
   require(patchwork)
-
+  
   ## Creating ouput directory
   tech.dir <- paste0(out.dir, '/technical/')
   dir.create(tech.dir, recursive = TRUE, showWarnings = FALSE)
-
+  
   ## Restoring sample name from within the object
   sample.name <- Seurat::Project(sobj)
-
+  
   ## Setting plot parameters
   plot.num.add <- if(!is.null(ident)) 1 else 0
   plot.pix <- 600
-
+  
   ## CLUSTERS
   if (!is.null(ident)) {
     # ori.ident <- Seurat::Idents(sobj)
@@ -1739,7 +1752,7 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
     upCLUST <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = multi.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
     # Seurat::Idents(sobj) <- ori.ident
   }
-
+  
   ## METRICS
   metrics.plotlist <- list(
     'percent_mt' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "percent_mt", max.cutoff = .2, cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
@@ -1748,17 +1761,19 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
     'log_nCount_RNA' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "log_nCount_RNA", cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
     'nFeature_RNA' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "nFeature_RNA", cols = gradient.cols, order = TRUE) + Seurat::DarkTheme()
   )
-
-  for (p in seq_along(metrics.plotlist)) {
-    png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_METRICS_', names(metrics.plotlist)[p], '_uMAP.png'), width = plot.pix, height = plot.pix)
-    print(metrics.plotlist[[p]])
+  
+  if (!only.ALL.plot){
+    for (p in seq_along(metrics.plotlist)) {
+      png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_METRICS_', names(metrics.plotlist)[p], '_uMAP.png'), width = plot.pix, height = plot.pix)
+      print(metrics.plotlist[[p]])
+      dev.off()
+    }
+    grid.xy <- grid.scalers(length(metrics.plotlist) + plot.num.add)
+    png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_METRICS_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+    if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), metrics.plotlist))) else print(wrap_plots(metrics.plotlist))
     dev.off()
   }
-  grid.xy <- grid.scalers(length(metrics.plotlist) + plot.num.add)
-  png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_METRICS_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-  if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), metrics.plotlist))) else print(wrap_plots(metrics.plotlist))
-  dev.off()
-
+  
   ## CELL CYCLE (cyclone)
   if ('Cyclone.Phase' %in% colnames(sobj@meta.data)) {
     c_cycle.plotlist <- list(
@@ -1768,19 +1783,21 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
       'Cyclone_SmG2M' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "Cyclone.SmG2M.Score", cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
       'Cyclone_G1' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "Cyclone.G1.Score", cols = gradient.cols, order = TRUE) + Seurat::DarkTheme()
     )
-    for (p in seq_along(c_cycle.plotlist)) {
-      png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_CYCLE_', names(c_cycle.plotlist)[p], '_uMAP.png'), width = 1000, height = 1000)
-      print(c_cycle.plotlist[[p]])
+    if (!only.ALL.plot){
+      for (p in seq_along(c_cycle.plotlist)) {
+        png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_CYCLE_', names(c_cycle.plotlist)[p], '_uMAP.png'), width = 1000, height = 1000)
+        print(c_cycle.plotlist[[p]])
+        dev.off()
+      }
+      grid.xy <- grid.scalers(length(c_cycle.plotlist) + plot.num.add)
+      png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_CYCLE_Cyclone_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+      if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), c_cycle.plotlist))) else print(wrap_plots(c_cycle.plotlist))
       dev.off()
     }
-    grid.xy <- grid.scalers(length(c_cycle.plotlist) + plot.num.add)
-    png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_CYCLE_Cyclone_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-    if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), c_cycle.plotlist))) else print(wrap_plots(c_cycle.plotlist))
-    dev.off()
   }else{
     c_cycle.plotlist <- list(plot_spacer())
   }
-
+  
   ## CELL CYCLE (Seurat)
   if ('Seurat.Phase' %in% colnames(sobj@meta.data)) {
     s_cycle.plotlist <- list(
@@ -1789,27 +1806,29 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
       'Seurat_G2M' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "Seurat.G2M.Score", cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
       'Seurat_SmG2M' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "Seurat.SmG2M.Score", cols = gradient.cols, order = TRUE) + Seurat::DarkTheme()
     )
-    for (p in seq_along(s_cycle.plotlist)) {
-      png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_CYCLE_', names(s_cycle.plotlist)[p], '_uMAP.png'), width = 1000, height = 1000)
-      print(s_cycle.plotlist[[p]])
+    if (!only.ALL.plot){
+      for (p in seq_along(s_cycle.plotlist)) {
+        png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_CYCLE_', names(s_cycle.plotlist)[p], '_uMAP.png'), width = 1000, height = 1000)
+        print(s_cycle.plotlist[[p]])
+        dev.off()
+      }
+      grid.xy <- grid.scalers(length(s_cycle.plotlist) + plot.num.add)
+      png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_CYCLE_Seurat_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+      if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), s_cycle.plotlist))) else print(wrap_plots(s_cycle.plotlist))
       dev.off()
     }
-    grid.xy <- grid.scalers(length(s_cycle.plotlist) + plot.num.add)
-    png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_CYCLE_Seurat_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-    if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), s_cycle.plotlist))) else print(wrap_plots(s_cycle.plotlist))
-    dev.off()
   }else{
     s_cycle.plotlist <- list(plot_spacer())
   }
-
+  
   ## CELL CYCLE (all)
-  if (('Cyclone.Phase' %in% colnames(sobj@meta.data)) & ('Seurat.Phase' %in% colnames(sobj@meta.data))) {
+  if (('Cyclone.Phase' %in% colnames(sobj@meta.data)) & ('Seurat.Phase' %in% colnames(sobj@meta.data)) & (!only.ALL.plot)) {
     grid.xy <- grid.scalers(length(c_cycle.plotlist) + length(s_cycle.plotlist) + plot.num.add)
     png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_CYCLE_ALL_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
     if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), c_cycle.plotlist, s_cycle.plotlist))) else print(wrap_plots(c(c_cycle.plotlist, s_cycle.plotlist)))
     dev.off()
   }
-
+  
   ## DOUBLETS
   doublets.plotlist <- list()
   if("scDblFinder.class" %in% colnames(sobj@meta.data)) doublets.plotlist[['ScDblFinder']] <- Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, group.by = "scDblFinder.class") + ggplot2::ggtitle("Cell doublets (scDblFinder)") + Seurat::DarkTheme()
@@ -1817,22 +1836,24 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
   if("doublets_consensus.class" %in% colnames(sobj@meta.data)) doublets.plotlist[['Doublets_union']] <- Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, group.by = "doublets_consensus.class") + ggplot2::ggtitle("Cell doublets (union)") + Seurat::DarkTheme()
   if("log_scran.doubletscore" %in% colnames(sobj@meta.data)) doublets.plotlist[['Doublets_scran']] <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "log_scran.doubletscore", cols = gradient.cols, order = TRUE)  + ggplot2::ggtitle("Cell doublets (scran (log))") + Seurat::DarkTheme()
   if (length(doublets.plotlist) > 0) {
-    for (p in seq_along(doublets.plotlist)) {
-      png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_', names(doublets.plotlist)[p], '_uMAP.png'), width = 1000, height = 1000)
-      print(doublets.plotlist[[p]])
+    if (!only.ALL.plot){
+      for (p in seq_along(doublets.plotlist)) {
+        png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_', names(doublets.plotlist)[p], '_uMAP.png'), width = 1000, height = 1000)
+        print(doublets.plotlist[[p]])
+        dev.off()
+      }
+      grid.xy <- grid.scalers(length(doublets.plotlist) + plot.num.add)
+      png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_DOUBLETS_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+      if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), doublets.plotlist))) else print(wrap_plots(doublets.plotlist))
       dev.off()
     }
-    grid.xy <- grid.scalers(length(doublets.plotlist) + plot.num.add)
-    png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_DOUBLETS_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-    if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), doublets.plotlist))) else print(wrap_plots(doublets.plotlist))
-    dev.off()
   }else{
     doublets.plotlist <- list(plot_spacer())
   }
-
+  
   ## MULTI:ALL
   grid.xy <- grid.scalers(length(metrics.plotlist) + length(doublets.plotlist) + length(c_cycle.plotlist) + length(s_cycle.plotlist) + plot.num.add)
-  png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_ALL_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+  png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_ALL_uMAPs',end.file.name,'.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
   if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), metrics.plotlist, doublets.plotlist, c_cycle.plotlist, s_cycle.plotlist))) else print(wrap_plots(c(metrics.plotlist,doublets.plotlist,c_cycle.plotlist,s_cycle.plotlist)))
   dev.off()
 }
@@ -1856,7 +1877,7 @@ orig.ident.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.
 }
 
 ## Markers
-markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir = NULL, dimplot.cols = c("gold", "blue"), multi.pt.size = 1) {
+markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir = NULL, dimplot.cols = c("gold", "blue"), markers.pt.size = 2, markers.order = FALSE) {
   if (is.null(out.dir)) stop('No output directory provided !')
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
@@ -1872,16 +1893,22 @@ markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir
   require(patchwork)
 
   ## Save command
-  sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("markers.umap.plot(sobj = sobj, markers = ", paste0("c(", paste(markers, collapse = ","),")"), ", ident = ", ident, ", out.dir = ", out.dir, ", dimplot.cols = ", paste0("c(", paste(dimplot.cols, collapse = ","),")"), ", multi.pt.size = ", multi.pt.size, ")"))
+  sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("markers.umap.plot(sobj = sobj, markers = ", paste0("c(", paste(markers, collapse = ","),")"), ", ident = ", ident, ", out.dir = ", out.dir, ", dimplot.cols = ", paste0("c(", paste(dimplot.cols, collapse = ","),")"), ", markers.pt.size = ", markers.pt.size, ", markers.order = ", markers.order, ")"))
 
-  ## Restoring sample name from within the object and cheking markers
+  ## Restoring sample name from within the object and checking markers
   sample.name <- Seurat::Project(sobj)
   markers <- markers[markers %in% rownames(sobj@assays[[assay]]@data)]
 
   #Creating output directory
   mark.dir <- paste0(out.dir, '/markers/')
-  dir.create(mark.dir, recursive = TRUE, showWarnings = FALSE)
+  mark.dir.type.umaps <- paste0(mark.dir, '/type/umaps/')
+  mark.dir.type.violinplots <- paste0(mark.dir, '/type/violinplots/')
+  mark.dir.type.dotplots <- paste0(mark.dir, '/type/dotplots/')
+  mark.dir.single.umaps <- paste0(mark.dir, '/single/umaps/')
+  mark.dir.single.violinplots <- paste0(mark.dir, '/single/violinplots/')
 
+  for (folder in c(mark.dir.single.umaps, mark.dir.single.violinplots, mark.dir.type.umaps, mark.dir.type.violinplots, mark.dir.type.dotplots)){ dir.create(folder, recursive = TRUE, showWarnings = FALSE) }
+  
   ## Setting plot parameters
   plot.num.add <- if(!is.null(ident)) 1 else 0
   plot.pix <- 600
@@ -1890,47 +1917,84 @@ markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir
   if (!is.null(ident)) {
     ori.ident <- Seurat::Idents(sobj)
     Seurat::Idents(sobj) <- ident
-    upCLUST <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = multi.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
+    upCLUST <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = markers.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
     Seurat::Idents(sobj) <- ori.ident
   }
 
-  marklist <- list()
+  marklist.umap <- list()
+  marklist.violin <- list()
   marknames <- unique(names(markers))
   if (length(marknames) > 0) {
     for (mn in marknames) {
         tryCatch( {
+          #select group of markers
           mini.markers <- markers[names(markers) == mn]
-          mn.plotlist <- sapply(mini.markers, function(x) {Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = x, cols = dimplot.cols) + Seurat::DarkTheme() }, simplify = FALSE)
+          #remove duplicates
+          mini.markers <- unique(mini.markers)
+          names(mini.markers) <- rep(mn, length(mini.markers))
+          
+          #umaps
+          mn.umaplist <- sapply(mini.markers, function(x) { Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = x, cols = dimplot.cols) + Seurat::DarkTheme() }, simplify = FALSE)
           if (length(mini.markers)==1) sum.exp <- sobj@assays[[assay]]@data[mini.markers, ] else sum.exp <- Matrix::colSums(x = sobj@assays[[assay]]@data[mini.markers, ])
           sobj <- Seurat::AddMetaData(sobj, sum.exp, col.name = paste0("SumExp_",mn))
-          mn.plotsum <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = paste0("SumExp_",mn), cols = dimplot.cols) + ggplot2::ggtitle(paste0("Sum of the ", mn, " markers expression")) + Seurat::DarkTheme()
-          grid.xy <- grid.scalers(length(mn.plotlist) + plot.num.add + 1) # +1 for the sum of expression
-          png(paste0(mark.dir, '/', sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-          # if(!is.null(ident)) print(upCLUST + mn.plotlist) else print(mn.plotlist)
-          if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST, mn.plotsum), mn.plotlist)) + patchwork::plot_layout(ncol = grid.xy[1])) else print(patchwork::wrap_plots(mn.plotlist)) + patchwork::plot_layout(ncol = grid.xy[1])
+          mn.plotsum <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = paste0("SumExp_",mn), cols = dimplot.cols) + ggplot2::ggtitle(paste0("Sum of the ", mn, " markers expression")) + Seurat::DarkTheme()
+          grid.xy <- grid.scalers(length(mn.umaplist) + plot.num.add + 1) # +1 for the sum of expression
+          png(paste0(mark.dir.type.umaps, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+          if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST, mn.plotsum), mn.umaplist)) + patchwork::plot_layout(ncol = grid.xy[1])) else print(patchwork::wrap_plots(mn.umaplist)) + patchwork::plot_layout(ncol = grid.xy[1])
           dev.off()
-          marklist <- c(marklist, list(mn.plotlist))
+          marklist.umap <- c(marklist.umap, list(mn.umaplist))
+          
+          #violinplots
+          mn.violinlist <- sapply(mini.markers, function(x) { Seurat::VlnPlot(object = sobj, features = x, assay = assay, pt.size = markers.pt.size) }, simplify = FALSE)
+          grid.xy <- grid.scalers(length(mn.violinlist) + plot.num.add)
+          png(paste0(mark.dir.type.violinplots, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_violinplots.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+          print(patchwork::wrap_plots(mn.violinlist)) + patchwork::plot_layout(ncol = grid.xy[1])
+          dev.off()
+          marklist.violin <- c(marklist.violin, list(mn.violinlist))
+          
+          #dotplot
+          names(mini.markers)=NULL
+          png(paste0(mark.dir.type.dotplots, '/', sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_dotplot.png'), width = length(unique(sobj@meta.data[[ident]]))*50, height = length(mini.markers)*20)
+          print(Seurat::DotPlot(object = sobj, features = mini.markers, cols = dimplot.cols) + ggplot2::coord_flip() + ggplot2::ggtitle(gsub(pattern = "_", replacement = " ", mn)) + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+          dev.off()
+          
       },  error=function(error_message) { message(paste0("Error in the plot of the sum of makers genes expression : ", error_message))} )
     }
   }
-  marklist <- unlist(marklist, recursive = FALSE)
-
+  marklist.umap <- unlist(marklist.umap, recursive = FALSE)
+  marklist.violin <- unlist(marklist.violin, recursive = FALSE)
+  
   ## SINGLES
-  for(x in seq_along(marklist)) {
-    png(paste0(mark.dir, '/', sample.name, '_markers_SINGLE_', markers[x], '_uMAP.png'), width = 1000, height = 1000)
-    print(marklist[[x]])
+  #umap
+  for(x in seq_along(marklist.umap)) {
+    png(paste0(mark.dir.single.umaps, sample.name, '_markers_SINGLE_', markers[x], '_uMAP.png'), width = 1000, height = 1000)
+    print(marklist.umap[[x]])
     dev.off()
   }
-
+  #violin
+  for(x in seq_along(marklist.violin)) {
+    png(paste0(  mark.dir.single.violinplots, sample.name, '_markers_SINGLE_', markers[x], '_violinplot.png'), width = 1000, height = 1000)
+    print(marklist.violin[[x]])
+    dev.off()
+  }
+  
   ## ALL
-  if (length(markers) <= 15) {
-    grid.xy <- grid.scalers(length(marklist) + plot.num.add)
-    png(paste0(mark.dir, '/', sample.name, '_markers_ALL_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-    # if(!is.null(ident)) print(upCLUST + patchwork::wrap_plots(marklist)) + patchwork::plot_layout(ncol = grid.xy[1]) else print(patchwork::wrap_plots(marklist))+ patchwork::plot_layout(ncol = grid.xy[1])
-    if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST), marklist))) + patchwork::plot_layout(ncol = grid.xy[1]) else print(patchwork::wrap_plots(marklist)) + patchwork::plot_layout(ncol = grid.xy[1])
-    dev.off()
+  #umap
+  #if (length(markers) <= 15) {
+  #  grid.xy <- grid.scalers(length(marklist.umap) + plot.num.add)
+  #  png(paste0(mark.dir, '/', sample.name, '_markers_ALL_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+  #  if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST), marklist.umap))) + patchwork::plot_layout(ncol = grid.xy[1]) else print(patchwork::wrap_plots(marklist.umap)) + patchwork::plot_layout(ncol = grid.xy[1])
+  #  dev.off()
+  #}
+  #violin
+  #if (length(markers) <= 15) {
+  #  grid.xy <- grid.scalers(length(marklist.violin) + plot.num.add)
+  #  png(paste0(mark.dir, '/', sample.name, '_markers_ALL_violinplot.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+  #  if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST), marklist.violin))) + patchwork::plot_layout(ncol = grid.xy[1]) else print(patchwork::wrap_plots(marklist.violin)) + patchwork::plot_layout(ncol = grid.xy[1])
+  #  dev.off()
   }
-
+  
+  ## Save parameter
   sobj@misc$markers.in <- markers
 
   return(sobj)
@@ -2038,7 +2102,7 @@ ctrl.umap.plot <- function(sobj = NULL, ctrl.genes = NULL, ident = NULL, out.dir
 ### To filter out mito, ribo and/or stress response genes from the MostExpressed results, one can pass the corresponding RDS files to parameters mt.genes.file, crb.genes.file and/or str.genes.file, respectively.
 ### The 'other.reductions' filter is a boolean to exclude other reductions than the one which the 'ident.name' ident came from (with the exception of '3d' version kept).
 ### Same goes for the 'other.idents'
-seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, sample.colname = 'orig.ident', force.assay = NULL, species = 'hg', remove.other.reductions = TRUE, remove.other.idents = TRUE, gmt.file = NULL, remove.mt.genes = FALSE, remove.crb.genes = FALSE, remove.str.genes = FALSE, file = NULL, nthreads = 1, remove.custom.DE = FALSE, only_pos_DE = FALSE, only_pos = TRUE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox') {
+seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, sample.colname = 'orig.ident', force.assay = NULL, species = 'hg', remove.other.reductions = TRUE, remove.other.idents = TRUE, gmt.file = NULL, remove.mt.genes = FALSE, remove.crb.genes = FALSE, remove.str.genes = FALSE, file = NULL, nthreads = 1, remove.custom.DE = FALSE, only_pos_DE = FALSE, only_pos = TRUE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox', add.surface.prot.info = TRUE) {
   if (is.null(sobj)) stop('No Seurat object provided !')
   if (is.null(ident)) stop("No ident name provided !")
   if (!ident %in% colnames(sobj@meta.data)) stop(paste0("Ident '", ident, "' not fond in Seurat object !"))
@@ -2158,18 +2222,24 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   
   # Download bbd for "genes on cell surface" column for get markers
   require(dplyr)
-  if (species == 'hg' || species == 'human'){
-    temp_attributes <- 'hgnc_symbol'
-    temp_dataset <- 'hsapiens_gene_ensembl'
-  } else if (species == 'mm' || species == 'mouse'){
-    temp_attributes <- 'external_gene_name'
-    temp_dataset <- 'mmusculus_gene_ensembl'
+  if (add.surface.prot.info){
+    if (species == 'hg' || species == 'human'){
+      temp_attributes <- 'hgnc_symbol'
+      temp_dataset <- 'hsapiens_gene_ensembl'
+    } else if (species == 'mm' || species == 'mouse'){
+      temp_attributes <- 'external_gene_name'
+      temp_dataset <- 'mmusculus_gene_ensembl'
+    }
+    while(!exists('genes_on_cell_surface')){
+      try( 
+        genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
+      )
+    }
   }
-  genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
   #clusters
   if (dim(sobj@misc$find.markers.quick)[1]!=0){
     sobj@misc$marker_genes$by_cluster <- data.frame(cluster=sobj@misc$find.markers.quick$tested_cluster, gene=sobj@misc$find.markers.quick$genes, p_val=sobj@misc$find.markers.quick$p_val, avg_logFC=sobj@misc$find.markers.quick$avg_log2FC, pct.1=sobj@misc$find.markers.quick$pct.1, pct.2=sobj@misc$find.markers.quick$pct.2, p_val_adj=sobj@misc$find.markers.quick$adj.P.Val)
-    sobj@misc$marker_genes$by_cluster <- sobj@misc$marker_genes$by_cluster %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_cluster$gene %in% genes_on_cell_surface)
+    if (add.surface.prot.info){ sobj@misc$marker_genes$by_cluster <- sobj@misc$marker_genes$by_cluster %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_cluster$gene %in% genes_on_cell_surface) }
   }else{
       sobj@misc$marker_genes$by_cluster <- 'no_markers_found'
   }
@@ -2184,7 +2254,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
     if (dim(tmp_markers)[1]!=0){
       tmp_markers <- tmp_markers[order(tmp_markers$cluster, tmp_markers$p_val_adj),] 
       sobj@misc$marker_genes$by_sample <- data.frame(sample=tmp_markers$cluster, gene=tmp_markers$gene, p_val=tmp_markers$p_val, avg_logFC=tmp_markers$avg_log2FC, pct.1=tmp_markers$pct.1, pct.2=tmp_markers$pct.2, p_val_adj=tmp_markers$p_val_adj)
-      sobj@misc$marker_genes$by_sample <- sobj@misc$marker_genes$by_sample %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_sample$gene %in% genes_on_cell_surface)
+      if (add.surface.prot.info){ sobj@misc$marker_genes$by_sample <- sobj@misc$marker_genes$by_sample %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_sample$gene %in% genes_on_cell_surface) }
     } else sobj@misc$marker_genes$by_sample <- 'no_markers_found'
     #restore ident and clean
     Idents(sobj) <- tmp_ident
@@ -2252,19 +2322,24 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
         }
       }
       ## Download bbd for "genes on cell surface" column for get markers
-      if (species == 'hg' || species == 'human'){
-        temp_attributes <- 'hgnc_symbol'
-        temp_dataset <- 'hsapiens_gene_ensembl'
-      } else if (species == 'mm' || species == 'mouse'){
-        temp_attributes <- 'external_gene_name'
-        temp_dataset <- 'mmusculus_gene_ensembl'
+      if (add.surface.prot.info){
+        if (species == 'hg' || species == 'human'){
+          temp_attributes <- 'hgnc_symbol'
+          temp_dataset <- 'hsapiens_gene_ensembl'
+        } else if (species == 'mm' || species == 'mouse'){
+          temp_attributes <- 'external_gene_name'
+          temp_dataset <- 'mmusculus_gene_ensembl'
+        }
+        while(!exists('genes_on_cell_surface')){
+          try( 
+              genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
+          )
+        }
+        ## add cell surface column
+        require(dplyr)
+        if(!is.null(df_all_cond)) df_all_cond = df_all_cond %>% dplyr::mutate(on_cell_surface = df_all_cond$gene %in% genes_on_cell_surface)
+        if(!is.null(df_all_clust)) df_all_clust = df_all_clust %>% dplyr::mutate(on_cell_surface = df_all_clust$gene %in% genes_on_cell_surface)
       }
-      genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
-      ## add cell surface column
-      require(dplyr)
-      if(!is.null(df_all_cond)) df_all_cond = df_all_cond %>% dplyr::mutate(on_cell_surface = df_all_cond$gene %in% genes_on_cell_surface)
-      if(!is.null(df_all_clust)) df_all_clust = df_all_clust %>% dplyr::mutate(on_cell_surface = df_all_clust$gene %in% genes_on_cell_surface)
-
       #fusion avec quick.markers
       if(!is.null(df_all_cond)){
         sobj@misc$marker_genes$by_sample <- if(sobj@misc$marker_genes$by_sample %in% 'no_markers_found') df_all_cond else rbind(sobj@misc$marker_genes$by_sample, df_all_cond)
@@ -2371,6 +2446,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
                                         remove.mt.genes = remove.mt.genes,
                                         remove.crb.genes = remove.crb.genes,
                                         remove.str.genes = remove.str.genes,
+                                        add.surface.prot.info = add.surface.prot.info,
                                         gmt.file = gmt.file )
   sobj@misc$technical_info$R <- sobj@misc$params$sobj_creation$Rsession
   sobj@misc$technical_info$cerebroApp <- utils::packageVersion('cerebroApp')
@@ -2384,7 +2460,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
 }
 
 
-seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.colname = 'orig.ident', force.assay = NULL, species = 'hg', remove.other.reductions = TRUE, remove.other.idents = TRUE, gmt.file = NULL, remove.mt.genes = FALSE, remove.crb.genes = FALSE, remove.str.genes = FALSE, file = NULL, nthreads = 1, remove.custom.DE = FALSE, only_pos_DE = FALSE, only_pos = TRUE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox') {
+seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.colname = 'orig.ident', force.assay = NULL, species = 'hg', remove.other.reductions = TRUE, remove.other.idents = TRUE, gmt.file = NULL, remove.mt.genes = FALSE, remove.crb.genes = FALSE, remove.str.genes = FALSE, file = NULL, nthreads = 1, remove.custom.DE = FALSE, only_pos_DE = FALSE, only_pos = TRUE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox', add.surface.prot.info = TRUE) {
   if (is.null(sobj)) stop('No Seurat object provided !')
   if (is.null(ident)) stop("No ident name provided !")
   if (!ident %in% colnames(sobj@meta.data)) stop(paste0("Ident '", ident, "' not fond in Seurat object !"))
@@ -2475,7 +2551,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   
   ## Get most expressed genes (@counts slot)
   cat("\nGet most expressed genes...\n")
-  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj), silent = TRUE) #RNA assay by default
+  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj, groups=groups), silent = TRUE) #RNA assay by default
   if('most_expressed_genes' %in% names(sobj@misc)) {
     ## Removing MT genes (if requested)
     if (remove.mt.genes) {
@@ -2499,8 +2575,8 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   
   ## Get Marker Genes
   cat("\nGet Marker Genes...\n")
-  sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", organism = species, groups = groups, name = 'classical_markers', only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
-  
+  sobj <- suppressMessages(cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", organism = if (add.surface.prot.info) species else "", groups = groups, name = 'classical_markers', only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test))
+
   ## Add test DEG results
   if(!remove.custom.DE){
     #get test DEG results names
@@ -2538,20 +2614,24 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
         }
       }
       ## Download bbd for "genes on cell surface" column for get markers
-      print(species)
-      if (species == 'hg'){
-        temp_attributes <- 'hgnc_symbol'
-        temp_dataset <- 'hsapiens_gene_ensembl'
-      } else if (species == 'mm'){
-        temp_attributes <- 'external_gene_name'
-        temp_dataset <- 'mmusculus_gene_ensembl'
+      if (add.surface.prot.info){
+        if (species == 'hg'){
+          temp_attributes <- 'hgnc_symbol'
+          temp_dataset <- 'hsapiens_gene_ensembl'
+        } else if (species == 'mm'){
+          temp_attributes <- 'external_gene_name'
+          temp_dataset <- 'mmusculus_gene_ensembl'
+        }
+        while(!exists('genes_on_cell_surface')){
+          try( 
+            genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
+            )
+        }
+        ## add cell surface column
+        require(dplyr)
+        if(!is.null(df_all_cond)) df_all_cond = df_all_cond %>% dplyr::mutate(on_cell_surface = df_all_cond$gene %in% genes_on_cell_surface)
+        if(!is.null(df_all_clust)) df_all_clust = df_all_clust %>% dplyr::mutate(on_cell_surface = df_all_clust$gene %in% genes_on_cell_surface)
       }
-      genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
-      ## add cell surface column
-      require(dplyr)
-      if(!is.null(df_all_cond)) df_all_cond = df_all_cond %>% dplyr::mutate(on_cell_surface = df_all_cond$gene %in% genes_on_cell_surface)
-      if(!is.null(df_all_clust)) df_all_clust = df_all_clust %>% dplyr::mutate(on_cell_surface = df_all_clust$gene %in% genes_on_cell_surface)
-      
       #fusion avec quick.markers
       if(!is.null(df_all_cond)){
         sobj@misc$marker_genes[["differential_custom"]]$conditions_custom <- if(is.null(sobj@misc$marker_genes[["differential_custom"]]$conditions_custom)) df_all_cond else rbind(sobj@misc$marker_genes[["differential_custom"]]$conditions_custom, df_all_cond)
@@ -2638,6 +2718,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
                                         remove.mt.genes = remove.mt.genes,
                                         remove.crb.genes = remove.crb.genes,
                                         remove.str.genes = remove.str.genes,
+                                        add.surface.prot.info = add.surface.prot.info,
                                         gmt.file = gmt.file )
   sobj@misc$technical_info$R <- sobj@misc$params$sobj_creation$Rsession
   sobj@misc$technical_info$cerebroApp <- utils::packageVersion('cerebroApp')
@@ -2791,6 +2872,7 @@ save_stat <- function(sobj = NULL, sample.names = NULL, title = NULL, out.dir = 
                      "Droplet_Quality.estimated_UMI", "Droplet_Quality.fraction_read_in_cells", "Cells_Quality.mito_summary.Median",
                      "Cells_Quality.ribo_summary.Median", "Cells_Quality.stress_summary.Median", "Cells_Quality.filter_cells_genes",
                      "Cells_Quality.filter_cells_counts", "Cells_Quality.genes_per_cell_summary.Median", "Cells_Quality.UMI_per_cell_summary.Median",
+                     "After_QC_cells_filtering.estim_cells",
                      "After_QC_cells_filtering.estim_cells_G1","After_QC_cells_filtering.estim_cells_G2M", "After_QC_cells_filtering.estim_cells_S",
                      "After_QC_cells_filtering.Genes_covered", "After_QC_cells_feature_filtering.estim_doublets","Final_Cells_Quality.mito_summary.Median",
                      "Final_Cells_Quality.ribo_summary.Median","Final_Cells_Quality.stress_summary.Median","Final_Cells_Quality.genes_per_cell_summary.Median",

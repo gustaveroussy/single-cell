@@ -27,7 +27,7 @@ From: ubuntu:20.04
     dpkg-reconfigure --frontend noninteractive tzdata
 
     apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgsl-dev libgit2-dev
-    apt-get install -y libcairo2-dev libxt-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libproj-dev #for EnhancedVolcano
+    apt-get install -y libcairo2-dev libxt-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libharfbuzz-dev libfribidi-dev libharfbuzz-dev libfribidi-dev libfontconfig1-dev libproj-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libcairo2-dev libxt-dev libgeos-dev
     apt-get install -y dirmngr gnupg apt-transport-https ca-certificates software-properties-common
     apt-get -y update && apt-get -y upgrade
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
@@ -41,10 +41,12 @@ From: ubuntu:20.04
     echo "Install R packages ######################"
     R -e 'install.packages("BiocManager")'
     R -e 'install.packages("devtools")'
-    R -e 'install.packages("rsvd", dependencies = TRUE)' # for seurat
-    R -e 'remove.packages(grep("spatstat", installed.packages(), value = T))' # for seurat
-    R -e 'devtools::install_github("spatstat/spatstat@v1.64-2")' # for seurat
+    R -e 'library("devtools")'
+    #R -e 'install.packages("rsvd", dependencies = TRUE)' # for seurat
+    #R -e 'remove.packages(grep("spatstat", installed.packages(), value = T))' # for seurat
+    #R -e 'devtools::install_github("spatstat/spatstat@v1.64-2")' # for seurat
     R -e 'install.packages("Seurat", dependencies = TRUE)'
+    R -e 'library(Seurat)'
     R -e 'devtools::install_github("thomasp85/patchwork")'
     R -e 'install.packages("optparse")'
     R -e 'install.packages("Matrix")'
@@ -56,7 +58,6 @@ From: ubuntu:20.04
     R -e 'BiocManager::install("limma")'
     R -e 'BiocManager::install("edgeR")'
     R -e 'BiocManager::install("EnhancedVolcano")'
-    R -e 'library(Seurat)'
     R -e 'library(pheatmap)'
     R -e 'library(limma)'
     R -e 'library(edgeR)'

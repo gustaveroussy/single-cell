@@ -5,6 +5,7 @@ These rules make the alignment of genes expression in single-cell RNA-seq.
 """
 wildcard_constraints:
     sample_name_ge = ".+_GE"
+    #sample_name_ge = "|".join(ALIGN_SAMPLE_NAME_GE)
 
 """
 This rule makes the symbolic links of fastq files with the good sample name.
@@ -139,8 +140,8 @@ rule alignment_ge:
     threads:
         4
     resources:
-        mem_mb = (lambda wildcards, attempt: min(6144 + attempt * 2048, 20480)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(6144 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -159,8 +160,8 @@ rule correct_UMIs_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(attempt * 256, 10240)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
     shell:
         "bustools correct -w {WHITELISTNAME} -o {output} {input} && rm {input}"
 
@@ -175,8 +176,8 @@ rule sort_file_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(12288 + attempt * 2048, 20480)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(12288 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -188,42 +189,119 @@ rule sort_file_ge:
         rm -r {input} $TMP_DIR || rm -r $TMP_DIR
         """
 
-"""
-This rule count UMI from the corrected sorted results of alignment, by bustools.
-"""
-rule build_count_matrix_ge:
-    input:
-        sorted_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_sorted.bus"),
-        transcripts_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/transcripts.txt"),
-        matrix_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/matrix.ec")
-    output:
-        mtx_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.mtx"),
-        barcodes_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.barcodes.txt"),
-        genes_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.genes.txt"),
-	    MandM = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/Materials_and_Methods.txt")
-    params:
-        os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS")
-    threads:
-        1
-    resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
-    conda:
-        CONDA_ENV_QC_ALIGN_GE_ADT
-    shell:
-        """
-        bustools count --genecounts -o {params}/{wildcards.sample_name_ge} -g {TR2GFILE_GE} -e {input.matrix_file} -t {input.transcripts_file} {input.sorted_file} && rm {input}
-        FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
-        FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")
-        KALLISTO_V=$(conda list "kallisto" | grep "^kallisto " | sed -e "s/kallisto *//g" | sed -e "s/ .*//g")
-        KBPYTHON_V=$(conda list "kb-python" | grep "^kb-python " | sed -e "s/kb-python *//g" | sed -e "s/ .*//g")
-        BUSTOOLS_V=$(conda list "bustools" | grep "^bustools " | sed -e "s/bustools *//g" | sed -e "s/ .*//g")
-        if [[ {SCTECH} = '10xv3' ]];then
-            CR="10X Chromium 3' scRNA-Seq v3 chemistry"
-        elif [[ {SCTECH} = '10xv2' ]];then
-            CR="10X Chromium 5' scRNA-Seq v2 chemistry"
-        fi
-        echo "Raw BCL-files were demultiplexed and converted to Fastq format using bcl2fastq (version 2.20.0.422 from Illumina).
+
+if VELOCITY_GE is False:
+    """
+    This rule count UMI from the corrected sorted results of alignment, by bustools.
+    """
+    rule build_count_matrix_ge:
+        input:
+            sorted_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_sorted.bus"),
+            transcripts_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/transcripts.txt"),
+            matrix_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/matrix.ec")
+        output:
+            mtx_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.mtx"),
+            barcodes_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.barcodes.txt"),
+            genes_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}.genes.txt"),
+    	    MandM = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/Materials_and_Methods.txt")
+        params:
+            os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS")
+        threads:
+            1
+        resources:
+            mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(attempt * 256, 10240)),
+            time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
+        conda:
+            CONDA_ENV_QC_ALIGN_GE_ADT
+        shell:
+            """
+            bustools count --genecounts -o {params}/{wildcards.sample_name_ge} -g {TR2GFILE_GE} -e {input.matrix_file} -t {input.transcripts_file} {input.sorted_file} && rm {input}
+            FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
+            FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")
+            KALLISTO_V=$(conda list "kallisto" | grep "^kallisto " | sed -e "s/kallisto *//g" | sed -e "s/ .*//g")
+            KBPYTHON_V=$(conda list "kb-python" | grep "^kb-python " | sed -e "s/kb-python *//g" | sed -e "s/ .*//g")
+            BUSTOOLS_V=$(conda list "bustools" | grep "^bustools " | sed -e "s/bustools *//g" | sed -e "s/ .*//g")
+            if [[ {SCTECH} = '10xv3' ]];then
+                CR="10X Chromium 3' scRNA-Seq v3 chemistry"
+            elif [[ {SCTECH} = '10xv2' ]];then
+                CR="10X Chromium 5' scRNA-Seq v2 chemistry"
+            fi
+            echo "Raw BCL-files were demultiplexed and converted to Fastq format using bcl2fastq (version 2.20.0.422 from Illumina).
 Reads quality control was performed using fastqc (version $FASTQC_V) and assignment to the expected genome species evaluated with fastq-screen (version $FASTQSCREEN_V).
 Reads were pseudo-mapped to the {REF_TXT_GE} with kallisto (version $KALLISTO_V) using its 'bus' subcommand and parameters corresponding to the $CR. The index was made with the kb-python (version $KBPYTHON_V) wrapper of kallisto. Barcode correction using whitelist provided by the manufacturer (10X Genomics) and gene-based reads quantification was performed with BUStools (version $BUSTOOLS_V)." > {output.MandM}
-        """
+            """
+else:
+    """
+    This rule capture the reads from exons or introns from the corrected sorted results of alignment, by bustools.
+    """
+    rule capture_bus_ge:
+        input:
+            sorted_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/{sample_name_ge}_sorted.bus"),
+            transcripts_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/transcripts.txt"),
+            matrix_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/matrix.ec")
+        output:
+            bus_spliced_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/spliced/spliced.bus"),
+            bus_unspliced_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/unspliced/unspliced.bus")
+        params:
+            os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS")
+        threads:
+            1
+        resources:
+            mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(attempt * 256, 10240)),
+            time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
+        conda:
+            CONDA_ENV_QC_ALIGN_GE_ADT
+        shell:
+            """
+            bustools capture -s -x -o {output.bus_spliced_file} -c {REF_INTRONS_VELOCITY_GE} -e {input.matrix_file} -t {input.transcripts_file} {input.sorted_file}
+            bustools capture -s -x -o {output.bus_unspliced_file} -c {REF_CDNA_VELOCITY_GE} -e {input.matrix_file} -t {input.transcripts_file} {input.sorted_file}
+            rm {input.sorted_file}
+            """
+
+    """
+    This rule count UMI from the captured corrected sorted results of alignment, by bustools.
+    """
+    rule build_count_matrix_ge:
+        input:
+            bus_spliced_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/spliced/spliced.bus"),
+            bus_unspliced_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/unspliced/unspliced.bus")
+            transcripts_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/transcripts.txt"),
+            matrix_file = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/matrix.ec")
+        output:
+            mtx_file_spliced = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/spliced/{sample_name_ge}.mtx"),
+            barcodes_file_spliced = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/spliced/{sample_name_ge}.barcodes.txt"),
+            genes_file_spliced = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/spliced/{sample_name_ge}.genes.txt"),
+            mtx_file_unspliced = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/unspliced/{sample_name_ge}.mtx"),
+            barcodes_file_unspliced = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/unspliced/{sample_name_ge}.barcodes.txt"),
+            genes_file_unspliced = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/unspliced/{sample_name_ge}.genes.txt"),
+    	    MandM = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/Materials_and_Methods.txt")
+        params:
+            out_spliced = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/spliced"),
+            out_unspliced = os.path.normpath(ALIGN_OUTPUT_DIR_GE + "/{sample_name_ge}/KALLISTOBUS/unspliced")
+        threads:
+            1
+        resources:
+            mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(attempt * 256, 10240)),
+            time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
+        conda:
+            CONDA_ENV_QC_ALIGN_GE_ADT
+        shell:
+            """
+            bustools count -o {params.out_spliced}/{wildcards.sample_name_ge} -g {TR2GFILE_GE} -e {input.matrix_file} -t {input.transcripts_file} --genecounts {input.bus_spliced_file}
+            bustools count -o {params.out_unspliced}/{wildcards.sample_name_ge} -g {TR2GFILE_GE} -e {input.matrix_file}c -t {input.transcripts_file} --genecounts {input.bus_unspliced_file}
+            rm {input}
+            FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
+            FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")
+            KALLISTO_V=$(conda list "kallisto" | grep "^kallisto " | sed -e "s/kallisto *//g" | sed -e "s/ .*//g")
+            KBPYTHON_V=$(conda list "kb-python" | grep "^kb-python " | sed -e "s/kb-python *//g" | sed -e "s/ .*//g")
+            BUSTOOLS_V=$(conda list "bustools" | grep "^bustools " | sed -e "s/bustools *//g" | sed -e "s/ .*//g")
+            if [[ {SCTECH} = '10xv3' ]];then
+                CR="10X Chromium 3' scRNA-Seq v3 chemistry"
+            elif [[ {SCTECH} = '10xv2' ]];then
+                CR="10X Chromium 5' scRNA-Seq v2 chemistry"
+            fi
+            echo "Raw BCL-files were demultiplexed and converted to Fastq format using bcl2fastq (version 2.20.0.422 from Illumina).
+Reads quality control was performed using fastqc (version $FASTQC_V) and assignment to the expected genome species evaluated with fastq-screen (version $FASTQSCREEN_V).
+Reads were pseudo-mapped to the {REF_TXT_GE} with kallisto (version $KALLISTO_V) using its 'bus' subcommand and parameters corresponding to the $CR.
+The index was made with BUSpaRse R package using its get_velocity_files() function and the BSgenome.<species>.UCSC.<version> R package for the reference. Barcode correction using whitelist provided by the manufacturer (10X Genomics), reads assignment to exons or introns, and gene-based reads quantification was performed with BUStools (version $BUSTOOLS_V)." > {output.MandM}
+            """

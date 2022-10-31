@@ -354,11 +354,41 @@ if(length(levels(Seurat::Idents(sobj)))!=1 && length(unique(sobj@meta.data[!is.n
 cat("\nPhysico-chemical properties of the CDR3 analysis...\n")
 Physicochemical_properties.c(sobj = sobj, list_type_clT = list_type_clT, out.dir = clusters_output, caption=caption, sample.name=sample.name.INT_GRP, ident.name=ident.name, filtred_metadata_aa=filtred_metadata_aa, filtred_metadata_nt=filtred_metadata_nt, filtred_metadata_gene=filtred_metadata_gene, filtred_metadata_gene_nt=filtred_metadata_gene_nt, type='TCR')
 
-
-#renamme TCR columns with 'TCR_' prefix
+## Renamme TCR columns with 'TCR_' prefix
 toMatch <- c("^CTgene","^CTnt","^CTaa","^CTstrict","^Frequency","^cloneType","^TRAV_1","^TRAJ_1","^TRAC_1","^TRAV_2","^TRAJ_2","^TRAC_2","^TRA_nt_1","^TRA_nt_2","^TRBV_1","^TRBJ_1","^None_1","^TRBC_1","^TRBV_2","^TRBJ_2","^None_2","^TRBC_2","^TRB_nt_1","^TRB_nt_2","^TRA_nt_1_len","^TRA_nt_2_len","^TRB_nt_1_len","^TRB_nt_2_len","^highlight_aa")
 matches <- grep(paste(toMatch,collapse="|"), colnames(sobj@meta.data))
 colnames(sobj@meta.data)[matches] <- paste0("TCR_", grep(paste(toMatch,collapse="|"), colnames(sobj@meta.data), value=TRUE))
+
+## Make the results tables (raw vdj data, sobj TCR data, nb cell/clust/clonotype and merge of this 3 tables)
+#get raw vdj data
+cr_res <- lapply(seq_along(vdj.input.files.tcr), load.sc.tcr.bcr, sobj=sobj, vdj.input.file=vdj.input.files.tcr, sample.name=samples.name.GE)
+for (i in 1:length(samples.name.GE)){
+  cr_res[[i]]$barcode=paste0(samples.name.GE[i],"_", cr_res[[i]]$barcode)
+}
+cr_res_unlist <- do.call("rbind", cr_res)
+cr_res_unlist <- cr_res_unlist[,c("barcode","is_cell","high_confidence","length","chain","v_gene","d_gene","j_gene","c_gene","full_length","productive","cdr3","cdr3_nt","reads","umis")]
+write.table(cr_res_unlist, file=paste0(output_path_TCR,"/raw_vdj.txt"), quote=FALSE, row.names=FALSE, sep = "\t")
+#get sobj TCR data
+TCR_col = grep("^TCR", colnames(sobj@meta.data), value = TRUE)
+TCR_col_to_remove = grep("^TCR_highlight_aa_clust|^TCR_highlight_aa_top", colnames(df_sobj), value = TRUE)
+TCR_col = TCR_col[! TCR_col %in% TCR_col_to_remove]
+df_sobj <- data.frame(barcode=colnames(sobj),sobj@meta.data[,TCR_col],clusters=sobj@meta.data[[ident.name]])
+write.table(df_sobj, file=paste0(output_path_TCR,"/sobj_vdj.txt"), quote=FALSE, row.names=FALSE, sep = "\t")
+#get table nb cell/cluster/clonotype
+df_nb_cell <- data.frame(sobj@meta.data$TCR_highlight_aa_all,sobj@meta.data[[ident.name]])
+df_nb_cell <- na.omit(df_nb_cell)
+df_nb_cell <- table(df_nb_cell)
+df_nb_cell <- data.frame(rbind(df_nb_cell))
+colnames(df_nb_cell) <- sub("X", "nbCell_byClono_Clust",colnames(df_nb_cell))
+rownames(df_nb_cell) <- sub("Clonotype", "",rownames(df_nb_cell)) #necessary to order
+df_nb_cell <- df_nb_cell[order(as.numeric(row.names(df_nb_cell))), ] #order
+rownames(df_nb_cell) <- paste0("Clonotype",rownames(df_nb_cell)) #come back to previous rownames
+df_nb_cell <- data.frame(TCR_highlight_aa_all=row.names(df_nb_cell),df_nb_cell)
+write.table(df_nb_cell, file=paste0(output_path_TCR,"/nb_cell_byclono_byclust.txt"), quote=FALSE, row.names=FALSE, sep = "\t")
+#merge of 3 previous table
+df_merged <- merge(df_sobj, df_nb_cell, by = "TCR_highlight_aa_all",all.x=TRUE, all.y=TRUE)
+df_merged <- merge(cr_res_unlist, df_merged, by = "barcode",all.x=TRUE, all.y=FALSE)
+write.table(df_merged, file=paste0(output_path_TCR,"/merged_vdj.txt"), quote=FALSE, row.names=FALSE, sep = "\t")
 
 ## Save packages versions
 sobj@misc$technical_info$scRepertoire <- utils::packageVersion('scRepertoire')

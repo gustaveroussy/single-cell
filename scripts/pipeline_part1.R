@@ -16,8 +16,6 @@ option_list <- list(
   make_option("--emptydrops.fdr", help="FDR threshold for emptydrops tool"),
   make_option("--droplets.limit", help="Number min of droplets to run emptydrops"),
   make_option("--emptydrops.retain", help="All droplets above this value is considered as a cell"),
-  # Translate ENSG into Gene Symbol
-  make_option("--translation", help="TRUE for translate ENSG into Gene Symbol"),
   # QC cell
   make_option("--pcmito.min", help="Threshold min for percentage of mitochondrial RNA (below this threshold the cells are eliminated)"),
   make_option("--pcmito.max", help="Threshold max for percentage of mitochondrial RNA (above this threshold the cells are eliminated)"),
@@ -34,8 +32,6 @@ option_list <- list(
   make_option("--mt.genes.file", help="RDS file with list of mitochondrial genes"),
   make_option("--crb.genes.file", help="RDS file with list of ribosomal genes"),
   make_option("--str.genes.file", help="RDS file with list of stress genes"),
-  # Translation into gene Symbols
-  make_option("--translation.file", help="Text file with correspondance ENSG / genes symbol"),
   # Yaml parameters file to remplace all parameters before (to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
@@ -67,8 +63,6 @@ pipeline.path <- args$options$pipeline.path
 emptydrops.fdr <-  if (!is.null(args$options$emptydrops.fdr) && (args$options$emptydrops.fdr != "NULL")) as.numeric(args$options$emptydrops.fdr)
 droplets.limit <- if (!is.null(args$options$droplets.limit) && (args$options$droplets.limit != "NULL")) as.numeric(args$options$droplets.limit)
 emptydrops.retain <- if (!is.null(args$options$emptydrops.retain) && (args$options$emptydrops.retain != "NULL")) as.numeric(args$options$emptydrops.retain)
-# Translate ENSG into Gene Symbol
-translation <- args$options$translation
 # QC cell
 pcmito.min <- if (!is.null(args$options$pcmito.min) && (args$options$pcmito.min != "NULL")) as.numeric(args$options$pcmito.min)
 pcmito.max <- if (!is.null(args$options$pcmito.max) && (args$options$pcmito.max != "NULL")) as.numeric(args$options$pcmito.max)
@@ -85,8 +79,6 @@ metadata.file <-  if (!is.null(args$options$metadata.file)) unlist(stringr::str_
 mt.genes.file <- args$options$mt.genes.file
 crb.genes.file <- args$options$crb.genes.file
 str.genes.file <- args$options$str.genes.file
-# Translation into gene Symbols
-translation.file <- args$options$translation.file
 
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
@@ -117,8 +109,6 @@ if (is.null(nthreads)) nthreads <- 1
 # Emptydrops
 if (is.null(emptydrops.fdr)) emptydrops.fdr <- 1E-03
 if (is.null(droplets.limit)) droplets.limit <- 1E+05
-# Translate ENSG into Gene Symbol
-if (is.null(translation)) translation <- TRUE
 # QC cell
 if (is.null(pcmito.min)) pcmito.min <- 0
 if (is.null(pcmito.max)) pcmito.max <- 0.2
@@ -136,16 +126,12 @@ if (species == "homo_sapiens") {
   if (is.null(mt.genes.file)) mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_mito_symbols_20191001.rds")
   if (is.null(crb.genes.file)) crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_cribo_symbols_20191015.rds")
   if (is.null(str.genes.file)) str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/homo_sapiens_stress_symbols_20200224.rds")
-  # Translation into gene Symbols
-  if (is.null(translation.file)) translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Homo_sapiens.GRCh38.txt")
 }
 if (species == "mus_musculus") {
   # QC
   if (is.null(mt.genes.file)) mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_mito_symbols_20191015.rds")
   if (is.null(crb.genes.file)) crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_cribo_symbols_20191015.rds")
   if (is.null(str.genes.file)) str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/mus_musculus_stress_symbols_20200224.rds")
-  # Translation into gene Symbols
-  if (is.null(translation.file)) translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Mus_musculus.GRCm38.txt")
 }
 
 if (species == "rattus_norvegicus") {
@@ -153,8 +139,6 @@ if (species == "rattus_norvegicus") {
   if (is.null(mt.genes.file)) mt.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_mito_symbols_20200315.rds")
   if (is.null(crb.genes.file)) crb.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_cribo_symbols_20200315.rds")
   if (is.null(str.genes.file)) str.genes.file <- paste0(pipeline.path, "/resources/GENELISTS/rattus_norvegicus_stress_symbols_20200315.rds")
-  # Translation into gene Symbols
-  if (is.null(translation.file)) translation.file <- paste0(pipeline.path, "/resources/GENE_CONVERT/EnsemblToGeneSymbol_Rattus_norvegicus.Rnor_6.0.txt")
 }
 
 #### Fixed parameters ####
@@ -193,7 +177,7 @@ unfiltred.dir <- paste0(output.dir.ge, 'QC_droplets', if(!is.null(emptydrops.ret
 dir.create(path = unfiltred.dir, recursive = TRUE, showWarnings = FALSE)
 
 ### Loading raw count matrix + Filtering duplicated cell barcodes + Removing empty droplets
-sobj <- load.sc.data(data.path = input.dir.ge, sample.name = sample.name.GE, assay = assay, droplets.limit = droplets.limit, emptydrops.fdr = emptydrops.fdr, emptydrops.retain = emptydrops.retain, translation = translation, translation.file = translation.file, BPPARAM = cl, my.seed = my.seed, out.dir = unfiltred.dir)
+sobj <- load.sc.data(data.path = input.dir.ge, sample.name = sample.name.GE, assay = assay, droplets.limit = droplets.limit, emptydrops.fdr = emptydrops.fdr, emptydrops.retain = emptydrops.retain, BPPARAM = cl, my.seed = my.seed, out.dir = unfiltred.dir, min.count = min.count)
 
 ### Add metadata
 if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file = metadata.file)

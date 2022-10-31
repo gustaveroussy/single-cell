@@ -5,7 +5,7 @@ This rule make the clustering, to find markers genes and to apply annotations of
 """
 
 wildcard_constraints:
-    name_grp = "|".join(GRP_NDRE_NAME_GRP)
+    name_grp = "|".join(GRP_CMA_NAME_GRP)
 
 """
 This function allows to determine the input .rda file.
@@ -58,13 +58,14 @@ rule grp_clust_markers_annot_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(10240 + attempt * 5120, 102400)),
-        time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
+        mem_mb = (lambda wildcards, attempt: GRP_CMA_MEM if (GRP_CMA_MEM is not None) else min(5120 + attempt * 51200, 716800)),
+        time_min = (lambda wildcards, attempt: GRP_CMA_TIME if (GRP_CMA_TIME is not None) else min(attempt * 1440, 10080))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR:$HOME {params.sing_grp_bind} \
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX)
+        rsync -az -c {PIPELINE_FOLDER}/resources/DATABASE/ref_annot_cache $TMP_DIR/ref_annot_cache  && \
+        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR/ref_annot_cache:$HOME {params.sing_grp_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Grouped_analysis_part2.R \
         --input.rda.grp {params.grp_input_rda} \
@@ -74,6 +75,8 @@ rule grp_clust_markers_annot_ge:
         --nthreads {threads} \
         --pipeline.path {params.pipeline_folder} \
         --markfile  {params.SING_GRP_CMA_MARKFILE} \
+        --markers.pt.size  {GRP_CMA_MARKERS_PTSIZE} \
+        --markers.order  {GRP_CMA_MARKERS_ORDER} \
         --custom.sce.ref {params.SING_GRP_CMA_CUSTOM_SCE_REF} \
         --custom.markers.ref {params.SING_GRP_CMA_CUSTOM_MARKERS_REF} \
         --keep.dims {GRP_CMA_KEEP_DIM} \

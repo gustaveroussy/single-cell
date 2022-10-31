@@ -21,6 +21,7 @@ option_list <- list(
   # Integration
   make_option("--integration.method", help="Name of integration method (Seurat, scbfa, Harmony or Liger)"),
   make_option("--vtr.batch", help="List of batch effect to regress into Harmony, Liger, scbfa or bpca correction ('orig.ident')"),
+  make_option("--seurat.num.ref", help="List of datasets to use as reference for seurat integration (useful if there are a lot of datasets to integrate."),
   # Normalization and dimension reduction
   make_option("--features.n", help="Number of High Variable Genes to consider"),
   make_option("--norm.method", help="Name of normalization method (LogNormalize or SCTransform)"),
@@ -28,11 +29,12 @@ option_list <- list(
   make_option("--vtr.biases", help="List of biases to regress into normalisation or dimension reduction (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
   make_option("--vtr.scale", help="TRUE to center biaises to regress (for scbfa and bpca only)"),
   make_option("--dims.max", help="Number max of dimensions to compute (depends on sample complexity and number of cells)"),
-  make_option("--dims.min", help="Number min of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
-  make_option("--dims.steps", help="Steps for dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
-  make_option("--res.max", help="Number max of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
-  make_option("--res.min", help="Number min of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
-  make_option("--res.steps", help="Steps for resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.dims.max", help="Number max of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.dims.min", help="Number min of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.dims.steps", help="Steps for dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.res.max", help="Number max of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.res.min", help="Number min of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.res.steps", help="Steps for resolution to compute for evaluation (depends on sample complexity and number of cells)"),
   #### Yaml parameters file to remplace all parameters before (to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
@@ -57,28 +59,30 @@ eval.markers <- unlist(stringr::str_split(args$options$eval.markers, ","))
 list.author.name <- unlist(stringr::str_split(args$options$author.name, ","))
 list.author.mail <- unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
-nthreads <- if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads) else NULL
+nthreads <- if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
 pipeline.path <- args$options$pipeline.path
 ### Analysis Parameters
 # Load data
-min.cells <- if (!is.null(args$options$min.cells)) as.numeric(args$options$min.cells) else NULL
+min.cells <- if (!is.null(args$options$min.cells)) as.numeric(args$options$min.cells)
 # Metadata
 metadata.file <- unlist(stringr::str_split(args$options$metadata.file, ","))
 # Integration
 integration.method <- args$options$integration.method
 vtr.batch <- unlist(stringr::str_split(args$options$vtr.batch, ","))
+seurat.num.ref <- as.numeric(unlist(stringr::str_split(args$options$seurat.num.ref, ",")))
 # Normalization and dimension reduction
-features.n <- if (!is.null(args$options$features.n)) as.numeric(args$options$features.n) else NULL
+features.n <- if (!is.null(args$options$features.n)) as.numeric(args$options$features.n)
 norm.method <- args$options$norm.method
 dimred.method <- args$options$dimred.method
 vtr.biases <- sort(unlist(stringr::str_split(args$options$vtr.biases, ",")))
 vtr.scale <- args$options$vtr.scale
-dims.max <- if (!is.null(args$options$dims.max)) as.numeric(args$options$dims.max) else NULL
-dims.min <- if (!is.null(args$options$dims.min)) as.numeric(args$options$dims.min) else NULL
-dims.steps <- if (!is.null(args$options$dims.steps)) as.numeric(args$options$dims.steps) else NULL
-res.max <- if (!is.null(args$options$res.max)) as.numeric(args$options$res.max) else NULL
-res.min <- if (!is.null(args$options$res.min)) as.numeric(args$options$res.min) else NULL
-res.steps <- if (!is.null(args$options$res.steps)) as.numeric(args$options$res.steps) else NULL
+dims.max <- if (!is.null(args$options$dims.max)) as.numeric(args$options$dims.max)
+eval.dims.max <- if (!is.null(args$options$eval.dims.max)) as.numeric(args$options$eval.dims.max)
+eval.dims.min <- if (!is.null(args$options$eval.dims.min)) as.numeric(args$options$eval.dims.min)
+eval.dims.steps <- if (!is.null(args$options$eval.dims.steps)) as.numeric(args$options$eval.dims.steps)
+eval.res.max <- if (!is.null(args$options$eval.res.max)) as.numeric(args$options$eval.res.max)
+eval.res.min <- if (!is.null(args$options$eval.res.min)) as.numeric(args$options$eval.res.min)
+eval.res.steps <- if (!is.null(args$options$eval.res.steps)) as.numeric(args$options$eval.res.steps)
 
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
@@ -90,7 +94,7 @@ if (!is.null(args$options$yaml)){
     } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "TRUE")) { yaml_options[[i]] <- TRUE
     }
     #assign values
-    if(i %in% c("nthreads","min.cells", "features.n", "dims.max", "dims.min", "dims.steps", "res.max", "res.min", "res.steps")) assign(i, as.numeric(yaml_options[[i]])) else assign(i, yaml_options[[i]])
+    if(i %in% c("nthreads","min.cells", "features.n", "dims.max", "eval.dims.max", "eval.dims.min", "eval.dims.steps", "eval.res.max", "eval.res.min", "eval.res.steps")) assign(i, as.numeric(yaml_options[[i]])) else assign(i, yaml_options[[i]])
   }
   name.int <- name.int
   rm(yaml_options, i)
@@ -111,11 +115,12 @@ if (is.null(min.cells)) min.cells <- 0
 if (is.null(features.n)) features.n <- 3000
 if (is.null(vtr.scale)) vtr.scale <- TRUE
 if (is.null(dims.max)) dims.max <- 49
-if (is.null(dims.min)) dims.min <- 3
-if (is.null(dims.steps)) dims.steps <- 2
-if (is.null(res.max)) res.max <- 1.2
-if (is.null(res.min)) res.min <- 0.1
-if (is.null(res.steps)) res.steps <- 0.1
+if (is.null(eval.dims.max)) eval.dims.max <- 49
+if (is.null(eval.dims.min)) eval.dims.min <- 3
+if (is.null(eval.dims.steps)) eval.dims.steps <- 2
+if (is.null(eval.res.max)) eval.res.max <- 1.2
+if (is.null(eval.res.min)) eval.res.min <- 0.1
+if (is.null(eval.res.steps)) eval.res.steps <- 0.1
 #### Fixed parameters ####
 solo.pt.size <- 2
 raw.methods <- c('scbfa', 'bpca')
@@ -196,6 +201,7 @@ sobj.list <- sapply(seq_along(input.list.rda), function(x) {
 names(sobj.list) <- vapply(sobj.list, Seurat::Project, 'a')
 message(paste0("There are ", length(sobj.list), " samples."))
 if(length(sobj.list) == 1) stop("We can't mix only one sample!") 
+seurat.name.ref <- if(!is.null(seurat.num.ref)) names(sobj.list)[seurat.num.ref] else NULL
 
 ## Filtering low cells datasets # pour seurat surtout!
 sobj.cells <- vapply(sobj.list, ncol, 1L)
@@ -271,11 +277,10 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     if(assay == 'SCT') int.norm.method <- 'SCT' else  int.norm.method <- 'LogNormalize'
     sobj.features <- Seurat::SelectIntegrationFeatures(object.list = sobj.list, nfeatures = features.n) #Sélection des marqueurs biologiques partagés
     sobj.list <- suppressWarnings(Seurat::PrepSCTIntegration(object.list = sobj.list, anchor.features = sobj.features)) #Verifie que les résidus de Pearson ont bien été calculés
-    sobj.anchors <- Seurat::FindIntegrationAnchors(object.list = sobj.list, normalization.method = int.norm.method, anchor.features = sobj.features) #CCA + L2normalisation; puis KNN; puis MNNs : identification des paires de cellules; filtrage des anchors; calcul des scores
+    sobj.anchors <- Seurat::FindIntegrationAnchors(object.list = sobj.list, normalization.method = int.norm.method, anchor.features = sobj.features, reference = seurat.num.ref) #CCA + L2normalisation; puis KNN; puis MNNs : identification des paires de cellules; filtrage des anchors; calcul des scores
     sobj <- Seurat::IntegrateData(anchorset = sobj.anchors, normalization.method = int.norm.method) #Calcul des poids; application des poids sur la matrice d'expression: intégration
 
     # Params
-    
     Seurat::Project(sobj) <- name.int
     sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
     DefaultAssay(sobj) <- "integrated"
@@ -426,6 +431,7 @@ if(integration.method == "Seurat"){
     "Datasets were integrated using canonical correlation analysis (CCA) to identify pairwise anchors between datasets and using the anchors to harmonize the datasets, as implemented in Seurat (version ",sobj@misc$technical_info$Seurat,").",
     "In practice, datasets were normalized independently using ",norm.method,", as described before (see Individual Analysis section). ",
     "The top ",features.n," Highly Variable Genes across all samples were selected by the SelectIntegrationFeatures() function and used for integration with the PrepSCTIntegration(), FindIntegrationAnchors() and IntegrateData() functions (with default parameters). ",
+    if(!is.null(seurat.name.ref) & length(seurat.name.ref)>1)  paste("Some samples (", paste0(seurat.name.ref, collapse=" ,"), ") were used as a reference for the integration.") else if(!is.null(seurat.name.ref) & length(seurat.name.ref)==1)  paste("The samples ", seurat.name.ref, " was used as a reference for the integration."),
     if(dimred.method == 'pca') paste("After integration, a ",MM_tmp," dimension reduction was performed on integrated dataset."),
     if(dimred.method == 'scbfa') paste("After integration, a ",dimred.method," dimension reduction was performed on HVG of integrated dataset.", MM_tmp3)
   )
@@ -452,8 +458,10 @@ if(integration.method == "Seurat"){
   )
   MM_tmp <- "Harmony"
 }
-sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval <- paste0( sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval, " The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations.")
+sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval <- paste0( sobj@misc$parameters$Materials_and_Methods$Integration_Norm_DimRed_Eval, " The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",eval.dims.min," to ",eval.dims.max," dimensions, with a step of ",eval.dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",eval.res.min," to ",eval.res.max," with a step of ",eval.res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations.")
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
+rm(MM_tmp,MM_tmp2,MM_tmp3)
+gc()
 
 ### Saving reduced normalized object
 cat("\nSaving object...\n")
@@ -471,6 +479,11 @@ cat("\nCorrelation of dimensions...\n")
 dimensions.eval(sobj = sobj, reduction = red.name, eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
 gc()
 
+### Elbowplot
+cat("\nElbowPlot...\n")
+elb <- Seurat::ElbowPlot(sobj, ndims = dims.max, reduction = red.name)
+ggplot2::ggsave(filename = paste0(norm.dim.red.dir,"/", name.int, '_', red.name, '_elbowplot.png'), plot = elb, width = 7, height = 4)
+
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)
 cat("\nEvaluation of multiple clustering parameters...\n")
-clustering.eval.mt(sobj = sobj, reduction = red.name, dimsvec = seq.int(dims.min, dims.max, dims.steps), resvec = seq(res.min,res.max,res.steps), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)
+clustering.eval.mt(sobj = sobj, reduction = red.name, dimsvec = seq.int(eval.dims.min, eval.dims.max, eval.dims.steps), resvec = seq(eval.res.min,eval.res.max,eval.res.steps), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)

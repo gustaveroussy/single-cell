@@ -42,8 +42,8 @@ rule cerebro:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(5120 * attempt , 102400)),
-        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
+        mem_mb = (lambda wildcards, attempt: CEREBRO_MEM if (CEREBRO_MEM is not None) else min(5120 * attempt , 102400)),
+        time_min = (lambda wildcards, attempt: CEREBRO_TIME if (CEREBRO_TIME is not None) else min(attempt * 60, 200))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
@@ -65,6 +65,7 @@ rule cerebro:
         --remove.str.genes {CEREBRO_REMOVE_STR} \
         --only.pos.DE {CEREBRO_ONLY_POS_DE} \
         --remove.custom.DE {CEREBRO_REMOVE_CUSTOM_DE} \
+        --add.surface.prot.info {CEREBRO_ADD_SURFACE_PROT_INFO} \
         --gmt.file {params.SING_CEREBRO_GMT_FILE} \
         --metadata.file {params.SING_CEREBRO_METADATA_FILE}
         """

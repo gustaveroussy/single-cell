@@ -19,6 +19,7 @@ option_list <- list(
   make_option("--remove.str.genes", help="Remove stress genes (to see better the other genes)"),
   make_option("--only.pos.DE", help="Keep only positive DE genes from customized differential expression analysis (for genes markers identification is always only positive)."),
   make_option("--remove.custom.DE", help="Remove results from customized differential expression analysis."),
+  make_option("--add.surface.prot.info", help="Get the information of if the DE gene code for a cell surface protein or not."),
   ### Databases
   # Metadata
   make_option("--metadata.file", help="csv file with the metadata to add in the seurat object"),
@@ -50,7 +51,7 @@ pipeline.path <- args$options$pipeline.path
 ### Analysis Parameters
 # Cerebro
 version <- args$options$version
-groups <- args$options$groups
+groups <- unlist(stringr::str_split(args$options$groups, ","))
 remove.other.reductions <- args$options$remove.other.reductions
 remove.other.idents <- args$options$remove.other.idents
 remove.mt.genes <- args$options$remove.mt.genes
@@ -58,6 +59,7 @@ remove.crb.genes <- args$options$remove.crb.genes
 remove.str.genes <- args$options$remove.str.genes
 only.pos.DE <- args$options$only.pos.DE
 remove.custom.DE <- args$options$remove.custom.DE
+add.surface.prot.info <- args$options$add.surface.prot.info
 ### Databases
 # Metadata
 metadata.file <-  if (!is.null(args$options$metadata.file)) unlist(stringr::str_split(args$options$metadata.file, ","))
@@ -118,20 +120,17 @@ if (is.null(remove.crb.genes)) remove.crb.genes <- FALSE
 if (is.null(remove.str.genes)) remove.str.genes <- FALSE
 if (is.null(only.pos.DE)) only.pos.DE <- FALSE
 if (is.null(remove.custom.DE)) remove.custom.DE <- FALSE
-if (is.null(groups)){
-  groups_v1.2 <- NULL
-}else{
-  groups_v1.2 <- unlist(stringr::str_split(groups, ","))
-}
+if (is.null(add.surface.prot.info)) add.surface.prot.info <- TRUE
+
 ### Databases
 # Cerebro
 if (is.null(gmt.file)) gmt.file <- paste0(pipeline.path, "/resources/DATABASE/MSIGDB/7.1/msigdb_v7.1_GMTs/msigdb.v7.1.symbols.gmt")
 
 #### Fixed parameters ####
 # Cerebro
-if (species == "homo_sapiens") species.rdx <- 'hg'
-if (species == "mus_musculus") species.rdx <- 'mm'
-if (species == "rattus_norvegicus") species.rdx <- 'rn'
+if (species == "homo_sapiens") species <- 'hg'
+if (species == "mus_musculus") species <- 'mm'
+if (species == "rattus_norvegicus") species <- 'rn'
 
 #########
 ## MAIN
@@ -154,12 +153,12 @@ write_MandM(sobj=sobj, output.dir=dirname(input.rda.ge))
 ### Building cerebro binary
 cat("\nBuilding cerebro object...\n")
 if (version == "v1.2"){
-    seurat2cerebro(sobj = sobj, ident = ident.name, clusters.colnames = NULL, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, species = species.rdx, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, only_pos = TRUE, only_pos_DE = only.pos.DE, remove.custom.DE = remove.custom.DE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox')
-  if(!is.null(groups_v1.2)){
-    for (clusters.colnames in groups_v1.2){
-      seurat2cerebro(sobj = sobj, ident = ident.name, clusters.colnames = clusters.colnames, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, species = species.rdx, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, only_pos = TRUE, only_pos_DE = only.pos.DE, remove.custom.DE = remove.custom.DE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox')
+  seurat2cerebro(sobj = sobj, ident = ident.name, clusters.colnames = NULL, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, species = species, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, only_pos = TRUE, only_pos_DE = only.pos.DE, remove.custom.DE = remove.custom.DE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox', add.surface.prot.info = add.surface.prot.info)
+  if(!is.null(groups)){
+    for (clusters.colnames in groups){
+      seurat2cerebro(sobj = sobj, ident = ident.name, clusters.colnames = clusters.colnames, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, species = species, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, only_pos = TRUE, only_pos_DE = only.pos.DE, remove.custom.DE = remove.custom.DE, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox', add.surface.prot.info = add.surface.prot.info)
     }
   }
 }else if (version == "v1.3"){
-  seurat2cerebro_1.3(sobj = sobj, ident = ident.name, groups = groups, species = species.rdx, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox', only_pos = TRUE, remove.custom.DE = remove.custom.DE, only_pos_DE = only.pos.DE)
+  seurat2cerebro_1.3(sobj = sobj, ident = ident.name, groups = groups, species = species, remove.other.reductions = remove.other.reductions, remove.other.idents = remove.other.idents, gmt.file = gmt.file, remove.mt.genes = remove.mt.genes, remove.crb.genes = remove.crb.genes, remove.str.genes = remove.str.genes, file = GE_file, nthreads = nthreads, min_pct = .75, thresh_logFC = .5, thresh_p_val = 5E-02, test = 'wilcox', only_pos = TRUE, remove.custom.DE = remove.custom.DE, only_pos_DE = only.pos.DE, add.surface.prot.info = add.surface.prot.info)
 }

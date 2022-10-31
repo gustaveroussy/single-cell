@@ -12,9 +12,13 @@ __author__ = "Marine AGLAVE"
 
 #using: snakemake --profile /mnt/beegfs/pipelines/single-cell/profiles/slurm -s /mnt/beegfs/pipelines/single-cell/Snakefile --configfile /mnt/beegfs/userdata/m_aglave/pipeline/test_new_data/Params.yaml
 
+pipeline_version = "1.4"
+gitub_pipeline = "https://github.com/gustaveroussy/single-cell"
 sys.stderr.write("\n############################################################# \n")
-sys.stderr.write("\n\n\t Single-cell RNA-seq pipeline \n\n")
+sys.stderr.write("\n\n\t Single-cell RNA-seq pipeline (version " + pipeline_version + ")\n\n")
 sys.stderr.write("\n############################################################# \n\n")
+
+sys.stderr.write("\nSee " + gitub_pipeline + " for more information about the pipeline. \n\n")
 
 ### parameters ###################################################################################################################################
 sys.stderr.write("\n#################### Setting Parameters ####################\n\n")
@@ -22,13 +26,12 @@ sys.stderr.write("\n#################### Setting Parameters ####################
 STEPS = config['Steps']
 PIPELINE_FOLDER = workflow.snakefile
 PIPELINE_FOLDER = PIPELINE_FOLDER.replace("/Snakefile", "")
-GLOBAL_TMP = config['Tmp'] if 'Tmp' in config else "/tmp"
-if os.path.normpath(GLOBAL_TMP) != "/tmp" :
-    if os.path.exists(GLOBAL_TMP) :
-        sys.stderr.write("Temporary directory is set to: " + GLOBAL_TMP + "\n")
-    else :
-        sys.stderr.write(GLOBAL_TMP + " doesn't exist! Temporary directory is set to /tmp \n")
-        GLOBAL_TMP = "/tmp"
+GLOBAL_TMP = config['Tmp'] if 'Tmp' in config else sys.exit("Error: No temporary folder found in configfile! Please set 'Tmp:' under 'Steps:'")
+if os.path.exists(GLOBAL_TMP) :
+    sys.stderr.write("Temporary directory is set to: " + GLOBAL_TMP + "\n")
+else :
+    sys.stderr.write(GLOBAL_TMP + " doesn't exist! This temporary directory is created.\n")
+    os.makedirs(GLOBAL_TMP)
 
 if "Alignment_countTable_GE" in STEPS:
     ### Sample/Project
@@ -37,12 +40,17 @@ if "Alignment_countTable_GE" in STEPS:
     if 'Alignment_countTable_GE' in config and 'output.dir.ge' not in config['Alignment_countTable_GE']: sys.exit("Error: No output.dir.ge in configfile (Alignment_countTable_GE)!")
     ALIGN_SAMPLE_NAME_GE_RAW = config['Alignment_countTable_GE']['sample.name.ge']
     ALIGN_INPUT_DIR_GE_RAW = os.path.normpath(config['Alignment_countTable_GE']['input.dir.ge'])
+    if not os.path.exists(ALIGN_INPUT_DIR_GE_RAW) :
+        sys.exit("Error: input.dir.ge (" + ALIGN_INPUT_DIR_GE_RAW +") not found! Wrong path? \n")
     ALIGN_OUTPUT_DIR_GE = os.path.normpath(config['Alignment_countTable_GE']['output.dir.ge'])
     ALIGN_INPUT_DIR_GE = os.path.normpath(GLOBAL_TMP + "/fastq/")
     ### Index
     KINDEX_GE = config['Alignment_countTable_GE']['kindex.ge'] if 'Alignment_countTable_GE' in config and 'kindex.ge' in config['Alignment_countTable_GE'] else sys.exit("Error: No kindex.ge in configfile (Alignment_countTable_GE)!")
     TR2GFILE_GE = config['Alignment_countTable_GE']['tr2g.file.ge'] if 'Alignment_countTable_GE' in config and 'tr2g.file.ge' in config['Alignment_countTable_GE'] else sys.exit("Error: No tr2g.file.ge in configfile (Alignment_countTable_GE)!")
-    REF_TXT_GE = config['Alignment_countTable_GE']['reference.txt'] if 'reference.txt' in config['Alignment_countTable_GE'] else "<insert_you_reference_here>"
+    REF_TXT_GE = config['Alignment_countTable_GE']['reference.txt'] if 'Alignment_countTable_GE' in config and 'reference.txt' in config['Alignment_countTable_GE'] else "<insert_you_reference_here>"
+    ### Computation
+    ALIGN_TIME_GE = config['Alignment_countTable_GE']['time'] if 'time' in config['Alignment_countTable_GE'] else None
+    ALIGN_MEM_GE = config['Alignment_countTable_GE']['mem'] if 'mem' in config['Alignment_countTable_GE'] else None
     ### File names
     ALIGN_SAMPLE_NAME_GE = []
     ALIGN_SYMLINK_FILES_GE = []
@@ -52,8 +60,10 @@ if "Alignment_countTable_GE" in STEPS:
         ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i] + "_GE") if (ALIGN_SAMPLE_NAME_GE_RAW[i][len(ALIGN_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i])
         #ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "*_R2_*.f*q*"))
         ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_[1-4]_S*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_S[0-9]*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_[1-4]_S*_R2_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_S[0-9]*_R2_*.f*q*"))
+        if (ORIG_FILES is None):
+            sys.exit("Error: No fastq files found for " + ALIGN_SAMPLE_NAME_GE_RAW[i] + " sample. Wrong name?\n")
         #files with path and extention
-        ALIGN_SYMLINK_FILES_GE = ALIGN_SYMLINK_FILES_GE + [ os.path.normpath(ALIGN_INPUT_DIR_GE + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_GE_RAW[i], ALIGN_SAMPLE_NAME_GE[i])) for file in ORIG_FILES]
+        ALIGN_SYMLINK_FILES_GE = ALIGN_SYMLINK_FILES_GE + [ os.path.normpath(ALIGN_INPUT_DIR_GE + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_GE_RAW[i], ALIGN_SAMPLE_NAME_GE[i],1)) for file in ORIG_FILES]
     #files without path and extention
     ALIGN_SYMLINK_FILES_NAME_GE = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_GE]
 
@@ -64,11 +74,16 @@ if "Alignment_countTable_ADT" in STEPS:
     if 'Alignment_countTable_ADT' in config and 'output.dir.adt' not in config['Alignment_countTable_ADT']: sys.exit("Error: No output.dir.adt in configfile (Alignment_countTable_ADT)!")
     ALIGN_SAMPLE_NAME_ADT_RAW = config['Alignment_countTable_ADT']['sample.name.adt']
     ALIGN_INPUT_DIR_ADT_RAW = os.path.normpath(config['Alignment_countTable_ADT']['input.dir.adt'])
+    if not os.path.exists(ALIGN_INPUT_DIR_ADT_RAW) :
+        sys.exit("Error: input.dir.adt not found! Wrong path? \n")
     ALIGN_OUTPUT_DIR_ADT = os.path.normpath(config['Alignment_countTable_ADT']['output.dir.adt'])
     ALIGN_INPUT_DIR_ADT = os.path.normpath(ALIGN_OUTPUT_DIR_ADT + "/fastq/")
     ### Index
     KINDEX_ADT = config['Alignment_countTable_ADT']['kindex.adt'] if 'Alignment_countTable_ADT' in config and 'kindex.adt' in config['Alignment_countTable_ADT'] else sys.exit("Error: No kindex.adt in configfile (Alignment_countTable_ADT)!")
     TR2GFILE_ADT = config['Alignment_countTable_ADT']['tr2g.file.adt'] if 'Alignment_countTable_ADT' in config and 'tr2g.file.adt' in config['Alignment_countTable_ADT'] else sys.exit("Error: No tr2g.file.adt in configfile (Alignment_countTable_ADT)!")
+    ### Computation
+    ALIGN_TIME_ADT = config['Alignment_countTable_ADT']['time'] if 'time' in config['Alignment_countTable_ADT'] else None
+    ALIGN_MEM_ADT = config['Alignment_countTable_ADT']['mem'] if 'mem' in config['Alignment_countTable_ADT'] else None
     ### File names
     ALIGN_SAMPLE_NAME_ADT = []
     ALIGN_SYMLINK_FILES_ADT = []
@@ -77,8 +92,10 @@ if "Alignment_countTable_ADT" in STEPS:
         #check samples names and add "_ADT" if needed
         ALIGN_SAMPLE_NAME_ADT.append(ALIGN_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (ALIGN_SAMPLE_NAME_ADT_RAW[i][len(ALIGN_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else ALIGN_SAMPLE_NAME_ADT.append(ALIGN_SAMPLE_NAME_ADT_RAW[i])
         ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R2_*.f*q*"))
+        if (ORIG_FILES is None):
+            sys.exit("Error: No fastq files found for " + ALIGN_SAMPLE_NAME_ADT_RAW[i] + " sample. Wrong name?\n")
         #files with path and extention
-        ALIGN_SYMLINK_FILES_ADT = ALIGN_SYMLINK_FILES_ADT + [ os.path.normpath(ALIGN_INPUT_DIR_ADT + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_ADT_RAW[i], ALIGN_SAMPLE_NAME_ADT[i])) for file in ORIG_FILES]
+        ALIGN_SYMLINK_FILES_ADT = ALIGN_SYMLINK_FILES_ADT + [ os.path.normpath(ALIGN_INPUT_DIR_ADT + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_ADT_RAW[i], ALIGN_SAMPLE_NAME_ADT[i],1)) for file in ORIG_FILES]
     #files without path and extention
     ALIGN_SYMLINK_FILES_NAME_ADT = [os.path.splitext(os.path.splitext(os.path.basename(x))[0])[0] for x in ALIGN_SYMLINK_FILES_ADT]
 
@@ -90,11 +107,18 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
     ALIGN_SAMPLE_NAME_TCR_RAW = config['Alignment_annotations_TCR_BCR']['sample.name.tcr'] if 'sample.name.tcr' in config['Alignment_annotations_TCR_BCR'] else None
     ALIGN_SAMPLE_NAME_BCR_RAW = config['Alignment_annotations_TCR_BCR']['sample.name.bcr'] if 'sample.name.bcr' in config['Alignment_annotations_TCR_BCR'] else None
     ALIGN_INPUT_DIR_TCR_RAW = os.path.normpath(config['Alignment_annotations_TCR_BCR']['input.dir.tcr'] + "/") if 'input.dir.tcr' in config['Alignment_annotations_TCR_BCR'] else None
+    if ALIGN_INPUT_DIR_TCR_RAW is not None and not os.path.exists(ALIGN_INPUT_DIR_TCR_RAW) :
+        sys.exit("Error: input.dir.tcr not found! Wrong path? \n")
     ALIGN_INPUT_DIR_BCR_RAW = os.path.normpath(config['Alignment_annotations_TCR_BCR']['input.dir.bcr'] + "/") if 'input.dir.bcr' in config['Alignment_annotations_TCR_BCR'] else None
+    if ALIGN_INPUT_DIR_BCR_RAW is not None and not os.path.exists(ALIGN_INPUT_DIR_BCR_RAW) :
+        sys.exit("Error: input.dir.bcr not found! Wrong path? \n")
     ALIGN_OUTPUT_DIR_TCR_BCR = os.path.normpath(config['Alignment_annotations_TCR_BCR']['output.dir.tcr_bcr'])
     ALIGN_INPUT_DIR_TCR_BCR = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/fastq/")
     ### Index
     CRINDEX_TCR_BCR=config['Alignment_annotations_TCR_BCR']['crindex.tcr_bcr'] if ('Alignment_annotations_TCR_BCR' in config and 'crindex.tcr_bcr' in config['Alignment_annotations_TCR_BCR']) else "/mnt/beegfs/database/bioinfo/single-cell/TCR_REFERENCES/refdata-cellranger-vdj-GRCh38-alts-ensembl-3.1.0"
+    ### Computation
+    ALIGN_TIME_TCR_BCR = config['Alignment_annotations_TCR_BCR']['time'] if 'time' in config['Alignment_annotations_TCR_BCR'] else None
+    ALIGN_MEM_TCR_BCR = config['Alignment_annotations_TCR_BCR']['mem'] if 'mem' in config['Alignment_annotations_TCR_BCR'] else None
     ### File names
     #TCR
     ALIGN_SAMPLE_NAME_TCR = []
@@ -106,11 +130,13 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
             #check samples names and add "_TCR" if needed
             ALIGN_SAMPLE_NAME_TCR.append(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_TCR") if (ALIGN_SAMPLE_NAME_TCR_RAW[i][len(ALIGN_SAMPLE_NAME_TCR_RAW[i])-4:] != "_TCR") else ALIGN_SAMPLE_NAME_TCR.append(ALIGN_SAMPLE_NAME_TCR_RAW[i])
             ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_R2_*.f*q*"))
-             #files with path and extention
+            if (ORIG_FILES is None):
+                sys.exit("Error: No fastq files found for " + ALIGN_SAMPLE_NAME_TCR_RAW[i] + " sample. Wrong name?\n")
+            #files with path and extention
             ALIGN_ORIG_FILES_TCR = ALIGN_ORIG_FILES_TCR + ORIG_FILES
             for file in ORIG_FILES:
                 if re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_S[0-9]+_L00[0-9]{1}_R[1-2]{1}_.*"), os.path.basename(file)) is not None: #good name format
-                    ALIGN_SYMLINK_FILES_TCR = ALIGN_SYMLINK_FILES_TCR + [ os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_TCR_RAW[i], ALIGN_SAMPLE_NAME_TCR[i])) ]
+                    ALIGN_SYMLINK_FILES_TCR = ALIGN_SYMLINK_FILES_TCR + [ os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_TCR_RAW[i], ALIGN_SAMPLE_NAME_TCR[i],1)) ]
                 elif re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_[0-9]{1}_S[0-9]+_R[1-2]{1}_.*"), os.path.basename(file)) is not None: # => reformat
                     res_match = re.match(str(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_(?P<nb>[0-9]{1})_(?P<S>S[0-9]+)_(?P<R_compl>R[1-2]{1}_.*)"), os.path.basename(file))
                     ALIGN_SYMLINK_FILES_TCR = ALIGN_SYMLINK_FILES_TCR + [ os.path.normpath(str(ALIGN_INPUT_DIR_TCR_BCR + "/" + ALIGN_SAMPLE_NAME_TCR[i] + "_" + res_match.group('S') + "_L00" + res_match.group('nb') + "_" + res_match.group('R_compl'))) ]
@@ -130,11 +156,13 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
             #check samples names and add "_BCR" if needed
             ALIGN_SAMPLE_NAME_BCR.append(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_BCR") if (ALIGN_SAMPLE_NAME_BCR_RAW[i][len(ALIGN_SAMPLE_NAME_BCR_RAW[i])-4:] != "_BCR") else ALIGN_SAMPLE_NAME_BCR.append(ALIGN_SAMPLE_NAME_BCR_RAW[i])
             ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_R2_*.f*q*"))
+            if (ORIG_FILES is None):
+                sys.exit("Error: No fastq files found for " + ALIGN_SAMPLE_NAME_BCR_RAW[i] + " sample. Wrong name?\n")
             #files with path and extention
             ALIGN_ORIG_FILES_BCR = ALIGN_ORIG_FILES_BCR + ORIG_FILES
             for file in ORIG_FILES:
                 if re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_S[0-9]+_L00[0-9]{1}_R[1-2]{1}_.*"), os.path.basename(file)) is not None: #good name format
-                    ALIGN_SYMLINK_FILES_BCR = ALIGN_SYMLINK_FILES_BCR + [ os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_BCR_RAW[i], ALIGN_SAMPLE_NAME_BCR[i])) ]
+                    ALIGN_SYMLINK_FILES_BCR = ALIGN_SYMLINK_FILES_BCR + [ os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_BCR_RAW[i], ALIGN_SAMPLE_NAME_BCR[i],1)) ]
                 elif re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_[0-9]{1}_S[0-9]+_R[1-2]{1}_.*"), os.path.basename(file)) is not None: # => reformat
                     res_match = re.match(str(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_(?P<nb>[0-9]{1})_(?P<S>S[0-9]+)_(?P<R_compl>R[1-2]{1}_.*)"), os.path.basename(file))
                     ALIGN_SYMLINK_FILES_BCR = ALIGN_SYMLINK_FILES_BCR + [ os.path.normpath(str(ALIGN_INPUT_DIR_TCR_BCR + "/" + ALIGN_SAMPLE_NAME_BCR[i] + "_" + res_match.group('S') + "_L00" + res_match.group('nb') + "_" + res_match.group('R_compl'))) ]
@@ -176,9 +204,6 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_annotations_TCR_BCR" in STEP
         FASTQSCREEN_INDEX = "/mnt/beegfs/database/bioinfo/single-cell/INDEX/FASTQ_SCREEN/0.14.0/fastq_screen.conf"
 
 if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
-    # Cutadapt parameters
-    ADAPTERSEQ='AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT'
-    MINBASEQ=28
     # Name of conda environment
     CONDA_ENV_QC_ALIGN_GE_ADT = PIPELINE_FOLDER + "/envs/conda/QC_Alignment.yml"
 
@@ -194,7 +219,10 @@ if "Droplets_QC_GE" in STEPS:
     elif 'sample.name.ge' in config['Alignment_countTable_GE'] and 'input.dir.ge' in config['Alignment_countTable_GE']  and "Alignment_countTable_GE" in STEPS:
         sys.stderr.write("Note: No sample.name.ge or input.dir.ge find in Droplets_QC_GE section of configfile; sample.name.ge and input.dir.ge will be determine from Alignment_countTable_GE step for Droplets_QC_GE step!\n")
         QC_SAMPLE_NAME_GE = copy.deepcopy(ALIGN_SAMPLE_NAME_GE)
-        QC_INPUT_DIR_GE = [os.path.join(ALIGN_OUTPUT_DIR_GE, str(x), "KALLISTOBUS") for x in ALIGN_SAMPLE_NAME_GE]
+        if VELOCITY_GE is False:
+            QC_INPUT_DIR_GE = [os.path.join(ALIGN_OUTPUT_DIR_GE, str(x), "KALLISTOBUS") for x in ALIGN_SAMPLE_NAME_GE]
+        else:
+            QC_INPUT_DIR_GE = [os.path.join(ALIGN_OUTPUT_DIR_GE, str(x), "KALLISTOBUS/spliced") for x in ALIGN_SAMPLE_NAME_GE]
     else:
         sys.exit("Error: No sample.name.ge or/and input.dir.ge in configfile!\n")
     if 'Droplets_QC_GE' in config and 'output.dir.ge' in config['Droplets_QC_GE'] :
@@ -207,13 +235,14 @@ if "Droplets_QC_GE" in STEPS:
     QC_SPECIES = config['Droplets_QC_GE']['species'] if ('Droplets_QC_GE' in config and 'species' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['species'] != None) else "NULL"
     QC_AUTHOR_NAME = config['Droplets_QC_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Droplets_QC_GE' in config and 'author.name' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['author.name'] != None) else "NULL"
     QC_AUTHOR_MAIL = config['Droplets_QC_GE']['author.mail'].replace(", ", ",") if ('Droplets_QC_GE' in config and 'author.mail' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['author.mail'] != None) else "NULL"
+    ### Computation
+    QC_TIME = config['Droplets_QC_GE']['time'] if 'time' in config['Droplets_QC_GE'] else None
+    QC_MEM = config['Droplets_QC_GE']['mem'] if 'mem' in config['Droplets_QC_GE'] else None
     ### Analysis Parameters
     # Emptydrops
     QC_EMPTYDROPS_FDR = config['Droplets_QC_GE']['emptydrops.fdr'] if ('Droplets_QC_GE' in config and 'emptydrops.fdr' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['emptydrops.fdr'] != None) else "NULL"
     QC_DROPLETS_LIMIT = config['Droplets_QC_GE']['droplets.limit'] if ('Droplets_QC_GE' in config and 'droplets.limit' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['droplets.limit'] != None) else "NULL"
     QC_EMPTYDROPS_RETAIN = config['Droplets_QC_GE']['emptydrops.retain'] if ('Droplets_QC_GE' in config and 'emptydrops.retain' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['emptydrops.retain'] != None) else "NULL"
-    # Translate ENSG into Gene Symbol
-    QC_TRANSLATION_BOOL = config['Droplets_QC_GE']['translation'] if ('Droplets_QC_GE' in config and 'translation' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['translation'] != None) else "NULL"
     # QC cell
     QC_PCMITO_MIN = config['Droplets_QC_GE']['pcmito.min'] if ('Droplets_QC_GE' in config and 'pcmito.min' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['pcmito.min'] != None) else "NULL"
     QC_PCMITO_MAX = config['Droplets_QC_GE']['pcmito.max'] if ('Droplets_QC_GE' in config and 'pcmito.max' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['pcmito.max'] != None) else "NULL"
@@ -230,8 +259,6 @@ if "Droplets_QC_GE" in STEPS:
     QC_MT_FILE = config['Droplets_QC_GE']['mt.genes.file'] if ('Droplets_QC_GE' in config and 'mt.genes.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['mt.genes.file'] != None) else "NULL"
     QC_RB_FILE = config['Droplets_QC_GE']['crb.genes.file'] if ('Droplets_QC_GE' in config and 'crb.genes.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['crb.genes.file'] != None) else "NULL"
     QC_ST_FILE = config['Droplets_QC_GE']['str.genes.file'] if ('Droplets_QC_GE' in config and 'str.genes.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['str.genes.file'] != None) else "NULL"
-    # Translation into gene Symbols
-    QC_TRANSLATION_FILE = config['Droplets_QC_GE']['translation.file'] if ('Droplets_QC_GE' in config and 'translation.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['translation.file'] != None) else "NULL"
     ### Snakefile parameters
     #check end paths (del "/" if necessary)
     for i in range(0,len(QC_INPUT_DIR_GE),1):
@@ -247,55 +274,58 @@ if "Droplets_QC_GE" in STEPS:
 if "Filtering_GE" in STEPS:
     ### Sample/Project
     if 'Filtering_GE' in config and 'sample.name.ge' in config['Filtering_GE'] and 'input.rda.ge' in config['Filtering_GE'] :
-        FILERING_SAMPLE_NAME_GE_RAW = config['Filtering_GE']['sample.name.ge']
-        FILERING_INPUT_RDA_GE = config['Filtering_GE']['input.rda.ge']
+        FILTERING_SAMPLE_NAME_GE_RAW = config['Filtering_GE']['sample.name.ge']
+        FILTERING_INPUT_RDA_GE = config['Filtering_GE']['input.rda.ge']
         #check samples names and add "_GE" if needed
-        FILERING_SAMPLE_NAME_GE = []
-        for i in range(0,len(FILERING_SAMPLE_NAME_GE_RAW),1):
-            FILERING_SAMPLE_NAME_GE.append(FILERING_SAMPLE_NAME_GE_RAW[i] + "_GE") if (FILERING_SAMPLE_NAME_GE_RAW[i][len(FILERING_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else FILERING_SAMPLE_NAME_GE.append(FILERING_SAMPLE_NAME_GE_RAW[i])
+        FILTERING_SAMPLE_NAME_GE = []
+        for i in range(0,len(FILTERING_SAMPLE_NAME_GE_RAW),1):
+            FILTERING_SAMPLE_NAME_GE.append(FILTERING_SAMPLE_NAME_GE_RAW[i] + "_GE") if (FILTERING_SAMPLE_NAME_GE_RAW[i][len(FILTERING_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else FILTERING_SAMPLE_NAME_GE.append(FILTERING_SAMPLE_NAME_GE_RAW[i])
     elif "Droplets_QC_GE" in STEPS:
         sys.stderr.write("Note: No input.rda.ge find in Filtering_GE section of configfile; input.rda.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
-        FILERING_SAMPLE_NAME_GE = copy.deepcopy(QC_SAMPLE_NAME_GE)
-        FILERING_INPUT_RDA_GE = [os.path.normpath(dic_SAMPLE_NAME_GE_INFO[x]['QC_OUTPUT_DIR'] + ("/QC_droplets/" if str(QC_EMPTYDROPS_RETAIN) == "NULL" else "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/") + str(x) + "_QC_NON-NORMALIZED.rda") for x in QC_SAMPLE_NAME_GE]
+        FILTERING_SAMPLE_NAME_GE = copy.deepcopy(QC_SAMPLE_NAME_GE)
+        FILTERING_INPUT_RDA_GE = [os.path.normpath(dic_SAMPLE_NAME_GE_INFO[x]['QC_OUTPUT_DIR'] + ("/QC_droplets/" if str(QC_EMPTYDROPS_RETAIN) == "NULL" else "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/") + str(x) + "_QC_NON-NORMALIZED.rda") for x in QC_SAMPLE_NAME_GE]
     else:
         sys.exit("Error: No sample.name.ge or/and input.rda.ge in configfile!\n")
     if 'Filtering_GE' in config and 'output.dir.ge' in config['Filtering_GE'] :
-        FILERING_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Filtering_GE']['output.dir.ge']]
+        FILTERING_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Filtering_GE']['output.dir.ge']]
     elif "Droplets_QC_GE" in STEPS:
-        FILERING_OUTPUT_DIR_GE = copy.deepcopy(QC_OUTPUT_DIR_GE)
+        FILTERING_OUTPUT_DIR_GE = copy.deepcopy(QC_OUTPUT_DIR_GE)
         sys.stderr.write("Note: No output.dir.ge find in Filtering_GE section of configfile; output.dir.ge will be determine from Droplets_QC_GE step for Filtering_GE step!\n")
     else :
         sys.exit("Error: No output.dir.ge find in configfile!\n")
-    FILERING_AUTHOR_NAME = config['Filtering_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Filtering_GE' in config and 'author.name' in config['Filtering_GE'] and config['Filtering_GE']['author.name'] != None) else "NULL"
-    FILERING_AUTHOR_MAIL = config['Filtering_GE']['author.mail'].replace(", ", ",") if ('Filtering_GE' in config and 'author.mail' in config['Filtering_GE'] and config['Filtering_GE']['author.mail'] != None) else "NULL"
+    FILTERING_AUTHOR_NAME = config['Filtering_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Filtering_GE' in config and 'author.name' in config['Filtering_GE'] and config['Filtering_GE']['author.name'] != None) else "NULL"
+    FILTERING_AUTHOR_MAIL = config['Filtering_GE']['author.mail'].replace(", ", ",") if ('Filtering_GE' in config and 'author.mail' in config['Filtering_GE'] and config['Filtering_GE']['author.mail'] != None) else "NULL"
+    ### Computation
+    FILTERING_TIME = config['Filtering_GE']['time'] if 'time' in config['Filtering_GE'] else None
+    FILTERING_MEM = config['Filtering_GE']['mem'] if 'mem' in config['Filtering_GE'] else None
     ### Analysis Parameters
     # QC cell
-    FILERING_PCMITO_MIN = config['Filtering_GE']['pcmito.min'] if ('Filtering_GE' in config and 'pcmito.min' in config['Filtering_GE'] and config['Filtering_GE']['pcmito.min'] != None) else "0"
-    FILERING_PCMITO_MAX = config['Filtering_GE']['pcmito.max'] if ('Filtering_GE' in config and 'pcmito.max' in config['Filtering_GE'] and config['Filtering_GE']['pcmito.max'] != None) else "0.2"
-    FILERING_PCRIBO_MIN = config['Filtering_GE']['pcribo.min'] if ('Filtering_GE' in config and 'pcribo.min' in config['Filtering_GE'] and config['Filtering_GE']['pcribo.min'] != None) else "0"
-    FILERING_PC_RIBO_MAX = config['Filtering_GE']['pcribo.max'] if ('Filtering_GE' in config and 'pcribo.max' in config['Filtering_GE'] and config['Filtering_GE']['pcribo.max'] != None) else "1"
-    FILERING_MIN_FEATURES = config['Filtering_GE']['min.features'] if ('Filtering_GE' in config and 'min.features' in config['Filtering_GE'] and config['Filtering_GE']['min.features'] != None) else "200"
-    FILERING_MIN_COUNTS = config['Filtering_GE']['min.counts'] if ('Filtering_GE' in config and 'min.counts' in config['Filtering_GE'] and config['Filtering_GE']['min.counts'] != None) else "1000"
+    FILTERING_PCMITO_MIN = config['Filtering_GE']['pcmito.min'] if ('Filtering_GE' in config and 'pcmito.min' in config['Filtering_GE'] and config['Filtering_GE']['pcmito.min'] != None) else "0"
+    FILTERING_PCMITO_MAX = config['Filtering_GE']['pcmito.max'] if ('Filtering_GE' in config and 'pcmito.max' in config['Filtering_GE'] and config['Filtering_GE']['pcmito.max'] != None) else "0.2"
+    FILTERING_PCRIBO_MIN = config['Filtering_GE']['pcribo.min'] if ('Filtering_GE' in config and 'pcribo.min' in config['Filtering_GE'] and config['Filtering_GE']['pcribo.min'] != None) else "0"
+    FILTERING_PC_RIBO_MAX = config['Filtering_GE']['pcribo.max'] if ('Filtering_GE' in config and 'pcribo.max' in config['Filtering_GE'] and config['Filtering_GE']['pcribo.max'] != None) else "1"
+    FILTERING_MIN_FEATURES = config['Filtering_GE']['min.features'] if ('Filtering_GE' in config and 'min.features' in config['Filtering_GE'] and config['Filtering_GE']['min.features'] != None) else "200"
+    FILTERING_MIN_COUNTS = config['Filtering_GE']['min.counts'] if ('Filtering_GE' in config and 'min.counts' in config['Filtering_GE'] and config['Filtering_GE']['min.counts'] != None) else "1000"
     # QC gene
-    FILERING_MIN_CELLS = config['Filtering_GE']['min.cells'] if ('Filtering_GE' in config and 'min.cells' in config['Filtering_GE'] and config['Filtering_GE']['min.cells'] != None) else "5"
+    FILTERING_MIN_CELLS = config['Filtering_GE']['min.cells'] if ('Filtering_GE' in config and 'min.cells' in config['Filtering_GE'] and config['Filtering_GE']['min.cells'] != None) else "5"
     # Doublets
-    FILERING_DOUBLET_FILTER_METHOD= config['Filtering_GE']['doublets.filter.method'] if ('Filtering_GE' in config and 'doublets.filter.method' in config['Filtering_GE'] and config['Filtering_GE']['doublets.filter.method'] != None) else "NULL"
+    FILTERING_DOUBLET_FILTER_METHOD= config['Filtering_GE']['doublets.filter.method'] if ('Filtering_GE' in config and 'doublets.filter.method' in config['Filtering_GE'] and config['Filtering_GE']['doublets.filter.method'] != None) else "NULL"
     ### Databases
     # Metadata file
-    FILERING_METADATA_FILE = config['Filtering_GE']['metadata.file'].replace(", ", ",") if ('Filtering_GE' in config and 'metadata.file' in config['Filtering_GE'] and config['Filtering_GE']['metadata.file'] != None) else "NULL"
+    FILTERING_METADATA_FILE = config['Filtering_GE']['metadata.file'].replace(", ", ",") if ('Filtering_GE' in config and 'metadata.file' in config['Filtering_GE'] and config['Filtering_GE']['metadata.file'] != None) else "NULL"
     # QC
-    FILERING_CC_SEURAT_FILE = config['Filtering_GE']['cc.seurat.file'] if ('Filtering_GE' in config and 'cc.seurat.file' in config['Filtering_GE'] and config['Filtering_GE']['cc.seurat.file'] != None) else "NULL"
-    FILERING_CC_CYCLONE_FILE = config['Filtering_GE']['cc.cyclone.file'] if ('Filtering_GE' in config and 'cc.cyclone.file' in config['Filtering_GE'] and config['Filtering_GE']['cc.cyclone.file'] != None) else "NULL"
+    FILTERING_CC_SEURAT_FILE = config['Filtering_GE']['cc.seurat.file'] if ('Filtering_GE' in config and 'cc.seurat.file' in config['Filtering_GE'] and config['Filtering_GE']['cc.seurat.file'] != None) else "NULL"
+    FILTERING_CC_CYCLONE_FILE = config['Filtering_GE']['cc.cyclone.file'] if ('Filtering_GE' in config and 'cc.cyclone.file' in config['Filtering_GE'] and config['Filtering_GE']['cc.cyclone.file'] != None) else "NULL"
     ### Snakefile parameters
     #Correspondance sample/input/output
     dic_FILTER_INFO = {}
-    for i in range(0,len(FILERING_SAMPLE_NAME_GE),1):
-        dic_FILTER_INFO[FILERING_SAMPLE_NAME_GE[i]] = {}
-        dic_FILTER_INFO[FILERING_SAMPLE_NAME_GE[i]]['FILTER_INPUT_RDA'] = FILERING_INPUT_RDA_GE[i]
-        dic_FILTER_INFO[FILERING_SAMPLE_NAME_GE[i]]['FILTER_OUTPUT_DIR'] = FILERING_OUTPUT_DIR_GE[i]
-    FILTERS_FOLDER = "F" + str(FILERING_MIN_FEATURES) + "_C" + str(FILERING_MIN_COUNTS) + "_M" + str(FILERING_PCMITO_MIN) + "-" + str(FILERING_PCMITO_MAX) + "_R" + str(FILERING_PCRIBO_MIN) + "-" + str(FILERING_PC_RIBO_MAX) + "_G" + str(FILERING_MIN_CELLS)
+    for i in range(0,len(FILTERING_SAMPLE_NAME_GE),1):
+        dic_FILTER_INFO[FILTERING_SAMPLE_NAME_GE[i]] = {}
+        dic_FILTER_INFO[FILTERING_SAMPLE_NAME_GE[i]]['FILTER_INPUT_RDA'] = FILTERING_INPUT_RDA_GE[i]
+        dic_FILTER_INFO[FILTERING_SAMPLE_NAME_GE[i]]['FILTER_OUTPUT_DIR'] = FILTERING_OUTPUT_DIR_GE[i]
+    FILTERS_FOLDER = "F" + str(FILTERING_MIN_FEATURES) + "_C" + str(FILTERING_MIN_COUNTS) + "_M" + str(FILTERING_PCMITO_MIN) + "-" + str(FILTERING_PCMITO_MAX) + "_R" + str(FILTERING_PCRIBO_MIN) + "-" + str(FILTERING_PC_RIBO_MAX) + "_G" + str(FILTERING_MIN_CELLS)
     #name of the doublets identification method
-    FILERING_DOUBLET_FILTER_METHOD_NAME = "all" if FILERING_DOUBLET_FILTER_METHOD == "NULL" else FILERING_DOUBLET_FILTER_METHOD
+    FILTERING_DOUBLET_FILTER_METHOD_NAME = "all" if FILTERING_DOUBLET_FILTER_METHOD == "NULL" else FILTERING_DOUBLET_FILTER_METHOD
 
 if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     ### Sample/Project
@@ -308,22 +338,23 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
             NDRE_SAMPLE_NAME_GE.append(NDRE_SAMPLE_NAME_GE_RAW[i] + "_GE") if (NDRE_SAMPLE_NAME_GE_RAW[i][len(NDRE_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else NDRE_SAMPLE_NAME_GE.append(NDRE_SAMPLE_NAME_GE_RAW[i])
     elif "Filtering_GE" in STEPS:
         sys.stderr.write("Note: No input.rda.ge find in Norm_DimRed_Eval_GE section of configfile; input.rda.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
-        NDRE_SAMPLE_NAME_GE = copy.deepcopy(FILERING_SAMPLE_NAME_GE)
-        if FILERING_DOUBLET_FILTER_METHOD_NAME == "none":
-            NDRE_INPUT_RDA_GE = [os.path.normpath(dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + "/DOUBLETSKEPT/" + x + "_DOUBLETSKEPT_NON-NORMALIZED.rda") for x in FILERING_SAMPLE_NAME_GE]
+        NDRE_SAMPLE_NAME_GE = copy.deepcopy(FILTERING_SAMPLE_NAME_GE)
+        if FILTERING_DOUBLET_FILTER_METHOD_NAME == "none":
+            NDRE_INPUT_RDA_GE = [os.path.normpath(dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + "/DOUBLETSKEPT/" + x + "_DOUBLETSKEPT_NON-NORMALIZED.rda") for x in FILTERING_SAMPLE_NAME_GE]
         else:
-            NDRE_INPUT_RDA_GE = [os.path.normpath(dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + "/DOUBLETSFILTER_" + FILERING_DOUBLET_FILTER_METHOD_NAME + "/" + x + "_FILTERED_NON-NORMALIZED.rda") for x in FILERING_SAMPLE_NAME_GE]
+            NDRE_INPUT_RDA_GE = [os.path.normpath(dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + "/DOUBLETSFILTER_" + FILTERING_DOUBLET_FILTER_METHOD_NAME + "/" + x + "_FILTERED_NON-NORMALIZED.rda") for x in FILTERING_SAMPLE_NAME_GE]
     else:
         sys.exit("Error: No sample.name.ge or/and input.rda.ge in configfile!\n")
     if ('Norm_DimRed_Eval_GE' in config) and ('output.dir.ge' in config['Norm_DimRed_Eval_GE']) :
         NDRE_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Norm_DimRed_Eval_GE']['output.dir.ge']]
     elif "Filtering_GE" in STEPS:
-        NDRE_OUTPUT_DIR_GE = [dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + ("/DOUBLETSKEPT" if FILERING_DOUBLET_FILTER_METHOD_NAME == "none" else ("/DOUBLETSFILTER_" + FILERING_DOUBLET_FILTER_METHOD_NAME)) for x in FILERING_SAMPLE_NAME_GE]
+        NDRE_OUTPUT_DIR_GE = [dic_FILTER_INFO[x]['FILTER_OUTPUT_DIR'] + "/" + FILTERS_FOLDER + ("/DOUBLETSKEPT" if FILTERING_DOUBLET_FILTER_METHOD_NAME == "none" else ("/DOUBLETSFILTER_" + FILTERING_DOUBLET_FILTER_METHOD_NAME)) for x in FILTERING_SAMPLE_NAME_GE]
         sys.stderr.write("Note: No output.dir.ge find in Norm_DimRed_Eval_GE section of configfile; output.dir.ge will be determine from Filtering_GE step for Norm_DimRed_Eval_GE step!\n")
     else :
         sys.exit("Error: No output.dir.ge find in configfile!\n")
-
-
+    ### Computation
+    NDRE_TIME = config['Norm_DimRed_Eval_GE']['time'] if 'time' in config['Norm_DimRed_Eval_GE'] else None
+    NDRE_MEM = config['Norm_DimRed_Eval_GE']['mem'] if 'mem' in config['Norm_DimRed_Eval_GE'] else None
     ### Analysis Parameters
     NDRE_AUTHOR_NAME = config['Norm_DimRed_Eval_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Norm_DimRed_Eval_GE' in config and 'author.name' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['author.name'] != None) else "NULL"
     NDRE_AUTHOR_MAIL = config['Norm_DimRed_Eval_GE']['author.mail'].replace(", ", ",") if ('Norm_DimRed_Eval_GE' in config and 'author.mail' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['author.mail'] != None) else "NULL"
@@ -335,11 +366,12 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     NDRE_VTR_BIASES = config['Norm_DimRed_Eval_GE']['vtr.biases'].replace(", ", ",") if ('Norm_DimRed_Eval_GE' in config and 'vtr.biases' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['vtr.biases'] != None) else "NULL"
     NDRE_VTR_SCALE = config['Norm_DimRed_Eval_GE']['vtr.scale'] if ('Norm_DimRed_Eval_GE' in config and 'vtr.scale' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['vtr.scale'] != None) else "NULL"
     NDRE_DIM_MAX = config['Norm_DimRed_Eval_GE']['dims.max'] if ('Norm_DimRed_Eval_GE' in config and 'dims.max' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['dims.max'] != None) else 49
-    NDRE_DIM_MIN = config['Norm_DimRed_Eval_GE']['dims.min'] if ('Norm_DimRed_Eval_GE' in config and 'dims.min' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['dims.min'] != None) else 3
-    NDRE_DIM_STEPS = config['Norm_DimRed_Eval_GE']['dims.steps'] if ('Norm_DimRed_Eval_GE' in config and 'dims.steps' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['dims.steps'] != None) else 2
-    NDRE_RES_MAX = config['Norm_DimRed_Eval_GE']['res.max'] if ('Norm_DimRed_Eval_GE' in config and 'res.max' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['res.max'] != None) else 1.2
-    NDRE_RES_MIN = config['Norm_DimRed_Eval_GE']['res.min'] if ('Norm_DimRed_Eval_GE' in config and 'res.min' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['res.min'] != None) else 0.1
-    NDRE_RES_STEPS = config['Norm_DimRed_Eval_GE']['res.steps'] if ('Norm_DimRed_Eval_GE' in config and 'res.steps' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['res.steps'] != None) else 0.1
+    NDRE_EVAL_DIM_MAX = config['Norm_DimRed_Eval_GE']['eval.dims.max'] if ('Norm_DimRed_Eval_GE' in config and 'eval.dims.max' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['eval.dims.max'] != None) else 49
+    NDRE_EVAL_DIM_MIN = config['Norm_DimRed_Eval_GE']['eval.dims.min'] if ('Norm_DimRed_Eval_GE' in config and 'eval.dims.min' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['eval.dims.min'] != None) else 3
+    NDRE_EVAL_DIM_STEPS = config['Norm_DimRed_Eval_GE']['eval.dims.steps'] if ('Norm_DimRed_Eval_GE' in config and 'eval.dims.steps' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['eval.dims.steps'] != None) else 2
+    NDRE_EVAL_RES_MAX = config['Norm_DimRed_Eval_GE']['eval.res.max'] if ('Norm_DimRed_Eval_GE' in config and 'eval.res.max' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['eval.res.max'] != None) else 1.2
+    NDRE_EVAL_RES_MIN = config['Norm_DimRed_Eval_GE']['eval.res.min'] if ('Norm_DimRed_Eval_GE' in config and 'eval.res.min' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['eval.res.min'] != None) else 0.1
+    NDRE_EVAL_RES_STEPS = config['Norm_DimRed_Eval_GE']['eval.res.steps'] if ('Norm_DimRed_Eval_GE' in config and 'eval.res.steps' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['eval.res.steps'] != None) else 0.1
     # Metadata file
     NDRE_METADATA_FILE = config['Norm_DimRed_Eval_GE']['metadata.file'].replace(", ", ",") if ('Norm_DimRed_Eval_GE' in config and 'metadata.file' in config['Norm_DimRed_Eval_GE'] and config['Norm_DimRed_Eval_GE']['metadata.file'] != None) else "NULL"
     ### Snakefile parameters
@@ -352,8 +384,8 @@ if "Norm_DimRed_Eval_GE" in STEPS: #alias NDRE_
     #Names
     NDRE_NORM_VTR = NDRE_NORM_METHOD if (NDRE_NORM_METHOD == "LogNormalize" or NDRE_VTR_BIASES == "NULL") else (NDRE_NORM_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
     NDRE_DIMRED_VTR = NDRE_DIMRED_METHOD if (NDRE_DIMRED_METHOD == "pca" or NDRE_DIMRED_METHOD == "ica" or NDRE_DIMRED_METHOD == "mds" or NDRE_VTR_BIASES == "NULL") else (NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(NDRE_VTR_BIASES.split(","))))))
-    #POSSIBLE_DIM = ["%.0f" % number for number in numpy.arange(NDRE_DIM_MIN,NDRE_DIM_MAX+1,NDRE_DIM_STEPS)]
-    #POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_RES_MIN*10,NDRE_RES_MAX*10+1,NDRE_RES_STEPS*10)/10] #*10 then /10 because numpy.arange doesn't handle floats well
+    #POSSIBLE_DIM = ["%.0f" % number for number in numpy.arange(NDRE_EVAL_DIM_MIN,NDRE_EVAL_DIM_MAX+1,NDRE_EVAL_DIM_STEPS)]
+    #POSSIBLE_RES = ["%.1f" % number for number in numpy.arange(NDRE_EVAL_RES_MIN*10,NDRE_EVAL_RES_MAX*10+1,NDRE_EVAL_RES_STEPS*10)/10] #*10 then /10 because numpy.arange doesn't handle floats well
     #ASSAY = "RNA" if NDRE_NORM_METHOD == "LogNormalize" else "SCT"
 
 if "Clust_Markers_Annot_GE" in STEPS: #alias CMA
@@ -378,10 +410,15 @@ if "Clust_Markers_Annot_GE" in STEPS: #alias CMA
         sys.stderr.write("Note: No output.dir.ge find in Clust_Markers_Annot_GE section of configfile; output.dir.ge will be determine from Norm_DimRed_Eval_GE step for Clust_Markers_Annot_GE step!\n")
     else :
         sys.exit("Error: No output.dir.ge find in configfile!\n")
+    ### Computation
+    CMA_TIME = config['Clust_Markers_Annot_GE']['time'] if 'time' in config['Clust_Markers_Annot_GE'] else None
+    CMA_MEM = config['Clust_Markers_Annot_GE']['mem'] if 'mem' in config['Clust_Markers_Annot_GE'] else None
     ### Analysis Parameters
     CMA_AUTHOR_NAME = config['Clust_Markers_Annot_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Clust_Markers_Annot_GE' in config and 'author.name' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['author.name'] != None) else "NULL"
     CMA_AUTHOR_MAIL = config['Clust_Markers_Annot_GE']['author.mail'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'author.mail' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['author.mail'] != None) else "NULL"
     CMA_MARKFILE = config['Clust_Markers_Annot_GE']['markfile'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'markfile' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['markfile'] != None) else "NULL" # formated "file1,file2,file3"
+    CMA_MARKERS_PTSIZE = config['Clust_Markers_Annot_GE']['markers.pt.size'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'markers.pt.size' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['markers.pt.size'] != None) else "NULL" # formated "file1,file2,file3"
+    CMA_MARKERS_ORDER = config['Clust_Markers_Annot_GE']['markers.order'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'markers.order' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['markers.order'] != None) else "NULL" # formated "file1,file2,file3"
     CMA_CUSTOM_SCE_REF = config['Clust_Markers_Annot_GE']['custom.sce.ref'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'custom.sce.ref' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['custom.sce.ref'] != None) else "NULL" # formated "file1,file2,file3"
     CMA_CUSTOM_MARKERS_REF = config['Clust_Markers_Annot_GE']['custom.markers.ref'].replace(", ", ",") if ('Clust_Markers_Annot_GE' in config and 'custom.markers.ref' in config['Clust_Markers_Annot_GE'] and config['Clust_Markers_Annot_GE']['custom.markers.ref'] != None) else "NULL" # formated "file1,file2,file3"
     # Normalization and dimension reduction
@@ -432,6 +469,9 @@ if "Adding_ADT" in STEPS:
         ADD_ADT_SAMPLE_NAME_ADT = copy.deepcopy(ALIGN_SAMPLE_NAME_ADT)
     else:
         sys.exit("Error: No sample.name.adt or input.dir.adt in configfile!\n")
+    ### Computation
+    ADD_ADT_TIME = config['Adding_ADT']['time'] if 'time' in config['Adding_ADT'] else None
+    ADD_ADT_MEM = config['Adding_ADT']['mem'] if 'mem' in config['Adding_ADT'] else None
     ### Analysis Parameters
     ADD_ADT_AUTHOR_NAME = config['Adding_ADT']['author.name'].replace(", ", ",").replace(" ", "_") if ('Adding_ADT' in config and 'author.name' in config['Adding_ADT'] and config['Adding_ADT']['author.name'] != None) else "NULL"
     ADD_ADT_AUTHOR_MAIL = config['Adding_ADT']['author.mail'].replace(", ", ",") if ('Adding_ADT' in config and 'author.mail' in config['Adding_ADT'] and config['Adding_ADT']['author.mail'] != None) else "NULL"
@@ -468,6 +508,9 @@ if "Adding_TCR" in STEPS:
         ADD_TCR_INPUT_CSV_TCR = [ os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + x + "/" + x + "_CellRanger/outs/filtered_contig_annotations.csv") for x in ALIGN_SAMPLE_NAME_TCR]
     else:
         sys.exit("Error: No vdj.input.file.tcr in configfile!\n")
+    ### Computation
+    ADD_TCR_TIME = config['Adding_TCR']['time'] if 'time' in config['Adding_TCR'] else None
+    ADD_TCR_MEM = config['Adding_TCR']['mem'] if 'mem' in config['Adding_TCR'] else None
     ### Analysis Parameters
     ADD_TCR_AUTHOR_NAME = config['Adding_TCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Adding_TCR' in config and 'author.name' in config['Adding_TCR'] and config['Adding_TCR']['author.name'] != None) else "NULL"
     ADD_TCR_AUTHOR_MAIL = config['Adding_TCR']['author.mail'].replace(", ", ",") if ('Adding_TCR' in config and 'author.mail' in config['Adding_TCR'] and config['Adding_TCR']['author.mail'] != None) else "NULL"
@@ -503,6 +546,9 @@ if "Adding_BCR" in STEPS:
         ADD_BCR_INPUT_CSV_BCR = [ os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + x + "/" + x + "_CellRanger/outs/filtered_contig_annotations.csv") for x in ALIGN_SAMPLE_NAME_BCR]
     else:
         sys.exit("Error: No vdj.input.file.bcr in configfile!\n")
+    ### Computation
+    ADD_BCR_TIME = config['Adding_BCR']['time'] if 'time' in config['Adding_BCR'] else None
+    ADD_BCR_MEM = config['Adding_BCR']['mem'] if 'mem' in config['Adding_BCR'] else None
     ### Analysis Parameters
     ADD_BCR_AUTHOR_NAME = config['Adding_BCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Adding_BCR' in config and 'author.name' in config['Adding_BCR'] and config['Adding_BCR']['author.name'] != None) else "NULL"
     ADD_BCR_AUTHOR_MAIL = config['Adding_BCR']['author.mail'].replace(", ", ",") if ('Adding_BCR' in config and 'author.mail' in config['Adding_BCR'] and config['Adding_BCR']['author.mail'] != None) else "NULL"
@@ -526,6 +572,9 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
         INT_NDRE_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Int_Norm_DimRed_Eval_GE']['output.dir.int']]
     else :
         sys.exit("Error: No output.dir.int find in configfile!\n")
+    ### Computation
+    INT_NDRE_TIME = config['Int_Norm_DimRed_Eval_GE']['time'] if 'time' in config['Int_Norm_DimRed_Eval_GE'] else None
+    INT_NDRE_MEM = config['Int_Norm_DimRed_Eval_GE']['mem'] if 'mem' in config['Int_Norm_DimRed_Eval_GE'] else None
     ### Analysis Parameters
     INT_NDRE_AUTHOR_NAME = config['Int_Norm_DimRed_Eval_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Norm_DimRed_Eval_GE' in config and 'author.name' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['author.name'] != None) else "NULL"
     INT_NDRE_AUTHOR_MAIL = config['Int_Norm_DimRed_Eval_GE']['author.mail'].replace(", ", ",") if ('Int_Norm_DimRed_Eval_GE' in config and 'author.mail' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['author.mail'] != None) else "NULL"
@@ -538,6 +587,7 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
     else :
         sys.exit("Error: No integration.method find in configfile!\n")
     INT_NDRE_VTR_BATCH = config['Int_Norm_DimRed_Eval_GE']['vtr.batch'] if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr.batch' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr.batch'] != None) else "NULL"
+    INT_NDRE_SEURAT_REF = config['Int_Norm_DimRed_Eval_GE']['seurat.num.ref'] if ('Int_Norm_DimRed_Eval_GE' in config and 'seurat.num.ref' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['seurat.num.ref'] != None) else "NULL"
     # Normalization and dimension reduction
     INT_NDRE_FEATURES_N = config['Int_Norm_DimRed_Eval_GE']['features.n'] if ('Int_Norm_DimRed_Eval_GE' in config and 'features.n' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['features.n'] != None) else "NULL"
     if ('Int_Norm_DimRed_Eval_GE' in config and 'norm.method' in config['Int_Norm_DimRed_Eval_GE']):
@@ -551,11 +601,12 @@ if "Int_Norm_DimRed_Eval_GE" in STEPS:
     INT_NDRE_VTR_BIASES = config['Int_Norm_DimRed_Eval_GE']['vtr.biases'].replace(", ", ",") if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr.biases' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr.biases'] != None) else "NULL"
     INT_NDRE_VTR_SCALE = config['Int_Norm_DimRed_Eval_GE']['vtr.scale'] if ('Int_Norm_DimRed_Eval_GE' in config and 'vtr.scale' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['vtr.scale'] != None) else "NULL"
     INT_NDRE_DIM_MAX = config['Int_Norm_DimRed_Eval_GE']['dims.max'] if ('Int_Norm_DimRed_Eval_GE' in config and 'dims.max' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['dims.max'] != None) else 49
-    INT_NDRE_DIM_MIN = config['Int_Norm_DimRed_Eval_GE']['dims.min'] if ('Int_Norm_DimRed_Eval_GE' in config and 'dims.min' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['dims.min'] != None) else 3
-    INT_NDRE_DIM_STEPS = config['Int_Norm_DimRed_Eval_GE']['dims.steps'] if ('Int_Norm_DimRed_Eval_GE' in config and 'dims.steps' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['dims.steps'] != None) else 2
-    INT_NDRE_RES_MAX = config['Int_Norm_DimRed_Eval_GE']['res.max'] if ('Int_Norm_DimRed_Eval_GE' in config and 'res.max' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['res.max'] != None) else 1.2
-    INT_NDRE_RES_MIN = config['Int_Norm_DimRed_Eval_GE']['res.min'] if ('Int_Norm_DimRed_Eval_GE' in config and 'res.min' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['res.min'] != None) else 0.1
-    INT_NDRE_RES_STEPS = config['Int_Norm_DimRed_Eval_GE']['res.steps'] if ('Int_Norm_DimRed_Eval_GE' in config and 'res.steps' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['res.steps'] != None) else 0.1
+    INT_NDRE_EVAL_DIM_MAX = config['Int_Norm_DimRed_Eval_GE']['eval.dims.max'] if ('Int_Norm_DimRed_Eval_GE' in config and 'eval.dims.max' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['eval.dims.max'] != None) else 49
+    INT_NDRE_EVAL_DIM_MIN = config['Int_Norm_DimRed_Eval_GE']['eval.dims.min'] if ('Int_Norm_DimRed_Eval_GE' in config and 'eval.dims.min' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['eval.dims.min'] != None) else 3
+    INT_NDRE_EVAL_DIM_STEPS = config['Int_Norm_DimRed_Eval_GE']['eval.dims.steps'] if ('Int_Norm_DimRed_Eval_GE' in config and 'eval.dims.steps' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['eval.dims.steps'] != None) else 2
+    INT_NDRE_EVAL_RES_MAX = config['Int_Norm_DimRed_Eval_GE']['eval.res.max'] if ('Int_Norm_DimRed_Eval_GE' in config and 'eval.res.max' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['eval.res.max'] != None) else 1.2
+    INT_NDRE_EVAL_RES_MIN = config['Int_Norm_DimRed_Eval_GE']['eval.res.min'] if ('Int_Norm_DimRed_Eval_GE' in config and 'eval.res.min' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['eval.res.min'] != None) else 0.1
+    INT_NDRE_EVAL_RES_STEPS = config['Int_Norm_DimRed_Eval_GE']['eval.res.steps'] if ('Int_Norm_DimRed_Eval_GE' in config and 'eval.res.steps' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['eval.res.steps'] != None) else 0.1
     # Metadata file
     INT_NDRE_METADATA_FILE = config['Int_Norm_DimRed_Eval_GE']['metadata.file'].replace(", ", ",") if ('Int_Norm_DimRed_Eval_GE' in config and 'metadata.file' in config['Int_Norm_DimRed_Eval_GE'] and config['Int_Norm_DimRed_Eval_GE']['metadata.file'] != None) else "NULL"
     ### Snakefile parameters
@@ -605,10 +656,15 @@ if "Int_Clust_Markers_Annot_GE" in STEPS:
         sys.stderr.write("Note: No output.dir.int find in Int_Clust_Markers_Annot_GE section of configfile; output.dir.int will be determine from Int_Norm_DimRed_Eval_GE step for Int_Clust_Markers_Annot_GE step!\n")
     else :
         sys.exit("Error: No output.dir.int find in configfile!\n")
+    ### Computation
+    INT_CMA_TIME = config['Int_Clust_Markers_Annot_GE']['time'] if 'time' in config['Int_Clust_Markers_Annot_GE'] else None
+    INT_CMA_MEM = config['Int_Clust_Markers_Annot_GE']['mem'] if 'mem' in config['Int_Clust_Markers_Annot_GE'] else None
     ### Analysis Parameters
     INT_CMA_AUTHOR_NAME = config['Int_Clust_Markers_Annot_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Clust_Markers_Annot_GE' in config and 'author.name' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['author.name'] != None) else "NULL"
     INT_CMA_AUTHOR_MAIL = config['Int_Clust_Markers_Annot_GE']['author.mail'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'author.mail' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['author.mail'] != None) else "NULL"
     INT_CMA_MARKFILE = config['Int_Clust_Markers_Annot_GE']['markfile'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'markfile' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['markfile'] != None) else "NULL" # formated "file1,file2,file3"
+    INT_CMA_MARKERS_PTSIZE = config['Int_Clust_Markers_Annot_GE']['markers.pt.size'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'markers.pt.size' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['markers.pt.size'] != None) else "NULL" # formated "file1,file2,file3"
+    INT_CMA_MARKERS_ORDER = config['Int_Clust_Markers_Annot_GE']['markers.order'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'markers.order' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['markers.order'] != None) else "NULL" # formated "file1,file2,file3"
     INT_CMA_CUSTOM_SCE_REF = config['Int_Clust_Markers_Annot_GE']['custom.sce.ref'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'custom.sce.ref' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['custom.sce.ref'] != None) else "NULL" # formated "file1,file2,file3"
     INT_CMA_CUSTOM_MARKERS_REF = config['Int_Clust_Markers_Annot_GE']['custom.markers.ref'].replace(", ", ",") if ('Int_Clust_Markers_Annot_GE' in config and 'custom.markers.ref' in config['Int_Clust_Markers_Annot_GE'] and config['Int_Clust_Markers_Annot_GE']['custom.markers.ref'] != None) else "NULL" # formated "file1,file2,file3"
     # Normalization and dimension reduction
@@ -661,6 +717,9 @@ if "Int_Adding_ADT" in STEPS:
             INT_ADD_ADT_SAMPLE_NAME_ADT.append(",".join(list_sample_tmp))
     else:
         sys.exit("Error: No samples.name.adt or input.dirs.adt in configfile!\n")
+    ### Computation
+    INT_ADD_ADT_TIME = config['Int_Adding_ADT']['time'] if 'time' in config['Int_Adding_ADT'] else None
+    INT_ADD_ADT_MEM = config['Int_Adding_ADT']['mem'] if 'mem' in config['Int_Adding_ADT'] else None
     ### Analysis Parameters
     INT_ADD_ADT_AUTHOR_NAME = config['Int_Adding_ADT']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Adding_ADT' in config and 'author.name' in config['Int_Adding_ADT'] and config['Int_Adding_ADT']['author.name'] != None) else "NULL"
     INT_ADD_ADT_AUTHOR_MAIL = config['Int_Adding_ADT']['author.mail'].replace(", ", ",") if ('Int_Adding_ADT' in config and 'author.mail' in config['Int_Adding_ADT'] and config['Int_Adding_ADT']['author.mail'] != None) else "NULL"
@@ -693,6 +752,9 @@ if "Int_Adding_TCR" in STEPS:
         INT_ADD_TCR_INPUT_CSV_TCR = [ x.replace(", ", ",") for x in config['Int_Adding_TCR']['vdj.input.files.tcr']]
     else:
         sys.exit("Error: No vdj.input.files.tcr in configfile!\n")
+    ### Computation
+    INT_ADD_TCR_TIME = config['Int_Adding_TCR']['time'] if 'time' in config['Int_Adding_TCR'] else None
+    INT_ADD_TCR_MEM = config['Int_Adding_TCR']['mem'] if 'mem' in config['Int_Adding_TCR'] else None
     ### Analysis Parameters
     INT_ADD_TCR_AUTHOR_NAME = config['Int_Adding_TCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Adding_TCR' in config and 'author.name' in config['Int_Adding_TCR'] and config['Int_Adding_TCR']['author.name'] != None) else "NULL"
     INT_ADD_TCR_AUTHOR_MAIL = config['Int_Adding_TCR']['author.mail'].replace(", ", ",") if ('Int_Adding_TCR' in config and 'author.mail' in config['Int_Adding_TCR'] and config['Int_Adding_TCR']['author.mail'] != None) else "NULL"
@@ -712,7 +774,7 @@ if "Int_Adding_BCR" in STEPS:
     elif "Int_Adding_TCR" in STEPS:
         sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_TCR step for Int_Adding_BCR step!\n")
         INT_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in INT_ADD_TCR_OUTPUT]
-    elif "Adding_ADT" in STEPS:
+    elif "Int_Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_ADT step for Int_Adding_BCR step!\n")
         INT_ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in INT_ADD_ADT_OUTPUT]
     elif "Int_Clust_Markers_Annot_GE" in STEPS:
@@ -724,6 +786,9 @@ if "Int_Adding_BCR" in STEPS:
         INT_ADD_BCR_INPUT_CSV_BCR = [ x.replace(", ", ",") for x in config['Int_Adding_BCR']['vdj.input.files.bcr']]
     else:
         sys.exit("Error: No vdj.input.files.bcr in configfile!\n")
+    ### Computation
+    INT_ADD_BCR_TIME = config['Int_Adding_BCR']['time'] if 'time' in config['Int_Adding_BCR'] else None
+    INT_ADD_BCR_MEM = config['Int_Adding_BCR']['mem'] if 'mem' in config['Int_Adding_BCR'] else None
     ### Analysis Parameters
     INT_ADD_BCR_AUTHOR_NAME = config['Int_Adding_BCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Int_Adding_BCR' in config and 'author.name' in config['Int_Adding_BCR'] and config['Int_Adding_BCR']['author.name'] != None) else "NULL"
     INT_ADD_BCR_AUTHOR_MAIL = config['Int_Adding_BCR']['author.mail'].replace(", ", ",") if ('Int_Adding_BCR' in config and 'author.mail' in config['Int_Adding_BCR'] and config['Int_Adding_BCR']['author.mail'] != None) else "NULL"
@@ -747,6 +812,9 @@ if "Grp_Norm_DimRed_Eval_GE" in STEPS:
         GRP_NDRE_OUTPUT_DIR_GE = [os.path.normpath(x) for x in config['Grp_Norm_DimRed_Eval_GE']['output.dir.grp']]
     else :
         sys.exit("Error: No output.dir.grp find in configfile!\n")
+    ### Computation
+    GRP_NDRE_TIME = config['Grp_Norm_DimRed_Eval_GE']['time'] if 'time' in config['Grp_Norm_DimRed_Eval_GE'] else None
+    GRP_NDRE_MEM = config['Grp_Norm_DimRed_Eval_GE']['mem'] if 'mem' in config['Grp_Norm_DimRed_Eval_GE'] else None
     ### Analysis Parameters
     GRP_NDRE_AUTHOR_NAME = config['Grp_Norm_DimRed_Eval_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Norm_DimRed_Eval_GE' in config and 'author.name' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['author.name'] != None) else "NULL"
     GRP_NDRE_AUTHOR_MAIL = config['Grp_Norm_DimRed_Eval_GE']['author.mail'].replace(", ", ",") if ('Grp_Norm_DimRed_Eval_GE' in config and 'author.mail' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['author.mail'] != None) else "NULL"
@@ -767,11 +835,12 @@ if "Grp_Norm_DimRed_Eval_GE" in STEPS:
     GRP_NDRE_VTR_BIASES = config['Grp_Norm_DimRed_Eval_GE']['vtr.biases'].replace(", ", ",") if ('Grp_Norm_DimRed_Eval_GE' in config and 'vtr.biases' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['vtr.biases'] != None) else "NULL"
     GRP_NDRE_VTR_SCALE = config['Grp_Norm_DimRed_Eval_GE']['vtr.scale'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'vtr.scale' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['vtr.scale'] != None) else "NULL"
     GRP_NDRE_DIM_MAX = config['Grp_Norm_DimRed_Eval_GE']['dims.max'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'dims.max' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['dims.max'] != None) else 49
-    GRP_NDRE_DIM_MIN = config['Grp_Norm_DimRed_Eval_GE']['dims.min'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'dims.min' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['dims.min'] != None) else 3
-    GRP_NDRE_DIM_STEPS = config['Grp_Norm_DimRed_Eval_GE']['dims.steps'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'dims.steps' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['dims.steps'] != None) else 2
-    GRP_NDRE_RES_MAX = config['Grp_Norm_DimRed_Eval_GE']['res.max'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'res.max' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['res.max'] != None) else 1.2
-    GRP_NDRE_RES_MIN = config['Grp_Norm_DimRed_Eval_GE']['res.min'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'res.min' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['res.min'] != None) else 0.1
-    GRP_NDRE_RES_STEPS = config['Grp_Norm_DimRed_Eval_GE']['res.steps'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'res.steps' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['res.steps'] != None) else 0.1
+    GRP_NDRE_EVAL_DIM_MAX = config['Grp_Norm_DimRed_Eval_GE']['eval.dims.max'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'eval.dims.max' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['eval.dims.max'] != None) else 49
+    GRP_NDRE_EVAL_DIM_MIN = config['Grp_Norm_DimRed_Eval_GE']['eval.dims.min'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'eval.dims.min' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['eval.dims.min'] != None) else 3
+    GRP_NDRE_EVAL_DIM_STEPS = config['Grp_Norm_DimRed_Eval_GE']['eval.dims.steps'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'eval.dims.steps' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['eval.dims.steps'] != None) else 2
+    GRP_NDRE_EVAL_RES_MAX = config['Grp_Norm_DimRed_Eval_GE']['eval.res.max'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'eval.res.max' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['eval.res.max'] != None) else 1.2
+    GRP_NDRE_EVAL_RES_MIN = config['Grp_Norm_DimRed_Eval_GE']['eval.res.min'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'eval.res.min' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['eval.res.min'] != None) else 0.1
+    GRP_NDRE_EVAL_RES_STEPS = config['Grp_Norm_DimRed_Eval_GE']['eval.res.steps'] if ('Grp_Norm_DimRed_Eval_GE' in config and 'eval.res.steps' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['eval.res.steps'] != None) else 0.1
     # Metadata file
     GRP_NDRE_METADATA_FILE = config['Grp_Norm_DimRed_Eval_GE']['metadata.file'].replace(", ", ",") if ('Grp_Norm_DimRed_Eval_GE' in config and 'metadata.file' in config['Grp_Norm_DimRed_Eval_GE'] and config['Grp_Norm_DimRed_Eval_GE']['metadata.file'] != None) else "NULL"
     ### Snakefile parameters
@@ -808,10 +877,15 @@ if "Grp_Clust_Markers_Annot_GE" in STEPS:
         sys.stderr.write("Note: No output.dir.grp find in Grp_Clust_Markers_Annot_GE section of configfile; output.dir.grp will be determine from Grp_Norm_DimRed_Eval_GE step for Grp_Clust_Markers_Annot_GE step!\n")
     else :
         sys.exit("Error: No output.dir.grp find in configfile!\n")
+    ### Computation
+    GRP_CMA_TIME = config['Grp_Clust_Markers_Annot_GE']['time'] if 'time' in config['Grp_Clust_Markers_Annot_GE'] else None
+    GRP_CMA_MEM = config['Grp_Clust_Markers_Annot_GE']['mem'] if 'mem' in config['Grp_Clust_Markers_Annot_GE'] else None
     ### Analysis Parameters
     GRP_CMA_AUTHOR_NAME = config['Grp_Clust_Markers_Annot_GE']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Clust_Markers_Annot_GE' in config and 'author.name' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['author.name'] != None) else "NULL"
     GRP_CMA_AUTHOR_MAIL = config['Grp_Clust_Markers_Annot_GE']['author.mail'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'author.mail' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['author.mail'] != None) else "NULL"
     GRP_CMA_MARKFILE = config['Grp_Clust_Markers_Annot_GE']['markfile'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'markfile' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['markfile'] != None) else "NULL" # formated "file1,file2,file3"
+    GRP_CMA_MARKERS_PTSIZE = config['Grp_Clust_Markers_Annot_GE']['markers.pt.size'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'markers.pt.size' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['markers.pt.size'] != None) else "NULL" # formated "file1,file2,file3"
+    GRP_CMA_MARKERS_ORDER = config['Grp_Clust_Markers_Annot_GE']['markers.order'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'markers.order' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['markers.order'] != None) else "NULL" # formated "file1,file2,file3"
     GRP_CMA_CUSTOM_SCE_REF = config['Grp_Clust_Markers_Annot_GE']['custom.sce.ref'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'custom.sce.ref' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['custom.sce.ref'] != None) else "NULL" # formated "file1,file2,file3"
     GRP_CMA_CUSTOM_MARKERS_REF = config['Grp_Clust_Markers_Annot_GE']['custom.markers.ref'].replace(", ", ",") if ('Grp_Clust_Markers_Annot_GE' in config and 'custom.markers.ref' in config['Grp_Clust_Markers_Annot_GE'] and config['Grp_Clust_Markers_Annot_GE']['custom.markers.ref'] != None) else "NULL" # formated "file1,file2,file3"
     # Normalization and dimension reduction
@@ -864,6 +938,9 @@ if "Grp_Adding_ADT" in STEPS:
             GRP_ADD_ADT_SAMPLE_NAME_ADT.append(",".join(list_sample_tmp))
     else:
         sys.exit("Error: No samples.name.adt or input.dirs.adt in configfile!\n")
+    ### Computation
+    GRP_ADD_ADT_TIME = config['Grp_Adding_ADT']['time'] if 'time' in config['Grp_Adding_ADT'] else None
+    GRP_ADD_ADT_MEM = config['Grp_Adding_ADT']['mem'] if 'mem' in config['Grp_Adding_ADT'] else None
     ### Analysis Parameters
     GRP_ADD_ADT_AUTHOR_NAME = config['Grp_Adding_ADT']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Adding_ADT' in config and 'author.name' in config['Grp_Adding_ADT'] and config['Grp_Adding_ADT']['author.name'] != None) else "NULL"
     GRP_ADD_ADT_AUTHOR_MAIL = config['Grp_Adding_ADT']['author.mail'].replace(", ", ",") if ('Grp_Adding_ADT' in config and 'author.mail' in config['Grp_Adding_ADT'] and config['Grp_Adding_ADT']['author.mail'] != None) else "NULL"
@@ -896,6 +973,9 @@ if "Grp_Adding_TCR" in STEPS:
         GRP_ADD_TCR_INPUT_CSV_TCR = [ x.replace(", ", ",") for x in config['Grp_Adding_TCR']['vdj.input.files.tcr']]
     else:
         sys.exit("Error: No vdj.input.files.tcr in configfile!\n")
+    ### Computation
+    GRP_ADD_TCR_TIME = config['Grp_Adding_TCR']['time'] if 'time' in config['Grp_Adding_TCR'] else None
+    GRP_ADD_TCR_MEM = config['Grp_Adding_TCR']['mem'] if 'mem' in config['Grp_Adding_TCR'] else None
     ### Analysis Parameters
     GRP_ADD_TCR_AUTHOR_NAME = config['Grp_Adding_TCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Adding_TCR' in config and 'author.name' in config['Grp_Adding_TCR'] and config['Grp_Adding_TCR']['author.name'] != None) else "NULL"
     GRP_ADD_TCR_AUTHOR_MAIL = config['Grp_Adding_TCR']['author.mail'].replace(", ", ",") if ('Grp_Adding_TCR' in config and 'author.mail' in config['Grp_Adding_TCR'] and config['Grp_Adding_TCR']['author.mail'] != None) else "NULL"
@@ -915,7 +995,7 @@ if "Grp_Adding_BCR" in STEPS:
     elif "Grp_Adding_TCR" in STEPS:
         sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_TCR step for Grp_Adding_BCR step!\n")
         GRP_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in GRP_ADD_TCR_OUTPUT]
-    elif "Adding_ADT" in STEPS:
+    elif "Grp_Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_ADT step for Grp_Adding_BCR step!\n")
         GRP_ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in GRP_ADD_ADT_OUTPUT]
     elif "Grp_Clust_Markers_Annot_GE" in STEPS:
@@ -927,6 +1007,9 @@ if "Grp_Adding_BCR" in STEPS:
         GRP_ADD_BCR_INPUT_CSV_BCR = [ x.replace(", ", ",") for x in config['Grp_Adding_BCR']['vdj.input.files.bcr']]
     else:
         sys.exit("Error: No vdj.input.files.bcr in configfile!\n")
+    ### Computation
+    GRP_ADD_BCR_TIME = config['Grp_Adding_BCR']['time'] if 'time' in config['Grp_Adding_BCR'] else None
+    GRP_ADD_BCR_MEM = config['Grp_Adding_BCR']['mem'] if 'mem' in config['Grp_Adding_BCR'] else None
     ### Analysis Parameters
     GRP_ADD_BCR_AUTHOR_NAME = config['Grp_Adding_BCR']['author.name'].replace(", ", ",").replace(" ", "_") if ('Grp_Adding_BCR' in config and 'author.name' in config['Grp_Adding_BCR'] and config['Grp_Adding_BCR']['author.name'] != None) else "NULL"
     GRP_ADD_BCR_AUTHOR_MAIL = config['Grp_Adding_BCR']['author.mail'].replace(", ", ",") if ('Grp_Adding_BCR' in config and 'author.mail' in config['Grp_Adding_BCR'] and config['Grp_Adding_BCR']['author.mail'] != None) else "NULL"
@@ -982,10 +1065,12 @@ if "Cerebro" in STEPS:
         CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [os.path.normpath(os.path.dirname(dic_GRP_CMA_INFO[GRP_CMA_NAME_GRP[x]]['GRP_CMA_INPUT_RDA']) + "/" + GRP_CMA_CLUST_FOLDER + "/" + GRP_CMA_NAME_GRP[x] + GRP_CMA_COMPLEMENT[x] + "_" + str(GRP_CMA_KEEP_DIM) + "_" + str(GRP_CMA_KEEP_RES) + ".rda") for x in range(len(GRP_CMA_NAME_GRP))]
     if len(CEREBRO_INPUT_RDA) == 0 :
         sys.exit("Error: No input.rda in configfile for Cerebro step!\n")
+    ### Computation
+    CEREBRO_TIME = config['Cerebro']['time'] if 'time' in config['Cerebro'] else None
+    CEREBRO_MEM = config['Cerebro']['mem'] if 'mem' in config['Cerebro'] else None
     ### Analysis Parameters
     CEREBRO_AUTHOR_NAME = config['Cerebro']['author.name'].replace(", ", ",").replace(" ", "_") if ('Cerebro' in config and 'author.name' in config['Cerebro'] and config['Cerebro']['author.name'] != None) else "NULL"
     CEREBRO_AUTHOR_MAIL = config['Cerebro']['author.mail'].replace(", ", ",") if ('Cerebro' in config and 'author.mail' in config['Cerebro'] and config['Cerebro']['author.mail'] != None) else "NULL"
-    # Normalization and dimension reduction
     CEREBRO_VERSION = config['Cerebro']['version'] if ('Cerebro' in config and 'version' in config['Cerebro'] and config['Cerebro']['version'] != None) else "v1.3"
     CEREBRO_GROUPS = config['Cerebro']['groups'].replace(", ", ",") if ('Cerebro' in config and 'groups' in config['Cerebro'] and config['Cerebro']['groups'] != None) else "NULL"
     CEREBRO_REMOVE_OTHER_RED = config['Cerebro']['remove.other.reductions'] if ('Cerebro' in config and 'remove.other.reductions' in config['Cerebro'] and config['Cerebro']['remove.other.reductions'] != None) else "NULL"
@@ -995,8 +1080,8 @@ if "Cerebro" in STEPS:
     CEREBRO_REMOVE_STR = config['Cerebro']['remove.str.genes'] if ('Cerebro' in config and 'remove.str.genes' in config['Cerebro'] and config['Cerebro']['remove.str.genes'] != None) else "NULL"
     CEREBRO_ONLY_POS_DE = config['Cerebro']['only.pos.DE'] if ('Cerebro' in config and 'only.pos.DE' in config['Cerebro'] and config['Cerebro']['only.pos.DE'] != None) else "NULL"
     CEREBRO_REMOVE_CUSTOM_DE = config['Cerebro']['remove.custom.DE'] if ('Cerebro' in config and 'remove.custom.DE' in config['Cerebro'] and config['Cerebro']['remove.custom.DE'] != None) else "NULL"
+    CEREBRO_ADD_SURFACE_PROT_INFO = config['Cerebro']['add.surface.prot.info'] if ('Cerebro' in config and 'add.surface.prot.info' in config['Cerebro'] and config['Cerebro']['add.surface.prot.info'] != None) else "NULL"
     CEREBRO_GMT_FILE = config['Cerebro']['gmt.file'] if ('Cerebro' in config and 'gmt.file' in config['Cerebro'] and config['Cerebro']['gmt.file'] != None) else "NULL"
-    # Metadata file
     CEREBRO_METADATA_FILE = config['Cerebro']['metadata.file'].replace(", ", ",") if ('Cerebro' in config and 'metadata.file' in config['Cerebro'] and config['Cerebro']['metadata.file'] != None) else "NULL"
     ### Snakefile parameters
     #Creation output complement + extention:
@@ -1020,6 +1105,7 @@ if "Cerebro" in STEPS:
         SINGULARITY_ENV_CEREBRO = PIPELINE_FOLDER + "/envs/singularity/single_cell.simg"
     else:
         sys.exit("Error: Unknown version of cerebro in configfile!\n")
+
 
 #singularity
 if "Droplets_QC_GE" in STEPS or "Filtering_GE" in STEPS or "Norm_DimRed_Eval_GE" in STEPS or "Clust_Markers_Annot_GE" in STEPS or "Adding_ADT" in STEPS or "Int_Clust_Markers_Annot_GE" in STEPS or "Grp_Norm_DimRed_Eval_GE" in STEPS or "Grp_Clust_Markers_Annot_GE" in STEPS:

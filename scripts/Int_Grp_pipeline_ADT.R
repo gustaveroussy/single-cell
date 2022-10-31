@@ -99,7 +99,7 @@ name.int_grp <- Seurat::Project(sobj)
 #### Fixed parameters ####
 output_path_ADT <- paste0(output.dir, "/ADT_results/")
 cor.method <- 'spearman'
-norm.method_ADT <- 'LogNormalize' #gave good VISUAL results. Avoid sctransform on such small dataset
+norm.method_ADT <- 'CLR' #gave good VISUAL results. Avoid sctransform on such small dataset
 slot <- 'data' #for correlation and umap
 
 #########

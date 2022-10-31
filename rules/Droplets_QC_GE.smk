@@ -38,7 +38,6 @@ def QC_params_sing(wildcards):
     if QC_MT_FILE != "NULL": concat = concat + " -B " + QC_MT_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_MT_FILE)
     if QC_RB_FILE != "NULL": concat = concat + " -B " + QC_RB_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_RB_FILE)
     if QC_ST_FILE != "NULL": concat = concat + " -B " + QC_ST_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_ST_FILE)
-    if QC_TRANSLATION_FILE != "NULL": concat = concat + " -B " + QC_TRANSLATION_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_TRANSLATION_FILE)
     if QC_METADATA_FILE != "NULL":
         for metadatafile in list(dict.fromkeys(QC_METADATA_FILE.split(","))):
             metadatafile = os.path.dirname(metadatafile)
@@ -65,13 +64,12 @@ rule QC_droplets_ge:
         SING_QC_MT_FILE = os.path.normpath("/WORKDIR/" + QC_MT_FILE) if QC_MT_FILE != "NULL" else "NULL",
         SING_QC_RB_FILE = os.path.normpath("/WORKDIR/" + QC_RB_FILE) if QC_RB_FILE != "NULL" else "NULL",
         SING_QC_ST_FILE = os.path.normpath("/WORKDIR/" + QC_ST_FILE) if QC_ST_FILE != "NULL" else "NULL",
-        SING_QC_TRANSLATION_FILE = os.path.normpath("/WORKDIR", QC_TRANSLATION_FILE) if QC_TRANSLATION_FILE != "NULL" else "NULL",
         SING_QC_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in QC_METADATA_FILE.split(',')]) if QC_METADATA_FILE != "NULL" else "NULL"
     threads:
         2
     resources:
-        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 3072, 20480)),
-        time_min = (lambda wildcards, attempt: min(attempt * 90, 200))
+        mem_mb = (lambda wildcards, attempt: QC_MEM if (QC_MEM is not None) else min(3072 + attempt * 3072, 20480)),
+        time_min = (lambda wildcards, attempt: QC_TIME if (QC_TIME is not None) else min(attempt * 90, 200))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
@@ -90,7 +88,6 @@ rule QC_droplets_ge:
         --emptydrops.fdr {QC_EMPTYDROPS_FDR} \
         --droplets.limit {QC_DROPLETS_LIMIT} \
         --emptydrops.retain {QC_EMPTYDROPS_RETAIN} \
-        --translation {QC_TRANSLATION_BOOL} \
         --pcmito.min {QC_PCMITO_MIN} \
         --pcmito.max {QC_PCMITO_MAX} \
         --pcribo.min {QC_PCRIBO_MIN} \
@@ -101,8 +98,6 @@ rule QC_droplets_ge:
         --mt.genes.file {params.SING_QC_MT_FILE} \
         --crb.genes.file {params.SING_QC_RB_FILE} \
         --str.genes.file {params.SING_QC_ST_FILE} \
-        --translation.file {params.SING_QC_TRANSLATION_FILE} \
-        --metadata.file {QC_METADATA_FILE} \
         --metadata.file {params.SING_QC_METADATA_FILE} && \
         rm -r $TMP_DIR || rm -r $TMP_DIR
         """

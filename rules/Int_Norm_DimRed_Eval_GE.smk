@@ -46,8 +46,8 @@ rule int_norm_dimred_ge:
     threads:
         4
     resources:
-        mem_mb = (lambda wildcards, attempt: min(5120 * len(dic_INT_NDRE_INFO[wildcards.name_int]['INT_NDRE_INPUT_LIST_RDA'].split(',')) + (attempt-1) * 10240, 184320)),
-        time_min = (lambda wildcards, attempt: min(60 * len(dic_INT_NDRE_INFO[wildcards.name_int]['INT_NDRE_INPUT_LIST_RDA'].split(',')) + attempt * 120, 4320))
+        mem_mb = (lambda wildcards, attempt: INT_NDRE_MEM if (INT_NDRE_MEM is not None) else min(5120 * len(dic_INT_NDRE_INFO[wildcards.name_int]['INT_NDRE_INPUT_LIST_RDA'].split(',')) + (attempt-1) * 10240, 184320)),
+        time_min = (lambda wildcards, attempt: INT_NDRE_TIME if (INT_NDRE_TIME is not None) else min(60 * len(dic_INT_NDRE_INFO[wildcards.name_int]['INT_NDRE_INPUT_LIST_RDA'].split(',')) + attempt * 120, 4320))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
@@ -66,17 +66,19 @@ rule int_norm_dimred_ge:
         --min.cells {INT_NDRE_MIN_CELLS} \
         --integration.method {INT_NDRE_INT_METHOD}  \
         --vtr.batch {INT_NDRE_VTR_BATCH} \
+        --seurat.num.ref {INT_NDRE_SEURAT_REF} \
         --features.n {INT_NDRE_FEATURES_N} \
         --norm.method {INT_NDRE_NORM_METHOD} \
         --dimred.method {INT_NDRE_DIMRED_METHOD} \
         --vtr.biases {INT_NDRE_VTR_BIASES} \
         --vtr.scale {INT_NDRE_VTR_SCALE} \
         --dims.max {INT_NDRE_DIM_MAX} \
-        --dims.min {INT_NDRE_DIM_MIN} \
-        --dims.steps {INT_NDRE_DIM_STEPS} \
-        --res.max {INT_NDRE_RES_MAX} \
-        --res.min {INT_NDRE_RES_MIN} \
-        --res.steps {INT_NDRE_RES_STEPS} \
+        --eval.dims.max {INT_NDRE_EVAL_DIM_MAX} \
+        --eval.dims.min {INT_NDRE_EVAL_DIM_MIN} \
+        --eval.dims.steps {INT_NDRE_EVAL_DIM_STEPS} \
+        --eval.res.max {INT_NDRE_EVAL_RES_MAX} \
+        --eval.res.min {INT_NDRE_EVAL_RES_MIN} \
+        --eval.res.steps {INT_NDRE_EVAL_RES_STEPS} \
         --metadata.file {params.SING_INT_NDRE_METADATA_FILE} && \
         rm -r $TMP_DIR || rm -r $TMP_DIR
         """

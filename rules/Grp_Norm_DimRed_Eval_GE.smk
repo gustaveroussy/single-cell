@@ -46,8 +46,8 @@ rule grp_norm_dimred_ge:
     threads:
         4
     resources:
-        mem_mb = (lambda wildcards, attempt: min(5120 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + (attempt-1) * 10240, 184320)),
-        time_min = (lambda wildcards, attempt: min(60 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + attempt * 120, 4320))
+        mem_mb = (lambda wildcards, attempt: GRP_NDRE_MEM if (GRP_NDRE_MEM is not None) else min(5120 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + (attempt-1) * 10240, 184320)),
+        time_min = (lambda wildcards, attempt: GRP_NDRE_TIME if (GRP_NDRE_TIME is not None) else min(120 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + attempt * 120, 4320))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
@@ -71,11 +71,12 @@ rule grp_norm_dimred_ge:
         --vtr.biases {GRP_NDRE_VTR_BIASES} \
         --vtr.scale {GRP_NDRE_VTR_SCALE} \
         --dims.max {GRP_NDRE_DIM_MAX} \
-        --dims.min {GRP_NDRE_DIM_MIN} \
-        --dims.steps {GRP_NDRE_DIM_STEPS} \
-        --res.max {GRP_NDRE_RES_MAX} \
-        --res.min {GRP_NDRE_RES_MIN} \
-        --res.steps {GRP_NDRE_RES_STEPS} \
+        --eval.dims.max {GRP_NDRE_EVAL_DIM_MAX} \
+        --eval.dims.min {GRP_NDRE_EVAL_DIM_MIN} \
+        --eval.dims.steps {GRP_NDRE_EVAL_DIM_STEPS} \
+        --eval.res.max {GRP_NDRE_EVAL_RES_MAX} \
+        --eval.res.min {GRP_NDRE_EVAL_RES_MIN} \
+        --eval.res.steps {GRP_NDRE_EVAL_RES_STEPS} \
         --metadata.file {params.SING_GRP_NDRE_METADATA_FILE} && \
         rm -r $TMP_DIR || rm -r $TMP_DIR
         """
