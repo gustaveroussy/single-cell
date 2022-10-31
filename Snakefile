@@ -219,10 +219,7 @@ if "Droplets_QC_GE" in STEPS:
     elif 'sample.name.ge' in config['Alignment_countTable_GE'] and 'input.dir.ge' in config['Alignment_countTable_GE']  and "Alignment_countTable_GE" in STEPS:
         sys.stderr.write("Note: No sample.name.ge or input.dir.ge find in Droplets_QC_GE section of configfile; sample.name.ge and input.dir.ge will be determine from Alignment_countTable_GE step for Droplets_QC_GE step!\n")
         QC_SAMPLE_NAME_GE = copy.deepcopy(ALIGN_SAMPLE_NAME_GE)
-        if VELOCITY_GE is False:
-            QC_INPUT_DIR_GE = [os.path.join(ALIGN_OUTPUT_DIR_GE, str(x), "KALLISTOBUS") for x in ALIGN_SAMPLE_NAME_GE]
-        else:
-            QC_INPUT_DIR_GE = [os.path.join(ALIGN_OUTPUT_DIR_GE, str(x), "KALLISTOBUS/spliced") for x in ALIGN_SAMPLE_NAME_GE]
+        QC_INPUT_DIR_GE = [os.path.join(ALIGN_OUTPUT_DIR_GE, str(x), "KALLISTOBUS") for x in ALIGN_SAMPLE_NAME_GE]
     else:
         sys.exit("Error: No sample.name.ge or/and input.dir.ge in configfile!\n")
     if 'Droplets_QC_GE' in config and 'output.dir.ge' in config['Droplets_QC_GE'] :
@@ -243,6 +240,8 @@ if "Droplets_QC_GE" in STEPS:
     QC_EMPTYDROPS_FDR = config['Droplets_QC_GE']['emptydrops.fdr'] if ('Droplets_QC_GE' in config and 'emptydrops.fdr' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['emptydrops.fdr'] != None) else "NULL"
     QC_DROPLETS_LIMIT = config['Droplets_QC_GE']['droplets.limit'] if ('Droplets_QC_GE' in config and 'droplets.limit' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['droplets.limit'] != None) else "NULL"
     QC_EMPTYDROPS_RETAIN = config['Droplets_QC_GE']['emptydrops.retain'] if ('Droplets_QC_GE' in config and 'emptydrops.retain' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['emptydrops.retain'] != None) else "NULL"
+    # Translate ENSG into Gene Symbol
+    QC_TRANSLATION_BOOL = config['Droplets_QC_GE']['translation'] if ('Droplets_QC_GE' in config and 'translation' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['translation'] != None) else "NULL"
     # QC cell
     QC_PCMITO_MIN = config['Droplets_QC_GE']['pcmito.min'] if ('Droplets_QC_GE' in config and 'pcmito.min' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['pcmito.min'] != None) else "NULL"
     QC_PCMITO_MAX = config['Droplets_QC_GE']['pcmito.max'] if ('Droplets_QC_GE' in config and 'pcmito.max' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['pcmito.max'] != None) else "NULL"
@@ -259,6 +258,8 @@ if "Droplets_QC_GE" in STEPS:
     QC_MT_FILE = config['Droplets_QC_GE']['mt.genes.file'] if ('Droplets_QC_GE' in config and 'mt.genes.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['mt.genes.file'] != None) else "NULL"
     QC_RB_FILE = config['Droplets_QC_GE']['crb.genes.file'] if ('Droplets_QC_GE' in config and 'crb.genes.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['crb.genes.file'] != None) else "NULL"
     QC_ST_FILE = config['Droplets_QC_GE']['str.genes.file'] if ('Droplets_QC_GE' in config and 'str.genes.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['str.genes.file'] != None) else "NULL"
+    # Translation into gene Symbols
+    QC_TRANSLATION_FILE = config['Droplets_QC_GE']['translation.file'] if ('Droplets_QC_GE' in config and 'translation.file' in config['Droplets_QC_GE'] and config['Droplets_QC_GE']['translation.file'] != None) else "NULL"
     ### Snakefile parameters
     #check end paths (del "/" if necessary)
     for i in range(0,len(QC_INPUT_DIR_GE),1):
