@@ -63,7 +63,7 @@ create.parallel.instance <- function(nthreads = 1) {
 # 4) Remove empty droplets
 # 5) Plotting saturation and Kneeplot
 # 6) Creation of the Seurat object
-load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE, metadata.file = NULL, min.counts = 1000) {
+load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, translation = FALSE, translation.file = NULL, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE, metadata.file = NULL, min.counts = 1000) {
   if (file.exists(data.path) && !is.null(sample.name)) {
     message("Loading data ...")
 
@@ -100,6 +100,39 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     umi.total.nb <- sum(scmat)
     print(umi.total.nb)
 
+    ## Rename ensembl genes id by genes symbols
+    if (translation){
+      message('Translation to genes symbols...')
+      data = read.table(file = translation.file, header = FALSE, sep = " ")
+      gene_name=vector()
+      for(i in 1:nrow(scmat)) {
+        index = grep(gsub("\\.[0-9]*$", "",rownames(scmat)[i]), as.vector(data[,1]))
+        if(!is.na(index)) gene_name[i] = as.vector(data[index,2]) else gene_name[i] = rownames(scmat)[i]
+      }
+      ##deduplicate lines
+      #identify duplicate genes names and position
+      dup.genes <- unique(gene_name[duplicated(gene_name)])
+      if(length(dup.genes) > 0) {
+        dup.pos=grep(paste0("^",paste(dup.genes,collapse="$|^"),"$"), gene_name)
+        message(paste0("Found ", length(dup.genes), ' (', sprintf("%.2f", length(dup.genes) / nrow(scmat) * 100), "%) replicated genes causes by translation! Summing ..."))
+        #data not duplicated
+        scmat_without_dup = scmat[-dup.pos,]
+        rownames(scmat_without_dup)=gene_name[-dup.pos]
+        #data duplicated
+        dup_scmat = as.data.frame(as.matrix(scmat[dup.pos,]))
+        dup_gene_names=gene_name[dup.pos]
+        rm(scmat)
+        #transform in non duplicated data
+        dedup_scmat = Matrix::Matrix(as.matrix(rowsum(dup_scmat,group=dup_gene_names)), sparse = TRUE)
+        #merge data
+        scmat = rbind(scmat_without_dup,dedup_scmat)
+        rm(scmat_without_dup,dedup_scmat)
+      }else{
+        rownames(scmat) = gene_name
+        message('No replicated gene found.')
+      }
+    }
+    
     ## df for saturation plots and Kneeplot beging
     if(draw_plots){
       suppressMessages(library(dplyr))
@@ -214,11 +247,13 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     sobj@misc$params$sobj_creation$emptydrops.fdr <- emptydrops.fdr
     sobj@misc$params$sobj_creation$droplets.limit <- droplets.limit
     sobj@misc$params$sobj_creation$emptydrops.retain <- emptydrops.retain
+    sobj@misc$params$sobj_creation$translation <- translation
+    sobj@misc$params$sobj_creation$translation.file <- translation.file
     sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
     sobj@misc$params$seed <- my.seed
     
     ## Save command
-    sobj@misc$pipeline_commands <- paste0("load.sc.data(data.path = ", data.path, ", sample.name = ", sample.name, ", assay = ", assay, ", droplets.limit = ", droplets.limit, ", emptydrops.fdr = ", emptydrops.fdr, ", emptydrops.retain = ", emptydrops.retain, ", return.matrix = ", return.matrix, ", BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = ", out.dir, ")")
+    sobj@misc$pipeline_commands <- paste0("load.sc.data(data.path = ", data.path, ", sample.name = ", sample.name, ", assay = ", assay, ", droplets.limit = ", droplets.limit, ", emptydrops.fdr = ", emptydrops.fdr, ", emptydrops.retain = ", emptydrops.retain, ", return.matrix = ", return.matrix, ", translation = ", translation, ",  translation.file = ", translation.file, ", BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = ", out.dir, ")")
     
     ## Save packages versions
     if(file.exists(paste0(data.path, "/run_info.json"))) sobj@misc$technical_info$kallisto <- json_data$kallisto_version
