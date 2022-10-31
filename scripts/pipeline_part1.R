@@ -87,7 +87,6 @@ crb.genes.file <- args$options$crb.genes.file
 str.genes.file <- args$options$str.genes.file
 # Translation into gene Symbols
 translation.file <- args$options$translation.file
-
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
@@ -193,7 +192,7 @@ unfiltred.dir <- paste0(output.dir.ge, 'QC_droplets', if(!is.null(emptydrops.ret
 dir.create(path = unfiltred.dir, recursive = TRUE, showWarnings = FALSE)
 
 ### Loading raw count matrix + Filtering duplicated cell barcodes + Removing empty droplets
-sobj <- load.sc.data(data.path = input.dir.ge, sample.name = sample.name.GE, assay = assay, droplets.limit = droplets.limit, emptydrops.fdr = emptydrops.fdr, emptydrops.retain = emptydrops.retain, translation = translation, translation.file = translation.file, BPPARAM = cl, my.seed = my.seed, out.dir = unfiltred.dir)
+sobj <- load.sc.data(data.path = input.dir.ge, sample.name = sample.name.GE, assay = assay, droplets.limit = droplets.limit, emptydrops.fdr = emptydrops.fdr, emptydrops.retain = emptydrops.retain, translation = translation, translation.file = translation.file, BPPARAM = cl, my.seed = my.seed, out.dir = unfiltred.dir, min.count = min.count)
 
 ### Add metadata
 if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file = metadata.file)

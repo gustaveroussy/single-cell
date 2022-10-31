@@ -46,8 +46,8 @@ rule add_bcr_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 1024, 10240)),
-        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
+        mem_mb = (lambda wildcards, attempt: ADD_BCR_MEM if (ADD_BCR_MEM is not None) else min(3072 + attempt * 1024, 10240)),
+        time_min = (lambda wildcards, attempt: ADD_BCR_TIME if (ADD_BCR_TIME is not None) else min(attempt * 60, 200))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}

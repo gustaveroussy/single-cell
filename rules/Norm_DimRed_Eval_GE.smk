@@ -43,8 +43,8 @@ rule norm_dimred_ge:
     threads:
         4
     resources:
-        mem_mb = (lambda wildcards, attempt: min(5120 + attempt * 5120, 61440)),
-        time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
+        mem_mb = (lambda wildcards, attempt: NDRE_MEM if (NDRE_MEM is not None) else min(5120 + attempt * 5120, 61440)),
+        time_min = (lambda wildcards, attempt: NDRE_TIME if (NDRE_TIME is not None) else min(attempt * 120, 200))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
@@ -65,11 +65,12 @@ rule norm_dimred_ge:
         --vtr.biases {NDRE_VTR_BIASES} \
         --vtr.scale {NDRE_VTR_SCALE} \
         --dims.max {NDRE_DIM_MAX} \
-        --dims.min {NDRE_DIM_MIN} \
-        --dims.steps {NDRE_DIM_STEPS} \
-        --res.max {NDRE_RES_MAX} \
-        --res.min {NDRE_RES_MIN} \
-        --res.steps {NDRE_RES_STEPS} \
+        --eval.dims.max {NDRE_EVAL_DIM_MAX} \
+        --eval.dims.min {NDRE_EVAL_DIM_MIN} \
+        --eval.dims.steps {NDRE_EVAL_DIM_STEPS} \
+        --eval.res.max {NDRE_EVAL_RES_MAX} \
+        --eval.res.min {NDRE_EVAL_RES_MIN} \
+        --eval.res.steps {NDRE_EVAL_RES_STEPS} \
         --metadata.file {params.SING_NDRE_METADATA_FILE} && \
         rm -r $TMP_DIR || rm -r $TMP_DIR
         """

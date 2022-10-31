@@ -24,11 +24,12 @@ option_list <- list(
   make_option("--vtr.biases", help="List of biases to regress (percent_mt, percent_rb, nFeature_RNA, percent_st, Cyclone.Phase, and all other column name in metadata)"),
   make_option("--vtr.scale", help="TRUE to center biaises to regress (for scbfa and bpca only)"),
   make_option("--dims.max", help="Number max of dimensions to compute (depends on sample complexity and number of cells)"),
-  make_option("--dims.min", help="Number min of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
-  make_option("--dims.steps", help="Steps for dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
-  make_option("--res.max", help="Number max of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
-  make_option("--res.min", help="Number min of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
-  make_option("--res.steps", help="Steps for resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.dims.max", help="Number max of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.dims.min", help="Number min of dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.dims.steps", help="Steps for dimensions to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.res.max", help="Number max of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.res.min", help="Number min of resolution to compute for evaluation (depends on sample complexity and number of cells)"),
+  make_option("--eval.res.steps", help="Steps for resolution to compute for evaluation (depends on sample complexity and number of cells)"),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
@@ -68,11 +69,12 @@ dimred.method <- args$options$dimred.method
 vtr.biases <- sort(unlist(stringr::str_split(args$options$vtr.biases, ",")))
 vtr.scale <- args$options$vtr.scale
 dims.max <- if (!is.null(args$options$dims.max)) as.numeric(args$options$dims.max)
-dims.min <- if (!is.null(args$options$dims.min)) as.numeric(args$options$dims.min)
-dims.steps <- if (!is.null(args$options$dims.steps)) as.numeric(args$options$dims.steps)
-res.max <- if (!is.null(args$options$res.max)) as.numeric(args$options$res.max)
-res.min <- if (!is.null(args$options$res.min)) as.numeric(args$options$res.min)
-res.steps <- if (!is.null(args$options$res.steps)) as.numeric(args$options$res.steps)
+eval.dims.max <- if (!is.null(args$options$eval.dims.max)) as.numeric(args$options$eval.dims.max)
+eval.dims.min <- if (!is.null(args$options$eval.dims.min)) as.numeric(args$options$eval.dims.min)
+eval.dims.steps <- if (!is.null(args$options$eval.dims.steps)) as.numeric(args$options$eval.dims.steps)
+eval.res.max <- if (!is.null(args$options$eval.res.max)) as.numeric(args$options$eval.res.max)
+eval.res.min <- if (!is.null(args$options$eval.res.min)) as.numeric(args$options$eval.res.min)
+eval.res.steps <- if (!is.null(args$options$eval.res.steps)) as.numeric(args$options$eval.res.steps)
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
@@ -83,7 +85,7 @@ if (!is.null(args$options$yaml)){
     } else if ((length(yaml_options[[i]]) == 1) && (toupper(yaml_options[[i]]) == "TRUE")) { yaml_options[[i]] <- TRUE
     }
     #assign values
-    if(i %in% c("nthreads","features.n","dims.max","dims.min","dims.steps","res.max", "res.min", "res.steps")) assign(i, as.numeric(yaml_options[[i]]))else assign(i, yaml_options[[i]])
+    if(i %in% c("nthreads","features.n","dims.max","eval.dims.max","eval.dims.min","eval.dims.steps","eval.res.max", "eval.res.min", "eval.res.steps")) assign(i, as.numeric(yaml_options[[i]]))else assign(i, yaml_options[[i]])
   }
   rm(yaml_options, i)
 }
@@ -112,11 +114,12 @@ if (is.null(vtr.biases)) vtr.biases <- NULL
 if (is.null(vtr.scale)) vtr.scale <- TRUE
 if (vtr.scale && !(dimred.method %in% c('scbfa', 'bpca', 'mds'))) vtr.scale <- FALSE
 if (is.null(dims.max)) dims.max <- 49
-if (is.null(dims.min)) dims.min <- 3
-if (is.null(dims.steps)) dims.steps <- 2
-if (is.null(res.max)) res.max <- 1.2
-if (is.null(res.min)) res.min <- 0.1
-if (is.null(res.steps)) res.steps <- 0.1
+if (is.null(eval.dims.max)) eval.dims.max <- 49
+if (is.null(eval.dims.min)) eval.dims.min <- 3
+if (is.null(eval.dims.steps)) eval.dims.steps <- 2
+if (is.null(eval.res.max)) eval.res.max <- 1.2
+if (is.null(eval.res.min)) eval.res.min <- 0.1
+if (is.null(eval.res.steps)) eval.res.steps <- 0.1
 
 #### Fixed parameters ####
 solo.pt.size <- 2
@@ -302,7 +305,7 @@ if(keep.norm){
  }
 }
 if(dimred.method == 'scbfa') MM_tmp4 <- paste0(MM_tmp4, paste0(" As the scBFA dimension reduction method (version ",sobj@misc$technical_info$scBFA,") is meant to be applied on a subset of the count matrix, we followed the authors recommendation and applied it on the HVG. ", MM_tmp3))
-MM_tmp4 <- paste0(MM_tmp4, paste0("The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",dims.min," to ",dims.max," dimensions, with a step of ",dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",res.min," to ",res.max," with a step of ",res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."))
+MM_tmp4 <- paste0(MM_tmp4, paste0("The number of ",MM_tmp," dimensions to keep for further analysis was evaluated by assessing a range of reduced ",MM_tmp," spaces using ",eval.dims.min," to ",eval.dims.max," dimensions, with a step of ",eval.dims.steps,". For each generated ",MM_tmp," space, Louvain clustering of cells was performed using a range of values for the resolution parameter from ",eval.res.min," to ",eval.res.max," with a step of ",eval.res.steps,". The optimal space was manually evaluated as the one combination of kept dimensions and clustering resolution resolving the best structure (clusters homogeneity and compacity) in a Uniform Manifold Approximation and Projection space (UMAP). Additionaly, we used the clustree method (version ",sobj@misc$technical_info$clustree,") to assess if the selected optimal space corresponded to a relatively stable position in the clustering results tested for these dimensions / resolution combinations."))
 sobj@misc$parameters$Materials_and_Methods$Grouped_analysis_Norm_DimRed_Eval <- MM_tmp4
 sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
 
@@ -323,6 +326,11 @@ cat("\nCorrelation of dimensions...\n")
 dimensions.eval(sobj = sobj, reduction = paste0(assay, "_", dimred.method), eval.markers = eval.markers, slot = 'data', out.dir = norm.dim.red.dir, nthreads = floor(nthreads/2))
 gc()
 
+### Elbowplot
+cat("\ElbowPlot...\n")
+elb <- Seurat::ElbowPlot(sobj, ndims = dims.max, reduction = paste0(assay, "_", dimred.method))
+ggplot2::ggsave(filename = paste0(norm.dim.red.dir,"/", name.grp, '_', paste0(assay, "_", dimred.method), '_elbowplot.png'), plot = elb, width = 7, height = 4)
+
 ### Testing multiple clustering parameters (nb dims kept + Louvain resolution)
 cat("\nEvaluation of multiple clustering parameters...\n")
-clustering.eval.mt(sobj = sobj, reduction = paste0(assay, "_", dimred.method), dimsvec = seq.int(dims.min, dims.max, dims.steps), resvec = seq(res.min,res.max,res.steps), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)
+clustering.eval.mt(sobj = sobj, reduction = paste0(assay, "_", dimred.method), dimsvec = seq.int(eval.dims.min, eval.dims.max, eval.dims.steps), resvec = seq(eval.res.min,eval.res.max,eval.res.steps), out.dir = norm.dim.red.dir, solo.pt.size = solo.pt.size, BPPARAM = cl)

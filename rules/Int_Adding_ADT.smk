@@ -63,8 +63,8 @@ rule int_add_adt_ge:
     threads:
         1
     resources:
-        mem_mb = lambda wildcards, attempt: min(5120 + attempt * 3072, 20480),
-        time_min = lambda wildcards, attempt: min(attempt * 120, 200)
+        mem_mb = lambda wildcards, attempt: INT_ADD_ADT_MEM if (INT_ADD_ADT_MEM is not None) else min(5120 + attempt * 3072, 20480),
+        time_min = lambda wildcards, attempt: INT_ADD_ADT_TIME if (INT_ADD_ADT_TIME is not None) else min(attempt * 120, 200)
     shell:
         """
         export TMPDIR={GLOBAL_TMP}

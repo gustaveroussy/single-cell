@@ -98,7 +98,7 @@ if (is.null(ADT.max.cutoff))  ADT.max.cutoff <- rep("q95", length(gene.names))
 #### Fixed parameters ####
 output_path_ADT <- paste0(output.dir, "/ADT_results/")
 cor.method <- 'spearman'
-norm.method_ADT <- 'LogNormalize' #gave good VISUAL results. Avoid sctransform on such small dataset
+norm.method_ADT <- 'CLR' #gave good VISUAL results. Avoid sctransform on such small dataset
 slot <- 'data' #for correlation and umap
 
 #########
@@ -127,6 +127,10 @@ cl <- create.parallel.instance(nthreads = nthreads)
 cat("\nLoading raw count matrix of ADT...\n")
 dir.create(path = output_path_ADT, recursive = TRUE, showWarnings = TRUE)
 sobjADT <- load.sc.data(data.path = input.dir.adt, sample.name = sample.name.ADT, assay = 'ADT', droplets.limit = NULL, emptydrops.fdr = NULL, BPPARAM = cl, my.seed = sobj@misc$params$seed, out.dir = output_path_ADT, draw_plots = FALSE)
+
+### Saving stat for sheet
+cat("\nSaving stat...\n")
+save_stat(sobj = sobjADT, sample.name = sample.name.ADT, title = sample.name.ADT, out.dir = input.dir.adt)
 
 ### Check number of protein names and gene.names and quantiles cutoff
 if(length(rownames(sobjADT)) != length(gene.names)) stop(paste0("The number of gene.names is not the same as the proteins in the ADT count table: ", length(gene.names), " genes (", paste0(gene.names, collapse=","),") and ",length(rownames(sobjADT))," proteins (",paste0(rownames(sobjADT), collapse=","),")."))

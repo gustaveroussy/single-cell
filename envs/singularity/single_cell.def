@@ -20,7 +20,12 @@ From: ubuntu:20.04
     echo "Ubuntu version ######################"
     cat /etc/lsb-release
     apt-get -y update && apt-get -y upgrade
-    apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgsl-dev libgit2-dev libpython3-dev libgmp3-dev
+    
+    ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime
+    apt-get install -y tzdata
+    dpkg-reconfigure --frontend noninteractive tzdata
+
+    apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgsl-dev libgit2-dev libpython3-dev libgmp3-dev tzdata libfontconfig1-dev  libharfbuzz-dev libfribidi-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libcairo2-dev libxt-dev libgeos-dev
     apt-get install -y dirmngr gnupg apt-transport-https ca-certificates software-properties-common
     apt-get -y update && apt-get -y upgrade
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
@@ -35,11 +40,12 @@ From: ubuntu:20.04
 
     # # Global packages
     R -e 'install.packages("devtools")'
+    R -e 'library("devtools")'
     R -e 'install.packages("BiocManager")'
-    R -e 'install.packages("rsvd", dependencies = TRUE)' # for seurat
-    R -e 'remove.packages(grep("spatstat", installed.packages(), value = T))' # for seurat
-    R -e 'devtools::install_github("spatstat/spatstat@v1.64-2")' # for seurat
-    R -e 'install.packages("Seurat", dependencies = TRUE)'
+    #R -e 'install.packages("rsvd", dependencies = TRUE)' # for seurat
+    #R -e 'remove.packages(grep("spatstat", installed.packages(), value = T))' # for seurat
+    #R -e 'devtools::install_github("spatstat/spatstat@v1.64-2")' # for seurat
+    R -e 'install.packages("Seurat")'
     R -e 'library(Seurat)'
     R -e 'devtools::install_github("thomasp85/patchwork")'
     R -e 'install.packages("optparse")'
@@ -83,7 +89,8 @@ From: ubuntu:20.04
     R -e 'devtools::install_github("rnabioco/clustifyr")' # annotation
     R -e 'devtools::install_github("rnabioco/clustifyrdata")' # annotation
     R -e 'install.packages("tensorflow");reticulate::install_miniconda(path = "/miniconda");reticulate::py_config()'
-    R -e 'tensorflow::install_tensorflow(method = "conda", envname = "r-reticulate", extra_packages="tensorflow-probability", version = "2.1.0")' # annotation
+    R -e 'library(tensorflow)'
+    R -e 'tensorflow::install_tensorflow(method = "conda", envname = "r-reticulate", extra_packages="tensorflow-probability", version = "2.2.0")' # cellassign annotation, need 2.1.0 version, but isn't compatible with version of other R packages of the container.
     R -e 'devtools::install_github("Irrationone/cellassign")' # annotation  #R -e 'Sys.getenv("RETICULATE_PYTHON_ENV", unset = "r-reticulate")'
     R -e 'BiocManager::install("CelliD")' # annotation
     R -e 'install.packages("pheatmap")' # annotation

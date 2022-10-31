@@ -70,8 +70,8 @@ rule QC_droplets_ge:
     threads:
         2
     resources:
-        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 3072, 20480)),
-        time_min = (lambda wildcards, attempt: min(attempt * 90, 200))
+        mem_mb = (lambda wildcards, attempt: QC_MEM if (QC_MEM is not None) else min(3072 + attempt * 3072, 20480)),
+        time_min = (lambda wildcards, attempt: QC_TIME if (QC_TIME is not None) else min(attempt * 90, 200))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
@@ -102,7 +102,6 @@ rule QC_droplets_ge:
         --crb.genes.file {params.SING_QC_RB_FILE} \
         --str.genes.file {params.SING_QC_ST_FILE} \
         --translation.file {params.SING_QC_TRANSLATION_FILE} \
-        --metadata.file {QC_METADATA_FILE} \
         --metadata.file {params.SING_QC_METADATA_FILE} && \
         rm -r $TMP_DIR || rm -r $TMP_DIR
         """

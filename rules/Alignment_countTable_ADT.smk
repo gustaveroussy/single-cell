@@ -113,8 +113,8 @@ rule alignment_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_ADT if (ALIGN_MEM_ADT is not None) else min(attempt * 256, 10240)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_ADT if (ALIGN_TIME_ADT is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -131,8 +131,8 @@ rule correct_UMIs_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_ADT if (ALIGN_MEM_ADT is not None) else min(attempt * 256, 10240)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_ADT if (ALIGN_TIME_ADT is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -149,8 +149,8 @@ rule sort_file_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(12288 + attempt * 3072, 30720)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_ADT if (ALIGN_MEM_ADT is not None) else min(12288 + attempt * 3072, 30720)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_ADT if (ALIGN_TIME_ADT is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -180,8 +180,8 @@ rule build_count_matrix_adt:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_ADT if (ALIGN_MEM_ADT is not None) else min(attempt * 256, 10240)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_ADT if (ALIGN_TIME_ADT is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:

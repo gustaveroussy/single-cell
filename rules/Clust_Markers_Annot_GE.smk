@@ -58,13 +58,14 @@ rule clust_markers_annot_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(10240 + attempt * 5120, 81920)),
-        time_min = (lambda wildcards, attempt: min(attempt * 120, 420))
+        mem_mb = (lambda wildcards, attempt: CMA_MEM if (CMA_MEM is not None) else min(10240 + attempt * 5120, 81920)),
+        time_min = (lambda wildcards, attempt: CMA_TIME if (CMA_TIME is not None) else min(attempt * 120, 420))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR:$HOME {params.sing_bind} \
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX)
+        rsync -az -c {PIPELINE_FOLDER}/resources/DATABASE/ref_annot_cache $TMP_DIR/ref_annot_cache  && \
+        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR/ref_annot_cache:$HOME {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part4.R \
         --input.rda.ge {params.input_rda} \
@@ -74,6 +75,8 @@ rule clust_markers_annot_ge:
         --nthreads {threads} \
         --pipeline.path {params.pipeline_folder} \
         --markfile  {params.SING_CMA_MARKFILE} \
+        --markers.pt.size  {CMA_MARKERS_PTSIZE} \
+        --markers.order  {CMA_MARKERS_ORDER} \
         --custom.sce.ref {params.SING_CMA_CUSTOM_SCE_REF} \
         --custom.markers.ref {params.SING_CMA_CUSTOM_MARKERS_REF} \
         --keep.dims {CMA_KEEP_DIM} \

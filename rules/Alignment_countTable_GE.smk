@@ -5,6 +5,7 @@ These rules make the alignment of genes expression in single-cell RNA-seq.
 """
 wildcard_constraints:
     sample_name_ge = ".+_GE"
+    #sample_name_ge = "|".join(ALIGN_SAMPLE_NAME_GE)
 
 """
 This rule makes the symbolic links of fastq files with the good sample name.
@@ -139,8 +140,8 @@ rule alignment_ge:
     threads:
         4
     resources:
-        mem_mb = (lambda wildcards, attempt: min(6144 + attempt * 2048, 20480)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(6144 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -159,8 +160,8 @@ rule correct_UMIs_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(attempt * 256, 10240)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
     shell:
         "bustools correct -w {WHITELISTNAME} -o {output} {input} && rm {input}"
 
@@ -175,8 +176,8 @@ rule sort_file_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(12288 + attempt * 2048, 20480)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(12288 + attempt * 2048, 20480)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:
@@ -206,8 +207,8 @@ rule build_count_matrix_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
-        time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
+        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_GE if (ALIGN_MEM_GE is not None) else min(attempt * 256, 10240)),
+        time_min = (lambda wildcards, attempt: ALIGN_TIME_GE if (ALIGN_TIME_GE is not None) else min(attempt * 30, 200))
     conda:
         CONDA_ENV_QC_ALIGN_GE_ADT
     shell:

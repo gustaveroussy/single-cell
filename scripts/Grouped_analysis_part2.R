@@ -4,7 +4,6 @@ option_list <- list(
   ### Project
   make_option("--input.rda.grp", help="Input filtred, normalized and reducted seurat object (in .rda format)."),
   make_option("--output.dir.grp", help="Output path"),
-  make_option("--markfile", help="Genes to plot on umap (# )format: 2 columns named Genes and Signature"),
   make_option("--author.name", help="Name of auhtor of the analysis"),
   make_option("--author.mail", help="Email of auhtor of the analysis"),
   ### Computational Parameters
@@ -21,6 +20,10 @@ option_list <- list(
   make_option("--custom.markers.ref", help="List of .xlsx files containing your reference"),
   make_option("--cfr.minscore", help="Minimum correlation score for clustifyr to consider"),
   make_option("--sr.minscore", help="Minimum correlation score for SingleR to consider"),
+  # Markerfile: umap + violin
+  make_option("--markfile", help="Genes to plot on umap (format: 2 columns named Genes and Signatures)"),
+  make_option("--markers.pt.size", help="Adjust point size to plot genes from the markfile"),
+  make_option("--markers.order", help="Boolean determining whether to plot cells in order of expression of markfile genes (can be useful if cells expressing given gene are getting buried)."),
   ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
   make_option("--yaml", help="Patho to yaml file with all parameters")
 )
@@ -37,27 +40,30 @@ for (i in names(args$options)){
   }
 }
 
-#### Get Paramaters ####
+#### Get Parameters ####
 ### Project
 input.rda.grp <- args$options$input.rda.grp
 output.dir.grp <- args$options$output.dir.grp
-markfile <- if (!is.null(args$options$markfile)) unlist(stringr::str_split(args$options$markfile, ","))
 list.author.name <- if (!is.null(args$options$author.name)) unlist(stringr::str_split(args$options$author.name, ","))
 list.author.mail <- if (!is.null(args$options$author.mail)) unlist(stringr::str_split(args$options$author.mail, ","))
 ### Computational Parameters
 nthreads <-  if (!is.null(args$options$nthreads)) as.numeric(args$options$nthreads)
-pipeline.path <- args$options$pipeline.path
+pipeline.path <- if (!is.null(args$options$pipeline.path)) args$options$pipeline.path
 ### Analysis Parameters
 # Metadata
-metadata.file <- unlist(stringr::str_split(args$options$metadata.file, ","))
+metadata.file <- if (!is.null(args$options$metadata.file)) unlist(stringr::str_split(args$options$metadata.file, ","))
 # Clustering
 keep.dims <- if (!is.null(args$options$keep.dims)) as.numeric(args$options$keep.dims)
-keep.res <- if (!is.null(args$options$keep.res)) as.numeric(args$options$keep.res)
+keep.res <- if (!is.null(args$options$keep.res) ) as.numeric(args$options$keep.res)
 # Annotation
 custom.sce.ref <- if (!is.null(args$options$custom.sce.ref)) unlist(stringr::str_split(args$options$custom.sce.ref, ","))
 custom.markers.ref <- if (!is.null(args$options$custom.markers.ref)) unlist(stringr::str_split(args$options$custom.markers.ref, ","))
 cfr.minscore <- if (!is.null(args$options$cfr.minscore)) as.numeric(args$options$cfr.minscore)
 sr.minscore <- if (!is.null(args$options$sr.minscore)) as.numeric(args$options$sr.minscore)
+# Markerfile: umap + violin
+markfile <- if (!is.null(args$options$markfile)) unlist(stringr::str_split(args$options$markfile, ","))
+markers.pt.size <- if (!is.null(args$options$markers.pt.size)) as.numeric(args$options$markers.pt.size)
+markers.order <- args$options$markers.order
 ### Yaml parameters file to remplace all parameters before (usefull to use R script without snakemake)
 if (!is.null(args$options$yaml)){
   yaml_options <- yaml::yaml.load_file(args$options$yaml)
@@ -69,7 +75,7 @@ if (!is.null(args$options$yaml)){
     }
     #assign values
     assign(i, yaml_options[[i]])
-    if(i %in% c("nthreads","keep.dims","keep.res","cfr.minscore","sr.minscore")) assign(i, as.numeric(yaml_options[[i]]))else assign(i, yaml_options[[i]])
+    if(i %in% c("nthreads","keep.dims","keep.res","cfr.minscore","sr.minscore","markers.pt.size")) assign(i, as.numeric(yaml_options[[i]]))else assign(i, yaml_options[[i]])
     
   }
   rm(yaml_options, i)
@@ -110,6 +116,9 @@ red.name <- paste0(assay, "_", dimred.method)
 # Annotation
 if (is.null(cfr.minscore)) cfr.minscore <- 0.35
 if (is.null(sr.minscore)) sr.minscore <- 0.25
+# Markerfile: umap + violin
+if (is.null(markers.pt.size)) markers.pt.size <- 2
+if (is.null(markers.order)) markers.order <- FALSE
 
 #### Fixed parameters ####
 # Annotation
@@ -135,19 +144,6 @@ if (species == "rattus_norvegicus") {
 solo.pt.size <- 3
 multi.pt.size <- 2
 gradient.cols <- c("gold", "blue")
-
-#### Get genes markers ####
-if (is.null(markfile)){
-  markers <- NULL
-}else{
-  markers <- c()
-  for (i in markfile){
-    mark.xl <- openxlsx::read.xlsx(i, sheet = 1, startRow = 1, fillMergedCells = TRUE, colNames = TRUE)
-    mark.xl <- mark.xl[order(mark.xl[,2]),]
-    markers_tmp <- setNames(mark.xl[,1], mark.xl[,2])
-    markers <- c(markers,markers_tmp)
-  }
-}
 
 print("#####################################")
 print(paste0("Sample: ", name.grp))
@@ -198,7 +194,11 @@ sobj <- find.markers.quick(sobj = sobj, ident = ident.name, test.use = 'wilcox',
 sobj <- cells.annot(sobj = sobj, ident = ident.name, singler.setnames = singler.setnames, clustifyr.setnames = clustifyr.setnames, scrnaseq.setnames = scrnaseq.setnames, custom.sce.ref = custom.sce.ref, custom.markers.ref = custom.markers.ref,sr.minscore = sr.minscore, cfr.minscore = cfr.minscore, out.dir = clust.dir, solo.pt.size = solo.pt.size, nthreads = nthreads)
 
 ### Assessing clusters : Plotting provided marker genes
-if(!is.null(markers)) sobj <- markers.umap.plot(sobj = sobj, markers = markers, ident = ident.name, out.dir = clust.dir, dimplot.cols = gradient.cols, multi.pt.size = 2)
+cat("\nPlotting provided marker genes...\n")
+if (!is.null(markfile)){
+  markers <- get.markers.from.markersfiles(markfiles = markfile)
+  sobj <- markers.umap.plot(sobj = sobj, markers = markers, ident = ident.name, out.dir = clust.dir, dimplot.cols = gradient.cols, markers.pt.size = markers.pt.size, markers.order = markers.order)
+}
 
 ### Materials and Methods
 sobj@misc$parameters$Materials_and_Methods$Grouped_analysis_Clust_Markers_Annot <- paste0(

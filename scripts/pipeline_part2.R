@@ -166,6 +166,7 @@ if(!is.null(metadata.file)) sobj <- add_metadata_sobj(sobj=sobj, metadata.file =
 ### Filtering cells
 cat("\nFiltering cells...\n")
 sobj <- cells.QC.filter(sobj = sobj, min.features = min.features, min.counts = min.counts, pcmito.range = pcmito.range, pcribo.range = pcribo.range)
+sobj@misc$excel$After_QC_cells_filtering$estim_cells <- ncol(sobj)
 
 ### Cell cycle prediction
 cat("\nCell cycle prediction...\n")
@@ -203,6 +204,8 @@ if(doublets.filter.method == 'none'){
   message("Saving stat...\n")
   sobj@misc$excel$Final_Cells_Quality$nb_genes <- dim(sobj)[1]
   sobj@misc$excel$Final_Cells_Quality$nb_cells <- dim(sobj)[2]
+  sobj@misc$excel$QC_genomic_core_facility$nb_reads_per_cells_CellRanger_like <- sobj@misc$excel$Kallisto_Bustools_alignment$Total_reads / sobj@misc$excel$Droplet_Quality$estimated_cells
+  sobj@misc$excel$QC_genomic_core_facility$nb_reads_per_cells_final <- sobj@misc$excel$Kallisto_Bustools_alignment$Total_reads / sobj@misc$excel$Final_Cells_Quality$nb_cells
   sobj@misc$params$doublets$method_filtering ="none"
   save_stat(sobj = sobj, sample.name = sample.name.GE, title = sample.name.GE, out.dir = doublet.kept.dir)
   ### Materials and Methods
@@ -249,6 +252,8 @@ if(doublets.filter.method != 'none'){
   cat("\nSaving stat...\n")
   sobj@misc$excel$Final_Cells_Quality$nb_genes <- dim(sobj)[1]
   sobj@misc$excel$Final_Cells_Quality$nb_cells <- dim(sobj)[2]
+  sobj@misc$excel$QC_genomic_core_facility$nb_reads_per_cells_CellRanger_like <- sobj@misc$excel$Kallisto_Bustools_alignment$Total_reads / sobj@misc$excel$Droplet_Quality$estimated_cells
+  sobj@misc$excel$QC_genomic_core_facility$nb_reads_per_cells_final <- sobj@misc$excel$Kallisto_Bustools_alignment$Total_reads / sobj@misc$excel$Final_Cells_Quality$nb_cells
   save_stat(sobj = sobj, sample.name = sample.name.GE, title = sample.name.GE, out.dir = doublet.filtered.dir)
 
   ### Materials and Methods
