@@ -42,8 +42,8 @@ Adding_ADT:
 ############################################ TCR/BCR ############################################
 
 Alignment_annotations_TCR_BCR:
-sample.name.tcr : ["sc5p_v2_hs_PBMC_1k_t"]
-input.dir.tcr : "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/fastq_10X/"
-sample.name.bcr : ["sc5p_v2_hs_PBMC_1k_b"]
-input.dir.bcr : "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/fastq_10X/"
-output.dir.tcr_bcr : "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Results/"
+ sample.name.tcr : ["sc5p_v2_hs_PBMC_1k_t"]
+ input.dir.tcr : "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/fastq_10X/"
+ sample.name.bcr : ["sc5p_v2_hs_PBMC_1k_b"]
+ input.dir.bcr : "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/fastq_10X/"
+ output.dir.tcr_bcr : "/mnt/beegfs/userdata/m_aglave/pipeline/single-cell/examples/complete_individual_analysis_example_of_wiki/Results/"
