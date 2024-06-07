@@ -70,7 +70,7 @@ rule QC_droplets_ge:
     threads:
         2
     resources:
-        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 3072, 20480)),
+        mem_mb = (lambda wildcards, attempt: 3072 + attempt * 3072,
         time_min = (lambda wildcards, attempt: min(attempt * 90, 200))
     shell:
         """
