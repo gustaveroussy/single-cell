@@ -42,8 +42,8 @@ rule cerebro:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(5120 * attempt , 102400)),
-        time_min = (lambda wildcards, attempt: min(attempt * 60, 200))
+        mem_mb = (lambda wildcards, attempt: min(5120 + 51200 * (attempt-1) , 609600)),
+        time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}

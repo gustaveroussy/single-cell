@@ -156,7 +156,10 @@ if (!is.null(norm.method) && !(norm.method %in% c('SCTransform','LogNormalize'))
 if (!is.null(dimred.method) && !(dimred.method %in% c('pca','scbfa','bpca','mds', 'Liger'))) stop("Dimension Reduction method unknown! (pca, scbfa, bpca, mds or Liger)")
 normalization.vtr <- if (!is.null(norm.method) && norm.method == 'SCTransform') vtr.biases else NULL
 reduction.vtr <- if (!is.null(dimred.method) && dimred.method %in% c('scbfa','bpca')) vtr.biases else NULL
-if (all(!any((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca'))) && !is.null(vtr.biases))) stop("vtr.biases can be used only with SCTransform, scbfa or bpca methods!")
+if (all(!any((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca'))) && !is.null(vtr.biases)))  {
+    vtr.biases <- NULL
+    warning("vtr.biases can be used only with SCTransform, scbfa or bpca methods! vtr.biases set to NULL")
+}
 if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr.biases were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
 if (vtr.scale && !(dimred.method %in% c('scbfa', 'bpca'))){
   message(paste0("vtr.scale is used only for scbfa or bpca. Set vtr.scale to FALSE."))
@@ -275,7 +278,6 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
     sobj <- Seurat::IntegrateData(anchorset = sobj.anchors, normalization.method = int.norm.method) #Calcul des poids; application des poids sur la matrice d'expression: intégration
 
     # Params
-    
     Seurat::Project(sobj) <- name.int
     sobj@misc$params$seed <- sobj.list[[1]]@misc$params$seed
     DefaultAssay(sobj) <- "integrated"
@@ -327,7 +329,7 @@ if((integration.method == "Seurat") || (integration.method == 'Liger')){
   }
 }
 
-## scbfa/bpca (or Harmony integration beging)
+## scbfa/bpca (or Harmony integration begin)
 if((integration.method %in% raw.methods) || (integration.method == 'Harmony')){
   ## Merge data
   cat("\nMerge data...\n")
@@ -388,6 +390,7 @@ if (integration.method == 'Harmony'){
   }
   ## Integration
   red.name <- paste(c(assay, dimred.method, integration.method), collapse = '_')
+  library(Seurat) #need when LogNorm + scbfa in individual analysis
   png(paste0(norm.dim.red.dir, '/harmony_convergence_plot.png'), width = 1000, height = 1000)
   sobj <- harmony::RunHarmony(sobj, vtr.batch, reduction = paste(c(assay, dimred.method), collapse = '_'), assay.use = assay, plot_convergence = TRUE, reduction.save = red.name) #, do_pca=FALSE ??
   dev.off()

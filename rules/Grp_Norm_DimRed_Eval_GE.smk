@@ -46,7 +46,7 @@ rule grp_norm_dimred_ge:
     threads:
         4
     resources:
-        mem_mb = (lambda wildcards, attempt: min(5120 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + (attempt-1) * 10240, 184320)),
+        mem_mb = (lambda wildcards, attempt: min(5120 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + (attempt-1) * 10240, 250000)), #184320 
         time_min = (lambda wildcards, attempt: min(60 * len(dic_GRP_NDRE_INFO[wildcards.name_grp]['GRP_NDRE_INPUT_LIST_RDA'].split(',')) + attempt * 120, 4320))
     shell:
         """

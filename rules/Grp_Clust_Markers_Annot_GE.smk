@@ -5,7 +5,7 @@ This rule make the clustering, to find markers genes and to apply annotations of
 """
 
 wildcard_constraints:
-    name_grp = "|".join(GRP_NDRE_NAME_GRP)
+    name_grp = "|".join(GRP_CMA_NAME_GRP)
 
 """
 This function allows to determine the input .rda file.
@@ -58,13 +58,14 @@ rule grp_clust_markers_annot_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(10240 + attempt * 5120, 102400)),
-        time_min = (lambda wildcards, attempt: min(attempt * 120, 200))
+        mem_mb = (lambda wildcards, attempt: attempt * 100240), #attempt * 10240),
+        time_min = (lambda wildcards, attempt: min(attempt * 360, 1400))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR:$HOME {params.sing_grp_bind} \
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX)
+        rsync -az -c {PIPELINE_FOLDER}/resources/DATABASE/ref_annot_cache $TMP_DIR/  && \
+        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR/ref_annot_cache:$HOME {params.sing_grp_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/Grouped_analysis_part2.R \
         --input.rda.grp {params.grp_input_rda} \

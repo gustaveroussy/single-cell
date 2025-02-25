@@ -58,13 +58,14 @@ rule clust_markers_annot_ge:
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(10240 + attempt * 5120, 81920)),
+        mem_mb = (lambda wildcards, attempt: min(5120 + attempt * 20480, 163840)),
         time_min = (lambda wildcards, attempt: min(attempt * 120, 420))
     shell:
         """
         export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR:$HOME {params.sing_bind} \
+        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX)
+        rsync -az -c {PIPELINE_FOLDER}/resources/DATABASE/ref_annot_cache $TMP_DIR/  && \
+        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR/ref_annot_cache:$HOME {params.sing_bind} \
         {SINGULARITY_ENV} \
         Rscript {params.pipeline_folder}/scripts/pipeline_part4.R \
         --input.rda.ge {params.input_rda} \

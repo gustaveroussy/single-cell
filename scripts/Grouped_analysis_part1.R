@@ -132,7 +132,10 @@ if (!is.null(norm.method) && !(norm.method %in% c('SCTransform','LogNormalize'))
 if (!is.null(dimred.method) && !(dimred.method %in% c('pca','scbfa','bpca','mds', 'Liger'))) stop("Dimension Reduction method unknown! (pca, scbfa, bpca, mds or Liger)")
 normalization.vtr <- if (!is.null(norm.method) && norm.method == 'SCTransform') vtr.biases else NULL
 reduction.vtr <- if (!is.null(dimred.method) && dimred.method %in% c('scbfa','bpca','mds')) vtr.biases else NULL
-if (all(!any((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca'))) && !is.null(vtr.biases))) stop("vtr.biases can be used only with SCTransform, scbfa or bpca methods!")
+if (all(!any((!is.null(norm.method) && norm.method == 'SCTransform') || (!is.null(dimred.method) && dimred.method %in% c('scbfa', 'bpca'))) && !is.null(vtr.biases))) {
+    vtr.biases <- NULL
+    warning("vtr.biases can be used only with SCTransform, scbfa or bpca methods! vtr.biases set to NULL")
+}
 if (!is.null(normalization.vtr) && !is.null(reduction.vtr)) warning(paste0("vtr.biases were set in Normalisation (", norm.method, ") and Dimension reduction (", dimred.method,")!"))
 
 ## Sourcing functions
@@ -255,7 +258,7 @@ if(keep.norm){
   cat("\nNormalization...\n")
   sobj <- sc.normalization(sobj = sobj, assay = assay, normalization.method = norm.method, features.n = features.n, vtr.biases = normalization.vtr)
   if(tolower(norm.method) == 'sctransform') assay <- 'SCT'
-  norm_vtr = paste0(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL)
+  norm_vtr = paste0(c(norm.method, if(!is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases[1])) paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = '_') else NULL), collapse = '_')
 }
 
 ### Reduction dimension

@@ -712,7 +712,7 @@ if "Int_Adding_BCR" in STEPS:
     elif "Int_Adding_TCR" in STEPS:
         sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_TCR step for Int_Adding_BCR step!\n")
         INT_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in INT_ADD_TCR_OUTPUT]
-    elif "Adding_ADT" in STEPS:
+    elif "Int_Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Int_Adding_BCR section of configfile; input.rda will be determine from Int_Adding_ADT step for Int_Adding_BCR step!\n")
         INT_ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in INT_ADD_ADT_OUTPUT]
     elif "Int_Clust_Markers_Annot_GE" in STEPS:
@@ -915,7 +915,7 @@ if "Grp_Adding_BCR" in STEPS:
     elif "Grp_Adding_TCR" in STEPS:
         sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_TCR step for Grp_Adding_BCR step!\n")
         GRP_ADD_BCR_INPUT_RDA = [ x + "_TCR.rda" for x in GRP_ADD_TCR_OUTPUT]
-    elif "Adding_ADT" in STEPS:
+    elif "Grp_Adding_ADT" in STEPS:
         sys.stderr.write("Note: No input.rda find in Grp_Adding_BCR section of configfile; input.rda will be determine from Grp_Adding_ADT step for Grp_Adding_BCR step!\n")
         GRP_ADD_BCR_INPUT_RDA = [ x + "_ADT.rda" for x in GRP_ADD_ADT_OUTPUT]
     elif "Grp_Clust_Markers_Annot_GE" in STEPS:

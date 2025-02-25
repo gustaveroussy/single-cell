@@ -55,7 +55,7 @@ rule int_add_bcr_ge:
     threads:
         1
     resources:
-        mem_mb = lambda wildcards, attempt: min(5120 + attempt * 3072, 20480),
+        mem_mb = lambda wildcards, attempt: min(5120 + attempt * 5120, 40960),
         time_min = lambda wildcards, attempt: min(attempt * 120, 200)
     shell:
         """

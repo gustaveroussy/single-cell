@@ -69,7 +69,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
 
     ## Loading data
     source.format <- ""
-    if(file.exists(paste0(data.path, "/matrix.mtx"))) { ### Cell Ranger
+    if(file.exists(paste0(data.path, "/matrix.mtx")) || file.exists(paste0(data.path, "/matrix.mtx.gz"))) { ### Cell Ranger
       source.format <- "CellRanger"
       scmat <- Seurat::Read10X(data.path)
       if ('Gene Expression' %in% names (scmat)) {
@@ -107,7 +107,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
       gene_name=vector()
       for(i in 1:nrow(scmat)) {
         index = grep(gsub("\\.[0-9]*$", "",rownames(scmat)[i]), as.vector(data[,1]))
-        if(!is.na(index)) gene_name[i] = as.vector(data[index,2]) else gene_name[i] = rownames(scmat)[i]
+        if(!identical(index, integer(0))) gene_name[i] = as.vector(data[index,2]) else gene_name[i] = rownames(scmat)[i]
       }
       ##deduplicate lines
       #identify duplicate genes names and position
@@ -320,7 +320,11 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       sobj@misc$params$QC$ribo.symbols = ribo.symbols
       sobj@misc$params$QC$pcribo.range = pcribo.range
       inribo <- rownames(sobj@assays$RNA@counts) %in% ribo.symbols
-      sobj$percent_rb <- as.vector(Matrix::colSums(sobj@assays$RNA@counts[inribo,]) / sobj$nCount_RNA)
+      if(table(inribo)[2]>1){
+          sobj$percent_rb <- as.vector(Matrix::colSums(sobj@assays$RNA@counts[inribo,]) / sobj$nCount_RNA)
+      }else{
+          sobj$percent_rb <- as.vector(sobj@assays$RNA@counts[inribo,] / sobj$nCount_RNA)
+      }
       message('% Ribosomal expression :')
       print(summary(sobj$percent_rb))
       pcribo_leftbound <- sobj$percent_rb >= pcribo.range[1]
@@ -923,6 +927,7 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
     
     miniobj@graphs <- list()
     message(paste0("Dimensions 1 to ", my.dims))
+    set.seed(my.seed)
     suppressMessages(miniobj <- Seurat::FindNeighbors(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction))
 
     resloop = list()
@@ -1636,9 +1641,17 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
       dir.create(fmark.dir, recursive = TRUE, showWarnings = FALSE)
 
       ## Heatmap
-      suppressPackageStartupMessages(require(ggplot2))
+       suppressPackageStartupMessages(require(ggplot2))
+      if (ncol(sobj)>20000){
+          df_barcodes_ident=data.frame(colnames(sobj), sobj@meta.data[ident])
+          colnames(df_barcodes_ident) = c("barcodes", "ident")
+          barcodes_tokeep <- (df_barcodes_ident %>% group_by(ident) %>% sample_frac(20000/ncol(sobj)))$barcodes
+          mini.sobj <- sobj[mytop$gene,barcodes_tokeep]
+          heatmapplot <- print(Seurat::DoHeatmap(mini.sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
+          rm(df_barcodes_ident, barcodes_tokeep, mini.sobj)
+      } else heatmapplot <- print(Seurat::DoHeatmap(sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
       png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_heatmap.png'), width = 1600, height = 1000)
-      print(Seurat::DoHeatmap(sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
+      print(heatmapplot)
       dev.off()
 
       ## Upset plots
@@ -2475,7 +2488,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   
   ## Get most expressed genes (@counts slot)
   cat("\nGet most expressed genes...\n")
-  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj), silent = TRUE) #RNA assay by default
+  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj, groups=groups), silent = TRUE) #RNA assay by default
   if('most_expressed_genes' %in% names(sobj@misc)) {
     ## Removing MT genes (if requested)
     if (remove.mt.genes) {
