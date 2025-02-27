@@ -173,7 +173,7 @@ if "Alignment_countTable_GE" in STEPS or "Alignment_annotations_TCR_BCR" in STEP
     elif 'Alignment_annotations_TCR_BCR' in config and 'fastqscreen_index' in config['Alignment_annotations_TCR_BCR']:
         FASTQSCREEN_INDEX = config['Alignment_annotations_TCR_BCR']['fastqscreen_index']
     else :
-        FASTQSCREEN_INDEX = "/mnt/beegfs/database/bioinfo/single-cell/INDEX/FASTQ_SCREEN/0.14.0/fastq_screen.conf"
+        FASTQSCREEN_INDEX = "/mnt/beegfs02/database/bioinfo/single-cell/INDEX/FASTQ_SCREEN/0.14.0/fastq_screen.conf"
 
 if "Alignment_countTable_GE" in STEPS or "Alignment_countTable_ADT" in STEPS or "Alignment_annotations_TCR_BCR" in STEPS:
     # Cutadapt parameters
