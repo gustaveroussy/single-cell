@@ -52,7 +52,7 @@ rule fastqc_ge:
         export TMPDIR={GLOBAL_TMP}
         TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
         mkdir -p {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc && \
-        fastqc -q -o {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc -d $TMP_DIR -t {threads} {input.fq} && \
+        fastqc --outdir {ALIGN_OUTPUT_DIR_GE}/{wildcards.sample_name_ge}/QC_reads/fastqc --dir $TMP_DIR --threads {threads} {input.fq} && \
         rm -r $TMP_DIR || rm -r $TMP_DIR
         """
 

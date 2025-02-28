@@ -52,7 +52,7 @@ rule fastqc_adt:
         export TMPDIR={GLOBAL_TMP}
         TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
         mkdir -p {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc && \
-        fastqc --quiet -o {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc -d $TMP_DIR -t {threads} {input} && \
+        fastqc --outdir {ALIGN_OUTPUT_DIR_ADT}/{wildcards.sample_name_adt}/QC_reads/fastqc --dir $TMP_DIR --threads {threads} {input} && \
         rm -r $TMP_DIR || rm -r $TMP_DIR
         """
 
