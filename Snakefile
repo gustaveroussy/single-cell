@@ -955,7 +955,7 @@ if "Cerebro" in STEPS:
         CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [ x + "_ADT.rda" for x in ADD_ADT_OUTPUT]
     elif "Clust_Markers_Annot_GE" in STEPS:
         sys.stderr.write("Note: input.rda will be determine from Clust_Markers_Annot_GE step for Cerebro step!\n")
-        CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [os.path.normpath(os.path.dirname(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_INPUT_RDA']) + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
+        CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [os.path.normpath(dic_CMA_INFO[CMA_SAMPLE_NAME_GE[x]]['CMA_OUTPUT_DIR'] + "/" + CMA_CLUST_FOLDER + "/" + CMA_SAMPLE_NAME_GE[x] + CMA_COMPLEMENT[x] + "_" + str(CMA_KEEP_DIM) + "_" + str(CMA_KEEP_RES) + ".rda") for x in range(len(CMA_SAMPLE_NAME_GE))]
     if "Int_Adding_BCR" in STEPS:
         sys.stderr.write("Note: input.rda will be determine from Int_Adding_BCR_GE step for Cerebro step!\n")
         CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [ x + "_BCR.rda" for x in INT_ADD_BCR_OUTPUT]
@@ -967,7 +967,7 @@ if "Cerebro" in STEPS:
         CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [ x + "_ADT.rda" for x in INT_ADD_ADT_OUTPUT]
     elif "Int_Clust_Markers_Annot_GE" in STEPS:
         sys.stderr.write("Note: input.rda will be determine from Int_Clust_Markers_Annot_GE step for Cerebro step!\n")
-        CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [os.path.normpath(os.path.dirname(dic_INT_CMA_INFO[INT_CMA_NAME_INT[x]]['INT_CMA_INPUT_RDA']) + "/" + INT_CMA_CLUST_FOLDER + "/" + INT_CMA_NAME_INT[x] + INT_CMA_COMPLEMENT[x] + "_" + str(INT_CMA_KEEP_DIM) + "_" + str(INT_CMA_KEEP_RES) + ".rda") for x in range(len(INT_CMA_NAME_INT))]
+        CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [os.path.normpath(dic_INT_CMA_INFO[INT_CMA_NAME_INT[x]]['INT_CMA_OUTPUT_DIR'] + "/" + INT_CMA_CLUST_FOLDER + "/" + INT_CMA_NAME_INT[x] + INT_CMA_COMPLEMENT[x] + "_" + str(INT_CMA_KEEP_DIM) + "_" + str(INT_CMA_KEEP_RES) + ".rda") for x in range(len(INT_CMA_NAME_INT))]
     if "Grp_Adding_BCR" in STEPS:
         sys.stderr.write("Note: input.rda will be determine from Grp_Adding_BCR_GE step for Cerebro step!\n")
         CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [ x + "_BCR.rda" for x in GRP_ADD_BCR_OUTPUT]
@@ -979,7 +979,7 @@ if "Cerebro" in STEPS:
         CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [ x + "_ADT.rda" for x in GRP_ADD_ADT_OUTPUT]
     elif "Grp_Clust_Markers_Annot_GE" in STEPS:
         sys.stderr.write("Note: input.rda will be determine from Grp_Clust_Markers_Annot_GE step for Cerebro step!\n")
-        CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [os.path.normpath(os.path.dirname(dic_GRP_CMA_INFO[GRP_CMA_NAME_GRP[x]]['GRP_CMA_INPUT_RDA']) + "/" + GRP_CMA_CLUST_FOLDER + "/" + GRP_CMA_NAME_GRP[x] + GRP_CMA_COMPLEMENT[x] + "_" + str(GRP_CMA_KEEP_DIM) + "_" + str(GRP_CMA_KEEP_RES) + ".rda") for x in range(len(GRP_CMA_NAME_GRP))]
+        CEREBRO_INPUT_RDA = CEREBRO_INPUT_RDA + [os.path.normpath(dic_GRP_CMA_INFO[GRP_CMA_NAME_GRP[x]]['GRP_CMA_OUTPUT_DIR'] + "/" + GRP_CMA_CLUST_FOLDER + "/" + GRP_CMA_NAME_GRP[x] + GRP_CMA_COMPLEMENT[x] + "_" + str(GRP_CMA_KEEP_DIM) + "_" + str(GRP_CMA_KEEP_RES) + ".rda") for x in range(len(GRP_CMA_NAME_GRP))]
     if len(CEREBRO_INPUT_RDA) == 0 :
         sys.exit("Error: No input.rda in configfile for Cerebro step!\n")
     ### Analysis Parameters
