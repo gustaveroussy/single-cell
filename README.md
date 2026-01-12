@@ -25,20 +25,21 @@ Perform single-cell RNA-seq analysis from FastQ files to cerebro file for 10XGen
 </p>
 
 <b>Integrated Analysis of several samples</b>
-* Integration, Normalization and dimension Reduction (Int_Norm_DimRed_Eval_GE)
+* Integration, Normalization and Dimension Reduction (Int_Norm_DimRed_Eval_GE)
 * Clustering, Identification of Marker Genes and Annotation of clusters (Int_Clust_Markers_Annot_GE),
 * Integration of several additional "omics" (Int_Adding_ADT, Int_Adding_TCR, Int_Adding_BCR),
 * Creation of a Cerebro object to help vizualisation of results (Cerebro).
 
 <b>Grouped Analysis (no integration) of several samples</b>
-* Merger, Normalization and dimension Reduction (Grp_Norm_DimRed_Eval_GE)
+* Merger, Normalization and Dimension Reduction (Grp_Norm_DimRed_Eval_GE)
 * Clustering, Identification of Marker Genes and Annotation of clusters (Grp_Clust_Markers_Annot_GE),
 * Integration of several additional "omics" (Grp_Adding_ADT, Grp_Adding_TCR, Grp_Adding_BCR),
 * Creation of a Cerebro object to help vizualisation of results (Cerebro). 
 
 ### Future Developments:
 * Improve cell annotation,
-* Update to CellRanger 6.0.0,
+* Improve cell integration,
+* Improve TCR/BCR analysis,
 * Analysis of scATAC-seq,
 * ...
 
