@@ -4,14 +4,20 @@ This rule make the droplets control-quality of genes expression in single-cell R
 ##########################################################################
 """
 
-wildcard_constraints:
-    sample_name_ge=".+_GE"
+"""
+This function allows to determine the input alignment folder.
+"""
+def QC_input_folder(w_outputqc_droplets_dir_ge):
+    for key, value in dic_SAMPLE_NAME_GE_INFO.items():
+        if value["QC_OUTPUT_DIR"] == w_outputqc_droplets_dir_ge :
+            return key
+            #key is the input value in the yaml parameter file.
 
 """
-This function allows to determine the input alignment folder/files.
+This function allows to determine the input alignment folder or files.
 """
 def QC_droplets_input_ge(wildcards):
-    kallisto_folder = dic_SAMPLE_NAME_GE_INFO[wildcards.sample_name_ge]['QC_INPUT_DIR']
+    kallisto_folder = QC_input_folder(wildcards.outputqc_droplets_dir_ge)
     if "Alignment_countTable_GE" in STEPS:
         mtx_file = os.path.normpath(kallisto_folder + "/" + wildcards.sample_name_ge + ".mtx")
         barcodes_file = os.path.normpath(kallisto_folder + "/" + wildcards.sample_name_ge + ".barcodes.txt")
@@ -25,24 +31,24 @@ def QC_droplets_input_ge(wildcards):
 This function allows to determine the input alignment folder for params section.
 """
 def QC_params_input_folder(wildcards):
-    input_folder = os.path.normpath("/WORKDIR/" + dic_SAMPLE_NAME_GE_INFO[wildcards.sample_name_ge]['QC_INPUT_DIR']) + "/"
+
+    input_folder = os.path.normpath(QC_input_folder(wildcards.outputqc_droplets_dir_ge)) + "/"
     return input_folder
 
 """
 This function allows to determine the singularity binding parameters.
 """
 def QC_params_sing(wildcards):
-    kallisto_folder = dic_SAMPLE_NAME_GE_INFO[wildcards.sample_name_ge]['QC_INPUT_DIR']
+    kallisto_folder = QC_input_folder(wildcards.outputqc_droplets_dir_ge)
     output_folder = wildcards.outputqc_droplets_dir_ge + "/"
-    concat = " -B " + PIPELINE_FOLDER + ":/WORKDIR/" + PIPELINE_FOLDER + " -B " + kallisto_folder + ":" + os.path.normpath("/WORKDIR/" + kallisto_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder)
-    if QC_MT_FILE != "NULL": concat = concat + " -B " + QC_MT_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_MT_FILE)
-    if QC_RB_FILE != "NULL": concat = concat + " -B " + QC_RB_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_RB_FILE)
-    if QC_ST_FILE != "NULL": concat = concat + " -B " + QC_ST_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_ST_FILE)
-    if QC_TRANSLATION_FILE != "NULL": concat = concat + " -B " + QC_TRANSLATION_FILE + ":" + os.path.normpath("/WORKDIR/" + QC_TRANSLATION_FILE)
+    concat = " -B " + PIPELINE_FOLDER + "," + kallisto_folder + "," + output_folder
+    if QC_MT_FILE != "NULL": concat = concat + "," + QC_MT_FILE
+    if QC_RB_FILE != "NULL": concat = concat + "," + QC_RB_FILE
+    if QC_ST_FILE != "NULL": concat = concat + "," + QC_ST_FILE
     if QC_METADATA_FILE != "NULL":
         for metadatafile in list(dict.fromkeys(QC_METADATA_FILE.split(","))):
             metadatafile = os.path.dirname(metadatafile)
-            concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
+            concat = concat + "," + metadatafile
     return concat
 
 """
@@ -52,45 +58,39 @@ rule QC_droplets_ge:
     input:
         QC_droplets_input_ge
     output:
-        kneeplot_file = os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_kneeplot.png") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_kneeplot.png"),
-        saturation_file = os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_saturation_plot.png") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_saturation_plot.png"),
+        kneeplot_saturation_file = os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_kneeplot_saturation.png") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_kneeplot_saturation.png"),
         QC_hist_unfiltred_file =  os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_QChist.png") if str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" +  "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_QChist.png"),
         unfiltred_non_norm_rda = os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets/" + "{sample_name_ge}_QC_NON-NORMALIZED.rda") if  str(QC_EMPTYDROPS_RETAIN) == "NULL" else os.path.normpath("{outputqc_droplets_dir_ge}" + "/QC_droplets_retain" + str(QC_EMPTYDROPS_RETAIN) + "/{sample_name_ge}_QC_NON-NORMALIZED.rda")
     params:
         sing_bind = QC_params_sing,
-        pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
-        # input_folder = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]) + "/",
         input_folder = QC_params_input_folder,
-        output_folder = os.path.normpath("/WORKDIR/" + "{outputqc_droplets_dir_ge}") + "/",
-        SING_QC_MT_FILE = os.path.normpath("/WORKDIR/" + QC_MT_FILE) if QC_MT_FILE != "NULL" else "NULL",
-        SING_QC_RB_FILE = os.path.normpath("/WORKDIR/" + QC_RB_FILE) if QC_RB_FILE != "NULL" else "NULL",
-        SING_QC_ST_FILE = os.path.normpath("/WORKDIR/" + QC_ST_FILE) if QC_ST_FILE != "NULL" else "NULL",
-        SING_QC_TRANSLATION_FILE = os.path.normpath("/WORKDIR", QC_TRANSLATION_FILE) if QC_TRANSLATION_FILE != "NULL" else "NULL",
-        SING_QC_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in QC_METADATA_FILE.split(',')]) if QC_METADATA_FILE != "NULL" else "NULL"
+    log:
+        "logs/QC_droplets_ge{outputqc_droplets_dir_ge}{sample_name_ge}.log"
+    benchmark:
+        "benchmark/QC_droplets_ge{outputqc_droplets_dir_ge}{sample_name_ge}.tsv"
     threads:
         2
     resources:
-        mem_mb = (lambda wildcards, attempt: QC_MEM if (QC_MEM is not None) else min(3072 + attempt * 3072, 20480)),
-        time_min = (lambda wildcards, attempt: QC_TIME if (QC_TIME is not None) else min(attempt * 90, 200))
+        mem_mb = (lambda wildcards, attempt: min(3072 + attempt * 3072, 20480)),
+        time_min = (lambda wildcards, attempt: min(attempt * 90, 200))
     shell:
         """
-        export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
+        TMPDIR=$(mktemp -d {resources.tmpdir}/XXXXXX)
+        trap "rm -r $TMPDIR" EXIT
+        singularity exec --no-home -B $TMPDIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV} \
-        Rscript {params.pipeline_folder}/scripts/pipeline_part1.R \
+        Rscript {PIPELINE_FOLDER}/scripts/pipeline_part1.R \
         --input.dir.ge {params.input_folder} \
-        --output.dir.ge {params.output_folder} \
+        --output.dir.ge {wildcards.outputqc_droplets_dir_ge}/ \
         --sample.name.ge {wildcards.sample_name_ge} \
-        --species {QC_SPECIES} \
-        --author.name {QC_AUTHOR_NAME} \
-        --author.mail {QC_AUTHOR_MAIL} \
+        --species {SPECIES} \
+        --author.name "{AUTHOR_NAME}" \
+        --author.mail "{AUTHOR_MAIL}" \
         --nthreads {threads} \
-        --pipeline.path {params.pipeline_folder} \
+        --pipeline.path {PIPELINE_FOLDER} \
         --emptydrops.fdr {QC_EMPTYDROPS_FDR} \
         --droplets.limit {QC_DROPLETS_LIMIT} \
         --emptydrops.retain {QC_EMPTYDROPS_RETAIN} \
-        --translation {QC_TRANSLATION_BOOL} \
         --pcmito.min {QC_PCMITO_MIN} \
         --pcmito.max {QC_PCMITO_MAX} \
         --pcribo.min {QC_PCRIBO_MIN} \
@@ -98,10 +98,8 @@ rule QC_droplets_ge:
         --min.features {QC_MIN_FEATURES} \
         --min.counts {QC_MIN_COUNTS} \
         --min.cells {QC_MIN_CELLS} \
-        --mt.genes.file {params.SING_QC_MT_FILE} \
-        --crb.genes.file {params.SING_QC_RB_FILE} \
-        --str.genes.file {params.SING_QC_ST_FILE} \
-        --translation.file {params.SING_QC_TRANSLATION_FILE} \
-        --metadata.file {params.SING_QC_METADATA_FILE} && \
-        rm -r $TMP_DIR || rm -r $TMP_DIR
+        --mt.genes.file {QC_MT_FILE} \
+        --crb.genes.file {QC_RB_FILE} \
+        --str.genes.file {QC_ST_FILE} \
+        --metadata.file {QC_METADATA_FILE} &> {log}
         """

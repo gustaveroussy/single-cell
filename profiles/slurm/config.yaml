@@ -1,15 +1,16 @@
 restart-times: 5
-jobscript: "slurm-jobscript.sh"
-cluster: "slurm-submit.py"
-cluster-status: "slurm-status.py"
 max-jobs-per-second: 1
-max-status-checks-per-second: 10
+max-status-checks-per-second: 1
 latency-wait: 10
 local-cores: 1
 jobs: 30
 keep-going: true
-reason: false
-printshellcmds: true
-jobname: "{name}.{jobid}.snakejob"
 use-conda: true
-conda-prefix: /mnt/beegfs/pipelines/single-cell/envs/conda
+conda-prefix: "/mnt/beegfs02/pipelines/bigr_single-cell/1.4_test/envs/compiled_conda/"
+benchmark-extended: true
+printshellcmds: true
+#executor: slurm
+executor: slurm-gustave-roussy
+default-resources:
+  tmpdir: "/mnt/beegfs02/scratch/$USER/.tmp/sc_pipeline/"
+shadow-prefix: "/mnt/beegfs02/scratch/$USER/.tmp/sc_pipeline_shadow/"

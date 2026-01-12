@@ -1,8 +1,8 @@
 BootStrap: docker
-From: ubuntu:20.04
+From: ubuntu:24.04
 
 #build image
-#sudo singularity build single_cell_TCR_BCR.simg single_cell_TCR_BCR.def
+#sudo singularity build single_cell_TCR_BCR.simg single_cell_TCR_BCR.def &> single_cell_TCR_BCR.log
 #using image
 #sudo singularity shell -B local_folder:/WORKDIR/container_folder single_cell_TCR_BCR.simg
 
@@ -26,38 +26,41 @@ From: ubuntu:20.04
     apt-get install -y tzdata
     dpkg-reconfigure --frontend noninteractive tzdata
     
-    apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgsl-dev libgit2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libcairo2-dev libxt-dev libgeos-dev libgeos-dev
+    apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgsl-dev libgit2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libcairo2-dev libxt-dev libgeos-dev libgeos-dev libhdf5-dev libhdf5-serial-dev pkg-config build-essential
     apt-get install -y dirmngr gnupg apt-transport-https ca-certificates software-properties-common
     apt-get -y update && apt-get -y upgrade
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
-    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/'
+    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/'
     apt-get -y update && apt-get -y upgrade
     apt-get install -y r-base r-base-dev #apt-cache policy r-base r-base-dev pour connaître les versions
     apt-cache policy r-base r-base-dev
     echo "R version ######################"
     R --version
-    apt-get install wget
-    mkdir Softwares
-    cd Softwares
-    echo "a362d62530e9d6a653e5bad5b9c19aba  cellranger-3.1.0.tar.gz" > mysum
-    wget -O cellranger-3.1.0.tar.gz "https://cf.10xgenomics.com/releases/cell-exp/cellranger-3.1.0.tar.gz?Expires=1662323221&Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZi4xMHhnZW5vbWljcy5jb20vcmVsZWFzZXMvY2VsbC1leHAvY2VsbHJhbmdlci0zLjEuMC50YXIuZ3oiLCJDb25kaXRpb24iOnsiRGF0ZUxlc3NUaGFuIjp7IkFXUzpFcG9jaFRpbWUiOjE2NjIzMjMyMjF9fX1dfQ__&Signature=AoducPcvVtVwjIr3i0EbOE5HafMoGfi9NRmb5D1z-bZTVS4aDfQChdUk9j2PEJd6Cbj~20PCuz2xsk9KbNs72fmIYje078rrSTPO~2ZmUc41XsTy0FSHsxoBe8g3TGRm7ieEqcCO89~H2aCj-hxOpvjOENbDzZxuERn104s8qBvF7JWnU8XQoHL1anj97jBkj8TWX2o-Op3x0CuXqzAFPFoXjaqk8Por5vAz-VDLGSXQCDQ55GoE3p~4ZIrEm6dFD1KHi5uZK5ZogiMD4j5y50wmwBAwrhbGt6GzSV1vUFrciIarAzeWw0vbNg0hwMIZ~TwLsS4J4PjPg4SWvuNn0w__&Key-Pair-Id=APKAI7S6A5RYOXBWRPDA"
-    md5sum --check mysum
-    tar -xzvf cellranger-3.1.0.tar.gz
-    rm cellranger-3.1.0.tar.gz mysum
-    cd ../
+    
     echo "Install R packages ######################"
     # Global packages
     R -e 'install.packages("devtools")'
     R -e 'library("devtools")'
     R -e 'install.packages("BiocManager")'
-    #R -e 'install.packages("rsvd", dependencies = TRUE)' # for seurat
-    #R -e 'remove.packages(grep("spatstat", installed.packages(), value = T))' # for seurat
-    #R -e 'devtools::install_github("spatstat/spatstat@v1.64-2")'
-    R -e 'install.packages("Seurat", dependencies = TRUE)'
-    echo "#############################################################################################################################"
+    #R -e 'install.packages("Seurat")'
+    R -e 'install.packages(c("sp", "future", "future.apply", "progressr", "spam", "generics", "RcppEigen","cowplot", "fastDummies", "fitdistrplus", "ggplot2", "ggrepel", "ggridges", "httr", "ica", "igraph", "irlba", "leiden", "lmtest", "matrixStats", "patchwork", "pbapply", "plotly", "png", "progressr", "RANN", "RColorBrewer", "RcppAnnoy", "RcppHNSW", "reticulate", "ROCR", "RSpectra", "Rtsne", "scales", "scattermore", "sctransform", "spatstat.explore", "spatstat.geom", "uwot", "RcppProgress"), repos="https://cloud.r-project.org")'
+    R -e 'install.packages("remotes", repos="https://cloud.r-project.org")'
+    R -e 'remotes::install_version("SeuratObject", version="5.0.1", repos="https://cloud.r-project.org", dependencies=FALSE)'
+    R -e 'remotes::install_version("Seurat", version="5.0.1", repos="https://cloud.r-project.org", dependencies=FALSE)'
+    R -e 'library(Seurat)'
+    echo "Seurat==5.0.1" >> /usr/local/lib/R/site-library/.Rpackages.lock
+    export CFLAGS=-I/usr/include/hdf5/serial
+    export CXXFLAGS=-I/usr/include/hdf5/serial
+    export LDFLAGS=-L/usr/lib/x86_64-linux-gnu/hdf5/serial
+    mkdir ~/.R
+    echo "CFLAGS=-I/usr/include/hdf5/serial" > ~/.R/Makevars
+    echo "CXXFLAGS=-I/usr/include/hdf5/serial" >> ~/.R/Makevars
+    echo "LDFLAGS=-L/usr/lib/x86_64-linux-gnu/hdf5/serial" >> ~/.R/Makevars
+    R -e 'setRepositories(ind = 1:3, addURLs = c("https://satijalab.r-universe.dev", "https://bnprks.r-universe.dev/"));install.packages(c("BPCells", "presto", "glmGamPoi"))'
+    R -e 'library(BPCells)'
+    R -e 'install.packages(c("RcppParallel", "RSpectra", "irlba", "uwot"))'
     R -e 'library(Seurat)'
     R -e 'packageVersion("Seurat")'
-    echo "#############################################################################################################################"
     R -e 'devtools::install_github("thomasp85/patchwork")'
     R -e 'install.packages("optparse")'
     R -e 'install.packages("Matrix")'
@@ -78,5 +81,9 @@ From: ubuntu:20.04
     R -e 'devtools::install_github("https://github.com/cran/tcR")' #for powerTCR
     R -e 'BiocManager::install("powerTCR")' #for scRepertoire
     R -e 'devtools::install_github("ncborcherding/scRepertoire")'
+    
+    echo "========== FINAL STEP: Seurat 5.0.1 =========="
+    R -e 'remove.packages(c("Seurat","SeuratObject")); remotes::install_version("SeuratObject", version="5.0.1", repos="https://cloud.r-project.org", dependencies=FALSE); remotes::install_version("Seurat", version="5.0.1", repos="https://cloud.r-project.org", dependencies=FALSE); cat("Seurat version: ", as.character(packageVersion("Seurat")), "\n")'
+
 %labels
     Author Marine AGLAVE

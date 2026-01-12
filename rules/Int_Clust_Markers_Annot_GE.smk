@@ -4,38 +4,42 @@ This rule make the clustering, to find markers genes and to apply annotations of
 ##########################################################################
 """
 
-wildcard_constraints:
-    name_int = "|".join(INT_CMA_NAME_INT)
-
 """
 This function allows to determine the input .rda file.
 """
 def int_clust_markers_annot_input_ge(wildcards):
-    return dic_INT_CMA_INFO[wildcards.name_int]['INT_CMA_INPUT_RDA']
+    #return dic_INT_CMA_INFO[wildcards.name_int]['INT_CMA_INPUT_RDA']
+    for key, value in dic_INT_CMA_INFO.items():
+        if value["INT_CMA_OUTPUT_DIR"] == wildcards.output_int_clust_markers_annot_dir_ge :
+            return key
+            #key is the input value in the yaml parameter file.
 
 """
 This function allows to determine the singularity binding parameters.
 """
 def int_clust_markers_annot_params_sing(wildcards):
-    rda_folder = os.path.dirname(dic_INT_CMA_INFO[wildcards.name_int]['INT_CMA_INPUT_RDA'])
+    #rda_folder = os.path.dirname(dic_INT_CMA_INFO[wildcards.name_int]['INT_CMA_INPUT_RDA'])
+    for key, value in dic_INT_CMA_INFO.items():
+        if value["INT_CMA_OUTPUT_DIR"] == wildcards.output_int_clust_markers_annot_dir_ge :
+            rda_folder = os.path.dirname(key)
     output_folder = wildcards.output_int_clust_markers_annot_dir_ge
-    concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + rda_folder + ":" + os.path.normpath("/WORKDIR/" + rda_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder)
+    concat = " -B " + PIPELINE_FOLDER + "," + rda_folder + "," + output_folder
     if INT_CMA_MARKFILE != "NULL":
         for markfile in list(dict.fromkeys(INT_CMA_MARKFILE.split(","))):
             markfile = os.path.dirname(markfile)
-            concat = concat + " -B " + markfile + ":" + os.path.normpath("/WORKDIR/" + markfile)
+            concat = concat + "," + markfile
     if INT_CMA_METADATA_FILE != "NULL":
         for metadatafile in list(dict.fromkeys(INT_CMA_METADATA_FILE.split(","))):
             metadatafile = os.path.dirname(metadatafile)
-            concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
+            concat = concat + "," + metadatafile
     if INT_CMA_CUSTOM_SCE_REF != "NULL":
         for custom_cse_ref in list(dict.fromkeys(INT_CMA_CUSTOM_SCE_REF.split(","))):
             custom_cse_ref = os.path.dirname(custom_cse_ref)
-            concat = concat + " -B " + custom_cse_ref + ":" + os.path.normpath("/WORKDIR/" + custom_cse_ref)
+            concat = concat + "," + custom_cse_ref
     if INT_CMA_CUSTOM_MARKERS_REF != "NULL":
         for custom_marker_ref in list(dict.fromkeys(INT_CMA_CUSTOM_MARKERS_REF.split(","))):
             custom_marker_ref = os.path.dirname(custom_marker_ref)
-            concat = concat + " -B " + custom_marker_ref + ":" + os.path.normpath("/WORKDIR/" + custom_marker_ref)
+            concat = concat + "," + custom_marker_ref
     return concat
 
 """
@@ -45,45 +49,45 @@ rule int_clust_markers_annot_ge:
     input:
         int_cma_file = int_clust_markers_annot_input_ge
     output:
-        int_cma_rda_file = os.path.normpath("{output_int_clust_markers_annot_dir_ge}" + "/" + INT_CMA_CLUST_FOLDER + "/" + "{name_int}" + "{int_complement}" + str(INT_CMA_KEEP_DIM) + "_" + str(INT_CMA_KEEP_RES) + ".rda")
+        int_cma_rda_file = os.path.normpath("{output_int_clust_markers_annot_dir_ge}/{int_clust_folders}/{name_int}{int_complement}{int_keep_dim_res}.rda")
     params:
         sing_int_bind = int_clust_markers_annot_params_sing,
-        pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
-        int_input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
-        int_output_folder = os.path.normpath("/WORKDIR/" + "{output_int_clust_markers_annot_dir_ge}") + "/",
-        SING_INT_CMA_MARKFILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_MARKFILE.split(',')]) if INT_CMA_MARKFILE != "NULL" else "NULL",
-        SING_INT_CMA_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_METADATA_FILE.split(',')]) if INT_CMA_METADATA_FILE != "NULL" else "NULL",
-        SING_INT_CMA_CUSTOM_SCE_REF = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_CUSTOM_SCE_REF.split(',')]) if INT_CMA_CUSTOM_SCE_REF != "NULL" else "NULL",
-        SING_INT_CMA_CUSTOM_MARKERS_REF = ','.join([os.path.normpath("/WORKDIR/" + x) for x in INT_CMA_CUSTOM_MARKERS_REF.split(',')]) if INT_CMA_CUSTOM_MARKERS_REF != "NULL" else "NULL"
-
+        keep_dim = lambda wildcards: wildcards.int_keep_dim_res.split('_')[0],
+        keep_res = lambda wildcards: wildcards.int_keep_dim_res.split('_')[1]
+    log:
+        "logs/int_clust_markers_annot_ge{output_int_clust_markers_annot_dir_ge}/{int_clust_folders}/{name_int}{int_complement}{int_keep_dim_res}.log"
+    benchmark:
+        "benchmark/int_clust_markers_annot_ge{output_int_clust_markers_annot_dir_ge}/{int_clust_folders}/{name_int}{int_complement}{int_keep_dim_res}.tsv"
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: INT_CMA_MEM if (INT_CMA_MEM is not None) else min(5120 + attempt * 51200, 716800)),
-        time_min = (lambda wildcards, attempt: INT_CMA_TIME if (INT_CMA_TIME is not None) else min(attempt * 1440, 10080))
+        mem_mb = (lambda wildcards, attempt: min(5120 + attempt * 51200, 716800)),
+        time_min = (lambda wildcards, attempt: min(attempt * 1440, 10080))
     shell:
         """
-        export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX)
-        rsync -az -c {PIPELINE_FOLDER}/resources/DATABASE/ref_annot_cache $TMP_DIR/ref_annot_cache  && \
-        singularity exec --no-home -B $TMP_DIR:/tmp -B $TMP_DIR/ref_annot_cache:$HOME {params.sing_int_bind} \
+        TMPDIR=$(mktemp -d {resources.tmpdir}/XXXXXX)
+        trap "rm -r $TMPDIR" EXIT
+        rsync -az -c {PIPELINE_FOLDER}/resources/DATABASE/ref_annot_cache $TMPDIR/ref_annot_cache  && \
+        singularity exec --no-home -B $TMPDIR:/tmp -B $TMPDIR/ref_annot_cache:$HOME {params.sing_int_bind} \
         {SINGULARITY_ENV} \
-        Rscript {params.pipeline_folder}/scripts/Integration_part2.R \
-        --input.rda.int {params.int_input_rda} \
-        --output.dir.int {params.int_output_folder} \
-        --author.name {INT_CMA_AUTHOR_NAME} \
-        --author.mail {INT_CMA_AUTHOR_MAIL} \
+        Rscript {PIPELINE_FOLDER}/scripts/Integration_part2.R \
+        --input.rda.int {input[0]} \
+        --output.dir.int {wildcards.output_int_clust_markers_annot_dir_ge}/ \
+        --author.name "{AUTHOR_NAME}" \
+        --author.mail "{AUTHOR_MAIL}" \
         --nthreads {threads} \
-        --pipeline.path {params.pipeline_folder} \
-        --markfile {params.SING_INT_CMA_MARKFILE} \
+        --pipeline.path {PIPELINE_FOLDER} \
+        --markfile {INT_CMA_MARKFILE} \
         --markers.pt.size {INT_CMA_MARKERS_PTSIZE} \
         --markers.order {INT_CMA_MARKERS_ORDER} \
-        --custom.sce.ref {params.SING_INT_CMA_CUSTOM_SCE_REF} \
-        --custom.markers.ref {params.SING_INT_CMA_CUSTOM_MARKERS_REF} \
-        --keep.dims {INT_CMA_KEEP_DIM} \
-        --keep.res {INT_CMA_KEEP_RES} \
+        --custom.sce.ref {INT_CMA_CUSTOM_SCE_REF} \
+        --custom.markers.ref {INT_CMA_CUSTOM_MARKERS_REF} \
+        --skip.technical_plots {INT_CMA_SKIP_TECHNICAL} \
+        --skip.annotation {INT_CMA_SKIP_ANNOT} \
+        --skip.markers_identification {INT_CMA_SKIP_MARKERS_IDENT} \
+        --keep.dims {params.keep_dim} \
+        --keep.res {params.keep_res} \
         --cfr.minscore {INT_CMA_CFR_MINSCORE} \
         --sr.minscore {INT_CMA_SR_MINSCORE} \
-        --metadata.file {params.SING_INT_CMA_METADATA_FILE} && \
-        rm -r $TMP_DIR || rm -r $TMP_DIR
+        --metadata.file {INT_CMA_METADATA_FILE} &> {log}
         """

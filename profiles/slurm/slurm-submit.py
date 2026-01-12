@@ -133,10 +133,12 @@ for k, v in arg_dict.items():
     if v is not None:
         opts += " --{} \"{}\" ".format(k.replace("_", "-"), v)
 
+# I remove the n10 with the addition od the option "-x n10" !!!
+
 if arg_dict["wrap"] is not None:
-    cmd = "sbatch {opts}".format(opts=opts)
+    cmd = "sbatch -x n10 {opts}".format(opts=opts)
 else:
-    cmd = "sbatch {opts} {extras}".format(opts=opts, extras=extras)
+    cmd = "sbatch -x n10 {opts} {extras}".format(opts=opts, extras=extras)
 
 try:
     res = subprocess.run(cmd, check=True, shell=True, stdout=subprocess.PIPE)

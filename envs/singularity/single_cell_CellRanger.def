@@ -1,0 +1,55 @@
+BootStrap: docker
+From: ubuntu:24.04
+
+#build image
+#sudo singularity build single_cell_CellRanger.simg single_cell_CellRanger.def &> single_cell_CellRanger.log
+#using image
+#sudo singularity shell -B local_folder:/WORKDIR/container_folder single_cell_CellRanger.simg
+
+
+%environment
+    export PATH=/opt/tools/bin:$PATH
+    export RETICULATE_MINICONDA_ENABLED=FALSE
+    LANG=en_US.UTF-8
+    LC_ALL=en_US.UTF-8
+    LC_TIME=en_US.UTF-8
+    LC_MONETARY=en_US.UTF-8
+    LC_PAPER=en_US.UTF-8
+    LC_MEASUREMENT=en_US.UTF-8
+
+%post
+    echo "Ubuntu version ######################"
+    cat /etc/lsb-release
+    apt-get -y update && apt-get -y upgrade
+
+    echo "CellRanger ######################"
+    apt-get install -y wget
+    mkdir /softwares
+    cd /softwares
+    echo "2efec98bff01f7a59edaf43724fae13f  cellranger-9.0.1.tar.gz" > mysum
+    wget -O cellranger-9.0.1.tar.gz "https://cf.10xgenomics.com/releases/cell-exp/cellranger-9.0.1.tar.gz?Expires=1761171121&Key-Pair-Id=APKAI7S6A5RYOXBWRPDA&Signature=dsLK3uVybKJbtafgKxe5wmlgS6fkXHBk1aupX7aErM~51FBCUAqSVo3wDCheiXhnIA8Wz6~kLnsuL4UZ3m92EhiZLv-mjM4pqTzMeT8YxGjK525DXnvRrG1xlo9GSE3JT~zTX-FiaXcUuIgFdPD6fvGwW1RakkWhnDgv7DCtsw6nWgg57DA6XZEet9~YJo0IdgrotkThip5RUPa0R6JINzic~HwQc73ZsFiIHDAgyMwA1L4BEUCcFoe32vA3qAACMHtqmm~sxkb5yOpzPgEEPeo5LmCiI-3R2C66pEgLGiTrYV66VhY4gZ4ev7bypiZviJMmiypteB608C1S0ql1Kw__"
+    md5sum --check mysum
+    tar -xzvf cellranger-9.0.1.tar.gz
+    rm cellranger-9.0.1.tar.gz mysum
+    
+    echo "CellRanger V(D)J References ######################"
+    mkdir /references
+    cd /references
+    #human
+    echo "65b5b033723b07fc1bb5375e5645761c  refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0.tar.gz" > mysum
+    wget "https://cf.10xgenomics.com/supp/cell-vdj/refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0.tar.gz"
+    md5sum --check mysum
+    tar -xzvf refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0.tar.gz
+    rm refdata-cellranger-vdj-GRCh38-alts-ensembl-7.1.0.tar.gz mysum
+    #mouse
+    echo "c6f41db8f67aa83b04d64ba1ae96e681  refdata-cellranger-vdj-GRCm38-alts-ensembl-7.0.0.tar.gz" > mysum
+    wget "https://cf.10xgenomics.com/supp/cell-vdj/refdata-cellranger-vdj-GRCm38-alts-ensembl-7.0.0.tar.gz"
+    md5sum --check mysum
+    tar -xzvf refdata-cellranger-vdj-GRCm38-alts-ensembl-7.0.0.tar.gz
+    rm refdata-cellranger-vdj-GRCm38-alts-ensembl-7.0.0.tar.gz mysum
+
+
+
+
+%labels
+    Author Marine AGLAVE

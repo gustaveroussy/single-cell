@@ -3,13 +3,11 @@
 These rules make the alignment of TCR and BCR in single-cell RNA-seq.
 ##########################################################################
 """
-wildcard_constraints:
-    sample_name_tcr_bcr=".+(_TCR|_BCR)"
 
 """
-This rule makes a copy of fastq files with the good sample name.
+This rule makes the copy of fastq files with the good sample name.
 """
-def rsync_rename_inputs_tcr_bcr(wildcards):
+def copy_rename_inputs_tcr_bcr(wildcards):
     res = "no result find!"
     to_test = os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + wildcards.lane_R_complement + ".fastq.gz")
     for i in range(0,len(ALIGN_SYMLINK_FILES_TCR_BCR),1):
@@ -17,30 +15,23 @@ def rsync_rename_inputs_tcr_bcr(wildcards):
             res = str(ALIGN_ORIG_FILES_TCR_BCR[i])
     return res
 
-rule rsync_rename_fq_tcr_bcr:
+rule copy_rename_fq_tcr_bcr:
     input:
-        fq = rsync_rename_inputs_tcr_bcr
+        fq = copy_rename_inputs_tcr_bcr
     output:
-        fq_link = temp(os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}{lane_R_complement}.fastq.gz")),
-        md5_validation = temp(os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/md5_validation_{sample_name_tcr_bcr}{lane_R_complement}.txt"))
+        fq_copied = temp(os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}{lane_R_complement}.fastq.gz"))
+    log:
+        "logs/copy_rename_fq_tcr_bcr/{sample_name_tcr_bcr}{lane_R_complement}.log"
+    benchmark:
+        "benchmark/copy_rename_fq_tcr_bcr/{sample_name_tcr_bcr}{lane_R_complement}.tsv"
     threads:
         1
     resources:
         mem_mb = (lambda wildcards, attempt: min(attempt * 256, 2048)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
-    # run:
-    #     sys.stderr.write("\t Create symbolic link: \n")
-    #     sys.stderr.write("\t From :" + "\t" + str(input.fq) + "\n")
-    #     sys.stderr.write("\t To :" + "\t" + str(output.fq_link) + "\n")
-    #     os.symlink(str(input.fq), str(output.fq_link))
     shell:
         """
-        echo "From: {input.fq}"
-        echo "To: {output.fq_link}"
-        rsync -avz -c --quiet {input.fq} {output.fq_link}
-        md5_fq=$(md5sum {input.fq} | cut -d' ' -f 1)
-        md5_symlink=$(md5sum {output.fq_link} | cut -d' ' -f 1)
-        [[ $md5_fq == $md5_symlink ]] && echo "md5sum OK" && touch {output.md5_validation}
+        rsync -az -c --quiet {input.fq} {output.fq_copied} &> {log}
         """
 
 """
@@ -48,26 +39,27 @@ This rule makes the fastqc control-quality.
 """
 rule fastqc_tcr_bcr:
     input:
-        fq = os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}{lane_R_complement}.fastq.gz")
+        fq_copied = os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/QC_reads/fastqc/{sample_name_tcr_bcr}{lane_R_complement}_fastqc.html"),
-        zip_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/QC_reads/fastqc/{sample_name_tcr_bcr}{lane_R_complement}_fastqc.zip")
+        html_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}{lane_R_complement}_fastqc.html")),
+        zip_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}{lane_R_complement}_fastqc.zip"))
+    log:
+        "logs/fastqc_tcr_bcr/{sample_name_tcr_bcr}{lane_R_complement}.log"
+    benchmark:
+        "benchmark/fastqc_tcr_bcr/{sample_name_tcr_bcr}{lane_R_complement}.tsv"
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 512, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
-        CONDA_ENV_QC_ALIGN_GE_ADT
+        CONDA_ENV_FASTQC
     shell:
         """
-        export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc && \
-        fastqc --quiet -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc -d $TMP_DIR -t {threads} {input} && \
-        rm -r $TMP_DIR || rm -r $TMP_DIR
+        TMPDIR=$(mktemp -d {resources.tmpdir}/XXXXXX)
+        trap "rm -r $TMPDIR" EXIT
+        fastqc --outdir {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads --dir $TMPDIR --threads {threads} {input.fq_copied} &> {log}
         """
-
 
 """
 This rule makes the fastq-screen control-quality on R2 files.
@@ -76,19 +68,24 @@ rule fastqscreen_tcr_bcr:
     input:
         R2_fq = os.path.normpath(ALIGN_INPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}{lane_R_complement}.fastq.gz")
     output:
-        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR +"/{sample_name_tcr_bcr}/QC_reads/fastqscreen/{sample_name_tcr_bcr}{lane_R_complement}_screen.html"),
-        #png_file = os.path.join(OUTPUT_DIR_TCR_BCR,"{sample_name_tcr_bcr}/QC_reads/fastqscreen/{sample_name_tcr_bcr}{lane_R_complement}_screen.png"),
-        txt_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR +"/{sample_name_tcr_bcr}/QC_reads/fastqscreen/{sample_name_tcr_bcr}{lane_R_complement}_screen.txt")
+        html_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR +"/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}{lane_R_complement}_screen.html")),
+        txt_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR +"/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}{lane_R_complement}_screen.txt")),
+        png_file = temp(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR +"/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}{lane_R_complement}_screen.png"))
+    log:
+        "logs/fastqscreen_tcr_bcr/{sample_name_tcr_bcr}{lane_R_complement}.log"
+    benchmark:
+        "benchmark/fastqscreen_tcr_bcr/{sample_name_tcr_bcr}{lane_R_complement}.tsv"
     threads:
         2
     resources:
         mem_mb = (lambda wildcards, attempt: min(2048 + attempt * 2048, 20480)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
-        CONDA_ENV_QC_ALIGN_GE_ADT
+        CONDA_ENV_FASTQ_SCREEN
     shell:
-        "mkdir -p {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqscreen && fastq_screen --quiet --threads {threads} --force --outdir {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqscreen --subset 100000 --conf {FASTQSCREEN_INDEX} {input.R2_fq}"
-
+        """
+        fastq_screen --quiet --threads {threads} --force --outdir {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads --subset 100000 --conf {FASTQSCREEN_INDEX} {input.R2_fq} &> {log}
+        """
 
 """
 This rule makes the multiqc from the fastqc and the fastq-screen results.
@@ -100,33 +97,39 @@ def multiqc_inputs_tcr_bcr(wildcards):
     files=[]
     for name in name_R1_R2:
         #fastqc
-        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/fastqc/" + name) + "_fastqc.html")
-        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/fastqc/" + name) + "_fastqc.zip")
+        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/" + name) + "_fastqc.html")
+        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/" + name) + "_fastqc.zip")
     for name in name_R2:
-        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/fastqscreen/" + name) + "_screen.html")
-        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/fastqscreen/" + name) + "_screen.txt")
+        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/" + name) + "_screen.html")
+        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/" + name) + "_screen.txt")
+        files.append(os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/" + wildcards.sample_name_tcr_bcr + "/QC_reads/" + name) + "_screen.png")
     return files
 
 rule multiqc_tcr_bcr:
     input:
         qc_files = multiqc_inputs_tcr_bcr
     output:
-        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW.html")
+        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW.html"),
+    log:
+        "logs/multiqc_tcr_bcr/{sample_name_tcr_bcr}.log"
+    benchmark:
+        "benchmark/multiqc_tcr_bcr/{sample_name_tcr_bcr}.tsv"
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: min(attempt * 256, 10240)),
+        mem_mb = (lambda wildcards, attempt: min(attempt * 1024, 10240)),
         time_min = (lambda wildcards, attempt: min(attempt * 30, 200))
     conda:
-        CONDA_ENV_QC_ALIGN_GE_ADT
+        CONDA_ENV_MULTIQC
     shell:
         """
-        export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        export TMPDIR=$TMP_DIR && \
-        multiqc -n {wildcards.sample_name_tcr_bcr}'_RAW' -i {wildcards.sample_name_tcr_bcr}' RAW FASTQ' -p -z -f -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads {input} && \
-        rm -r {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqc {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/fastqscreen {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/{wildcards.sample_name_tcr_bcr}_RAW_data.zip {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/{wildcards.sample_name_tcr_bcr}_RAW_plots && \
-        rm -r $TMP_DIR || rm -r $TMP_DIR
+        export TMPDIR=$(mktemp -d {resources.tmpdir}/XXXXXX)
+        trap "rm -r $TMPDIR" EXIT
+        multiqc \
+            -n {wildcards.sample_name_tcr_bcr}'_RAW' \
+            -i {wildcards.sample_name_tcr_bcr}' RAW FASTQ' \
+            -f --no-megaqc-upload --no-data-dir \
+            -o {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/QC_reads/ {input.qc_files} &> {log}
         """
 
 """
@@ -135,12 +138,11 @@ This function allows to determine the singularity binding parameters.
 def alignment_annotations_tcr_bcr_params_sing(wildcards):
     input_folder = os.path.dirname(ALIGN_SYMLINK_FILES_TCR_BCR[0])
     output_folder = os.path.dirname(ALIGN_OUTPUT_DIR_TCR_BCR + "/wildcards.sample_name_tcr_bcr")
-    ref_folder = CRINDEX_TCR_BCR
-    concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + input_folder + ":" + os.path.normpath("/WORKDIR/" + input_folder) + " -B " + output_folder + ":" + os.path.normpath("/WORKDIR/" + output_folder) + " -B " + ref_folder + ":" + os.path.normpath("/WORKDIR/" + ref_folder)
+    concat = " -B " + PIPELINE_FOLDER + "," + input_folder + "," + output_folder
     return concat
 
 """
-This rule makes the alignment and annotation by cellranger.
+This rule makes the alignment and annotation for vdj by cellranger.
 The function alignment_annotations_inputs_tcr_bcr allows to get all fastq input files for one specific sample (wildcards).
 """
 def alignment_annotations_inputs_tcr_bcr(wildcards):
@@ -150,43 +152,46 @@ def alignment_annotations_inputs_tcr_bcr(wildcards):
 
 rule alignment_annotations_tcr_bcr:
     input:
-        fq = alignment_annotations_inputs_tcr_bcr,
-        html_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/QC_reads/{sample_name_tcr_bcr}_RAW.html")
+        fq = alignment_annotations_inputs_tcr_bcr
     output:
         csv_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/filtered_contig_annotations.csv"),
         html_file = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/web_summary.html"),
-	    MandM = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/Materials_and_Methods.txt")
+        MandM = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}/{sample_name_tcr_bcr}_CellRanger/outs/Materials_and_Methods.txt")
+    log:
+        "logs/alignment_annotations_tcr_bcr/{sample_name_tcr_bcr}.log"
+    benchmark:
+        "benchmark/alignment_annotations_tcr_bcr/{sample_name_tcr_bcr}.tsv"
     params:
         sing_bind = alignment_annotations_tcr_bcr_params_sing,
         sample_folder = os.path.normpath(ALIGN_OUTPUT_DIR_TCR_BCR + "/{sample_name_tcr_bcr}")
     threads:
         3
     resources:
-        mem_mb = (lambda wildcards, attempt: ALIGN_MEM_TCR_BCR if (ALIGN_MEM_TCR_BCR is not None) else  min(1024 + attempt * 4096, 30720)),
-        time_min = (lambda wildcards, attempt: ALIGN_TIME_TCR_BCR if (ALIGN_TIME_TCR_BCR is not None) else min(1*24*60 + attempt * 24*60, 7*24*60))
-    conda:
-        CONDA_ENV_QC_ALIGN_GE_ADT
+        mem_mb = (lambda wildcards, attempt: min(attempt * 5120, 25600)),
+        time_min = (lambda wildcards, attempt: min(5*60 + attempt * 12*60, 7*24*60))
     shell:
         """
-        #source /mnt/beegfs/software/cellranger/3.1.0/cellranger-3.1.0/sourceme.bash
         rm -r {params.sample_folder}/{wildcards.sample_name_tcr_bcr}_CellRanger
-        res=$(({resources.mem_mb}/1000))
+        echo "ressources: " &> {log}
+        echo {resources.mem_mb} &>> {log}
 
-        echo 'cd /WORKDIR/{params.sample_folder} && \
-        /Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj \
+        echo 'cd {params.sample_folder} && \
+        /softwares/cellranger-9.0.1/cellranger vdj \
                  --id={wildcards.sample_name_tcr_bcr}_CellRanger \
-                 --reference=/WORKDIR/{CRINDEX_TCR_BCR} \
-                 --fastqs=/WORKDIR/{ALIGN_INPUT_DIR_TCR_BCR} \
+                 --reference={CRINDEX_TCR_BCR} \
+                 --fastqs={ALIGN_INPUT_DIR_TCR_BCR} \
                  --sample={wildcards.sample_name_tcr_bcr} \
                  --localmem=$res \
-                 --localcores={threads}' | singularity exec --contain {params.sing_bind} {SINGULARITY_ENV_TCR_BCR} bash
+                 --localcores={threads} \
+                 --disable-ui' | singularity exec --env res=$(({resources.mem_mb}/1000)) --contain {params.sing_bind} {SINGULARITY_ENV_CR} bash &>> {log}
         rm -r {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/{wildcards.sample_name_tcr_bcr}_CellRanger/SC_VDJ_ASSEMBLER_CS
+        rm -r {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/{wildcards.sample_name_tcr_bcr}_CellRanger/extras
         rm {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/{wildcards.sample_name_tcr_bcr}_CellRanger/_*
-        FASTQC_V=$(conda list "fastqc" | grep "^fastqc " | sed -e "s/fastqc *//g" | sed -e "s/ .*//g")
-        FASTQSCREEN_V=$(conda list "fastq-screen" | grep "^fastq-screen " | sed -e "s/fastq-screen *//g" | sed -e "s/ .*//g")
-        #CELLRANGER_V=`/Softwares/cellranger-3.1.0/cellranger-cs/3.1.0/bin/cellranger vdj --version | grep "cellranger vdj (" | sed -e "s/cellranger vdj (//g" | sed -e "s/)//g"`
-        CELLRANGER_V="3.1.0"
-        echo "Raw BCL-files were demultiplexed and converted to Fastq format using bcl2fastq (version 2.20.0.422 from Illumina).
-Reads quality control was performed using fastqc (version $FASTQC_V) and assignment to the expected genome species evaluated with fastq-screen (version $FASTQSCREEN_V).
+        rm {ALIGN_OUTPUT_DIR_TCR_BCR}/{wildcards.sample_name_tcr_bcr}/{wildcards.sample_name_tcr_bcr}_CellRanger/*_CellRanger.mri.tgz
+
+        FASTQC_V=$(grep fastqc {PIPELINE_FOLDER}/envs/conda/fastqc.yaml | cut -d= -f2)
+        FASTQSCREEN_V=$(grep fastq-screen {PIPELINE_FOLDER}/envs/conda/fastq-screen.yaml | cut -d= -f2)
+        CELLRANGER_V="9.0.1"
+        echo "Reads quality control was performed using fastqc (version $FASTQC_V) and assignment to the expected genome species evaluated with fastq-screen (version $FASTQSCREEN_V).
 CellRanger (version $CELLRANGER_V from 10X Genomics) was used to generate single-cell V(D)J sequences and annotations." > {output.MandM}
         """

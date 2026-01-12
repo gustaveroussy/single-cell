@@ -1,10 +1,10 @@
 BootStrap: docker
-From: ubuntu:20.04
+From: ubuntu:24.04
 
 #build image
-#sudo singularity build single_cell_DE.simg single_cell_DE.def
+#sudo singularity build single_cell_DE.simg single_cell_DE.def &> single_cell_DE.log
 #using image
-#sudo singularity shell -B local_folder:/WORKDIR/container_folder single_cell.simg
+#sudo singularity shell -B local_folder:/WORKDIR/container_folder single_cell_DE.simg
 
 %environment
     export PATH=/opt/tools/bin:$PATH
@@ -16,6 +16,9 @@ From: ubuntu:20.04
     LC_MONETARY=en_US.UTF-8
     LC_PAPER=en_US.UTF-8
     LC_MEASUREMENT=en_US.UTF-8
+    CFLAGS=-I/usr/include/hdf5/serial
+    CXXFLAGS=-I/usr/include/hdf5/serial
+    LDFLAGS=-L/usr/lib/x86_64-linux-gnu/hdf5/serial
 
 %post
     echo "Ubuntu version ######################"
@@ -27,11 +30,11 @@ From: ubuntu:20.04
     dpkg-reconfigure --frontend noninteractive tzdata
 
     apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libgsl-dev libgit2-dev
-    apt-get install -y libcairo2-dev libxt-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libharfbuzz-dev libfribidi-dev libharfbuzz-dev libfribidi-dev libfontconfig1-dev libproj-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libcairo2-dev libxt-dev libgeos-dev
+    apt-get install -y libcairo2-dev libxt-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libharfbuzz-dev libfribidi-dev libharfbuzz-dev libfribidi-dev libfontconfig1-dev libproj-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libcairo2-dev libxt-dev libgeos-dev libudunits2-dev libhdf5-dev libhdf5-serial-dev pkg-config build-essential libmagick++-dev libz-dev cmake
     apt-get install -y dirmngr gnupg apt-transport-https ca-certificates software-properties-common
     apt-get -y update && apt-get -y upgrade
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
-    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/'
+    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/'
     apt-get -y update && apt-get -y upgrade
     apt-get install -y r-base r-base-dev #apt-cache policy r-base r-base-dev pour connaître les versions
     apt-cache policy r-base r-base-dev
@@ -42,27 +45,42 @@ From: ubuntu:20.04
     R -e 'install.packages("BiocManager")'
     R -e 'install.packages("devtools")'
     R -e 'library("devtools")'
-    #R -e 'install.packages("rsvd", dependencies = TRUE)' # for seurat
-    #R -e 'remove.packages(grep("spatstat", installed.packages(), value = T))' # for seurat
-    #R -e 'devtools::install_github("spatstat/spatstat@v1.64-2")' # for seurat
-    R -e 'install.packages("Seurat", dependencies = TRUE)'
+    R -e 'install.packages(c("sp", "future", "future.apply", "progressr", "spam", "generics", "RcppEigen","cowplot", "fastDummies", "fitdistrplus", "ggplot2", "ggrepel", "ggridges", "httr", "ica", "igraph", "irlba", "leiden", "lmtest", "matrixStats", "patchwork", "pbapply", "plotly", "png", "progressr", "RANN", "RColorBrewer", "RcppAnnoy", "RcppHNSW", "reticulate", "ROCR", "RSpectra", "Rtsne", "scales", "scattermore", "sctransform", "spatstat.explore", "spatstat.geom", "uwot", "RcppProgress"), repos="https://cloud.r-project.org")'
+    #R -e 'install.packages("Seurat")'
+    R -e 'install.packages("remotes", repos="https://cloud.r-project.org")'
+    R -e 'remotes::install_version("SeuratObject", version="5.0.1", repos="https://cloud.r-project.org", dependencies=FALSE)'
+    R -e 'remotes::install_version("Seurat", version="5.0.1", repos="https://cloud.r-project.org", dependencies=FALSE)'
     R -e 'library(Seurat)'
+    echo "Seurat==5.0.1" >> /usr/local/lib/R/site-library/.Rpackages.lock
+    #export CFLAGS=-I/usr/include/hdf5/serial
+    #export CXXFLAGS=-I/usr/include/hdf5/serial
+    #export LDFLAGS=-L/usr/lib/x86_64-linux-gnu/hdf5/serial
+    #mkdir ~/.R
+    #echo "CFLAGS=-I/usr/include/hdf5/serial" > ~/.R/Makevars
+    #echo "CXXFLAGS=-I/usr/include/hdf5/serial" >> ~/.R/Makevars
+    #echo "LDFLAGS=-L/usr/lib/x86_64-linux-gnu/hdf5/serial" >> ~/.R/Makevars
+    R -e 'setRepositories(ind = 1:3, addURLs = c("https://satijalab.r-universe.dev", "https://bnprks.r-universe.dev/"));install.packages(c("BPCells", "presto", "glmGamPoi"))'
+    R -e 'library(BPCells)'
+    R -e 'install.packages(c("RcppParallel", "RSpectra", "irlba", "uwot"))'
     R -e 'devtools::install_github("thomasp85/patchwork")'
     R -e 'install.packages("optparse")'
     R -e 'install.packages("Matrix")'
     R -e 'install.packages("dplyr")'
-    R -e 'install.packages("ggplot2")'
+    R -e 'install.packages(c("ggplot2", "ggrepel"))'
     R -e 'install.packages("stringr")'
     R -e 'install.packages("utils")'
     R -e 'install.packages("pheatmap")'
     R -e 'BiocManager::install("limma")'
     R -e 'BiocManager::install("edgeR")'
-    R -e 'BiocManager::install("EnhancedVolcano")'
+    R -e 'BiocManager::install("EnhancedVolcano")'# EnhancedVolcano pas encore dispo pour cette version de R
+    R -e 'devtools::install_github("kevinblighe/EnhancedVolcano")'
     R -e 'library(pheatmap)'
     R -e 'library(limma)'
     R -e 'library(edgeR)'
     R -e 'library(EnhancedVolcano)'
-
+    
+    echo "========== FINAL STEP: Seurat 5.0.1 =========="
+    R -e 'remove.packages(c("Seurat","SeuratObject")); remotes::install_version("SeuratObject", version="5.0.1", repos="https://cloud.r-project.org", dependencies=FALSE); remotes::install_version("Seurat", version="5.0.1", repos="https://cloud.r-project.org", dependencies=FALSE); cat("Seurat version: ", as.character(packageVersion("Seurat")), "\n")'
 
 %labels
     Author Marine AGLAVE

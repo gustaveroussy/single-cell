@@ -10,52 +10,86 @@ This function allows to determine the input .rda file.
 def cerebro_input(wildcards):
     return wildcards.cerebro_input_rda_no_extention + ".rda"
 
+
 """
 This function allows to determine the singularity binding parameters.
 """
 def cerebro_params_sing(wildcards):
     rda_crb_folder = os.path.dirname(wildcards.cerebro_input_rda_no_extention)
-    concat = " -B " + PIPELINE_FOLDER + ":" + os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER) + " -B " + rda_crb_folder + ":" + os.path.normpath("/WORKDIR/" + rda_crb_folder)
+    concat = " -B " + PIPELINE_FOLDER + "," + rda_crb_folder
     if CEREBRO_GMT_FILE != "NULL":
         gmt_folder = os.path.dirname(CEREBRO_GMT_FILE)
-        concat = concat + " -B " + gmt_folder + ":" + os.path.normpath("/WORKDIR/" + gmt_folder)
+        concat = concat + "," + gmt_folder
     if CEREBRO_METADATA_FILE != "NULL":
         for metadatafile in list(dict.fromkeys(CEREBRO_METADATA_FILE.split(","))):
             metadatafile = os.path.dirname(metadatafile)
-            concat = concat + " -B " + metadatafile + ":" + os.path.normpath("/WORKDIR/" + metadatafile)
+            concat = concat + "," + metadatafile
     return concat
+
+
+
+
+"""
+This rule launches the R script to translate seurat V5 file into seurat V3 file.
+"""
+rule cerebro_seurat_conversion:
+    input:
+        rda_file = cerebro_input
+    output:
+        rda_file = temp("{cerebro_input_rda_no_extention}_SeuratV3.rda")
+    params:
+        sing_bind = cerebro_params_sing
+    log:
+        "logs/cerebro_seurat_conversion{cerebro_input_rda_no_extention}.log"
+    benchmark:
+        "benchmark/cerebro_seurat_conversion{cerebro_input_rda_no_extention}.tsv"
+    threads:
+        1
+    resources:
+        mem_mb = lambda wildcards, attempt: 5120 * attempt,
+        time_min = lambda wildcards, attempt: min(attempt * 60, 200)
+    shell:
+        """
+        TMPDIR=$(mktemp -d {resources.tmpdir}/XXXXXX)
+        trap "rm -r $TMPDIR" EXIT
+        singularity exec --contain -B $TMPDIR:/tmp {params.sing_bind} \
+        {SINGULARITY_ENV} \
+        Rscript {PIPELINE_FOLDER}/scripts/pipeline_Seurat_conversion_v5_to_v3.R \
+        --input.rda.ge {input[0]} \
+        --pipeline.path {PIPELINE_FOLDER} &> {log}
+        """
 
 """
 This rule launches the R script to translate seurat file into cerebro file.
 """
 rule cerebro:
     input:
-        cerebro_rda_file = cerebro_input
+        cerebro_rda_file = "{cerebro_input_rda_no_extention}_SeuratV3.rda"
     output:
         cerebro_crb_file = expand("{{cerebro_input_rda_no_extention}}{cerebro_complement}", cerebro_complement = CEREBRO_COMPLEMENT_CRB)
     params:
-        sing_bind = cerebro_params_sing,
-        pipeline_folder = os.path.normpath("/WORKDIR/" + PIPELINE_FOLDER),
-        input_rda = lambda wildcards, input: os.path.normpath("/WORKDIR/" + input[0]),
-        SING_CEREBRO_GMT_FILE = os.path.normpath("/WORKDIR/" + CEREBRO_GMT_FILE) if CEREBRO_GMT_FILE != "NULL" else "NULL",
-        SING_CEREBRO_METADATA_FILE = ','.join([os.path.normpath("/WORKDIR/" + x) for x in CEREBRO_METADATA_FILE.split(',')]) if CEREBRO_METADATA_FILE != "NULL" else "NULL"
+        sing_bind = cerebro_params_sing
+    log:
+        "logs/cerebro{cerebro_input_rda_no_extention}.log"
+    benchmark:
+        "benchmark/cerebro{cerebro_input_rda_no_extention}.tsv"
     threads:
         1
     resources:
-        mem_mb = (lambda wildcards, attempt: CEREBRO_MEM if (CEREBRO_MEM is not None) else min(5120 * attempt , 102400)),
-        time_min = (lambda wildcards, attempt: CEREBRO_TIME if (CEREBRO_TIME is not None) else min(attempt * 60, 200))
+        mem_mb = lambda wildcards, attempt: 5120 * attempt,
+        time_min = lambda wildcards, attempt: min(attempt * 60, 360)
     shell:
         """
-        export TMPDIR={GLOBAL_TMP}
-        TMP_DIR=$(mktemp -d -t sc_pipeline-XXXXXXXXXX) && \
-        singularity exec --contain --home $TMP_DIR:$HOME -B $TMP_DIR:/tmp {params.sing_bind} \
+        TMPDIR=$(mktemp -d {resources.tmpdir}/XXXXXX)
+        trap "rm -r $TMPDIR" EXIT
+        singularity exec --contain --home $TMPDIR:$HOME -B $TMPDIR:/tmp {params.sing_bind} \
         {SINGULARITY_ENV_CEREBRO} \
-        Rscript {params.pipeline_folder}/scripts/pipeline_CEREBRO.R \
-        --input.rda.ge {params.input_rda} \
-        --author.name {CEREBRO_AUTHOR_NAME} \
-        --author.mail {CEREBRO_AUTHOR_MAIL} \
+        Rscript {PIPELINE_FOLDER}/scripts/pipeline_CEREBRO.R \
+        --input.rda.ge {input[0]} \
+        --author.name "{AUTHOR_NAME}" \
+        --author.mail "{AUTHOR_MAIL}" \
         --nthreads {threads} \
-        --pipeline.path {params.pipeline_folder} \
+        --pipeline.path {PIPELINE_FOLDER} \
         --version {CEREBRO_VERSION} \
         --groups {CEREBRO_GROUPS} \
         --remove.other.reductions {CEREBRO_REMOVE_OTHER_RED} \
@@ -66,6 +100,6 @@ rule cerebro:
         --only.pos.DE {CEREBRO_ONLY_POS_DE} \
         --remove.custom.DE {CEREBRO_REMOVE_CUSTOM_DE} \
         --add.surface.prot.info {CEREBRO_ADD_SURFACE_PROT_INFO} \
-        --gmt.file {params.SING_CEREBRO_GMT_FILE} \
-        --metadata.file {params.SING_CEREBRO_METADATA_FILE}
+        --gmt.file {CEREBRO_GMT_FILE} \
+        --metadata.file {CEREBRO_METADATA_FILE} &> {log}
         """

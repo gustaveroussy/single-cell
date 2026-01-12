@@ -1,45 +1,6 @@
-## THIS IS THE MASTER SCRIPT FOR 10X SCRNASEQ PREPROCESSING FROM COUNT MATRIX
-## TO A NORMALIZED (EVEN COVARIATES-REGRESSED) DATASET SAVED AS A RICH SEURAT
-## OBJECT.
-## ---
-## This recommended workflow comes into 3 to 4 steps :
-## 1) A completely unfiltered first step, just to display the first space of ALL
-##    identified cells, despite putatively many bias source present in the data.
-## 2) A filtered step, except for identified doublets : just to visualize them.
-## 3) A filtered + doublets removed step, but with "basic" normalization (ie :
-##    no covariate regressed)
-## 4) Depending on the necessity, same as 3) but with one or multiple covariates
-##    regressed.
-## ---
-## The ACTUAL, POOR script structure contains :
-## 1) A series of blocks of variables, which are run/project -specific (a
-##    detailed example is provided in the first blocl, "P30-MAMA1")
-## 2) A block of common variables (variables that are very rarely to get
-##    modified, paths to resources, etc...)
-## 3) The functions, where all the magic happens.
-## 4) A series of code blocks, corresponding to examples of each of the 4
-##    described steps.
-## ---
-##
-## ---
-## WARNINGS :
-## 1) PLEASE ONLY CONSIDER FUNCTIONS AS REAL CODE. CODE BLOCKS ARE LOSELY
-##    MAINTAINED AND SHOULD BE BASIC HELPERS FOR THE ORDER OF FUNCTION CALLS.
-## 2) The "clustering.eval.mt" function is a multithreaded version of the
-##    "clustering.eval" function. Everything was done to limit its memory
-##    hunger (a minimal Seurat object is temporarily created, only necessary
-##    objects are exported), but running it on 4 threads can take up to 3x the
-##    memory of the monothreaded version !
-## 3) The use of scBFA/BPCA implies a variation of the pipeline and its steps.
-##    Please read the corresponding function header.
-
-## INSTALL :
-## R3.6.x & rstudio installed via conda -c r
-## packages installed from BioConductor via BiocManager::install :
-## Seurat, scran, DropletUtils, scds, scDblFinder, scBFA, (celda)
-
-## GUILTY AUTHOR : Bastien JOB (bastien.job@gustaveroussy.fr)
-
+## THIS IS A COMPANION SCRIPT, CONTAINING THE GLOBAL VARIABLES AND ALL THE
+## FUNCTIONS NECESSARY FOR SINGLE-CELL RNA-SEQ ANALYSIS VIA THE SINGLE-CELL
+## PIPELINE.
 
 ## GLOBAL VARIABLES
 ############
@@ -49,12 +10,101 @@ pdf(NULL)
 ## FUNCTIONS
 ############
 
-## multithreading cluster
+## Multithreading cluster
 create.parallel.instance <- function(nthreads = 1) {
   doParallel::registerDoParallel(nthreads)
   cl <- BiocParallel::DoparParam()
   return(cl)
 }
+
+## Convert "NULL"/"FALSE"/"TRUE" (in character) into NULL/FALSE/TRUE
+## and create a variable and assign it a value from the list
+# no need to do "input.dir.ge <- args$options$input.dir.ge" anymore
+convert_NULL_BOOL <- function(args) {
+  for (i in names(args$options)){
+    val <- args$options[[i]]
+    if (is.null(val) || val == "" || toupper(val) == "NULL") {
+      assign(i, NULL, envir = .GlobalEnv)
+    } else if (toupper(val) == "FALSE") {
+      assign(i, FALSE, envir = .GlobalEnv)
+    } else if (toupper(val) == "TRUE") {
+      assign(i, TRUE, envir = .GlobalEnv)
+    } else {
+      assign(i, val, envir = .GlobalEnv)
+    }
+  }
+}
+
+## Convert into vector after split on comma, if not NULL
+asNumeric.ifnotNULLelse <- function(variable, other_variable = NULL){
+    if (!is.null(variable)) {
+        return(as.numeric(variable))
+    }else{
+        return(other_variable)
+    }
+}
+
+## Convert into vector after split on comma, if not NULL
+splitByComma.ifnotNULL <- function(variable){
+    if (!is.null(variable)) {
+        return(unlist(stringr::str_split(variable, ",")))
+    }else{
+        return(NULL)
+    }
+}
+
+## Reset a layer/slot in a Seurat object (set to NULL or empty matrix)
+reset_data_matrix <- function(sobj, assay = NULL, data = "data", to_matrix = TRUE) {
+  #get assay
+  if (is.null(assay)) assay <- Seurat::DefaultAssay(sobj)
+  if (!assay %in% names(sobj@assays)) stop(paste0("Assay '", assay, "' not found in Seurat object."))
+
+  #get replacement
+  if (to_matrix){
+     replacement <- matrix(nrow = 0, ncol = 0)
+  } else replacement <- NULL
+
+  #replacement
+  if ("layers" %in% slotNames(sobj@assays[[assay]])) { # layers: RNA
+    if (data %in% names(sobj@assays[[assay]]@layers)) {
+      sobj@assays[[assay]]@layers[[data]] <- replacement
+    }# else warning(paste0("Layer '", data, "' not found in assay '", assay, "' — nothing to reset."))
+  } else {                                             # slots: SCT
+    if (data %in% slotNames(sobj@assays[[assay]])) {
+      slot(sobj@assays[[assay]], data) <- replacement
+    #} else warning(paste0("Slot '", data, "' not found in assay '", assay, "' — nothing to reset."))
+    }
+  }
+
+  return(sobj)
+}
+
+retrive_scale.data <- function(sobj, assay = NULL, vars.to.regress = NULL) {
+  #get assay
+  if (is.null(assay)) assay <- Seurat::DefaultAssay(sobj)
+  if (!assay %in% names(sobj@assays)) stop(paste0("Assay '", assay, "' not found in Seurat object."))
+  
+  #scaling
+  if ("layers" %in% slotNames(sobj@assays[[assay]])) { # layers: RNA
+      if (is.null(dim(sobj@assays[[assay]]@layers$scale.data)) || dim(sobj@assays[[assay]]@layers$scale.data)[1] < 1){
+          if (!is.null(vars.to.regress)) message(paste0("Scaling coveriate(s) '", paste(vars.to.regress, collapse = "', '"), "' set for regression..."))
+          sobj <- Seurat::ScaleData(object = sobj,
+                                    assay = assay,
+                                    vars.to.regress = vars.to.regress,
+                                    do.scale = TRUE, scale.max = 10, block.size = 1000)
+        }
+  }else{  # slots: SCT
+      if (is.null(dim(sobj@assays[[assay]]@scale.data)) || dim(sobj@assays[[assay]]@scale.data)[1] < 1){
+          if (!is.null(vars.to.regress)) message(paste0("Scaling coveriate(s) '", paste(vars.to.regress, collapse = "', '"), "' set for regression..."))
+          sobj <- Seurat::ScaleData(object = sobj,
+                                    assay = assay,
+                                    vars.to.regress = vars.to.regress,
+                                    do.scale = FALSE, scale.max = Inf, block.size = 750)
+      }
+  }
+  return(sobj)
+}
+
 
 ## Loading data into a Seurat object
 # 1) Loading data
@@ -63,13 +113,12 @@ create.parallel.instance <- function(nthreads = 1) {
 # 4) Remove empty droplets
 # 5) Plotting saturation and Kneeplot
 # 6) Creation of the Seurat object
-load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, return.matrix = FALSE, translation = FALSE, translation.file = NULL, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE, metadata.file = NULL, min.counts = 1000) {
+load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', droplets.limit = 1E+05, emptydrops.fdr = 1E+03, emptydrops.retain = NULL, BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = NULL, draw_plots = TRUE, metadata.file = NULL, min.counts = 1000) {
   if (file.exists(data.path) && !is.null(sample.name)) {
     message("Loading data ...")
 
     ## Loading data
-    source.format <- ""
-    if(file.exists(paste0(data.path, "/matrix.mtx"))) { ### Cell Ranger
+    if(file.exists(paste0(data.path, "/matrix.mtx")) || file.exists(paste0(data.path, "/matrix.mtx.gz"))) { ### Cell Ranger
       source.format <- "CellRanger"
       scmat <- Seurat::Read10X(data.path)
       if ('Gene Expression' %in% names (scmat)) {
@@ -79,11 +128,8 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     } else if(file.exists(paste0(data.path, "/", sample.name, ".mtx"))) { ### BUStools
       source.format <- "BUStools"
       scmat <- BUSpaRse::read_count_output(dir = data.path, name = sample.name, tcc = FALSE)
-    } else if (file.exists(paste0(data.path, "/quants_mat.gz"))) { ### Alevin
-      source.format <- "Alevin"
-      scmat <- Seurat::ReadAlevin(data.path)
     } else if (file.exists(paste0(data.path, "/", sample.name, "_counts.tsv.gz"))) { ### UMI-tools
-      source.format <- "UMI-tools"
+      source.format <- "Basic counts table (UMI-tools like)"
       scmat <- read.table(file = paste0(data.path, "/", sample.name, "_counts.tsv.gz"), header = TRUE, sep = "\t", quote = "", check.names = FALSE, row.names = 1)
     } else {
       stop(paste0("No data found in [", data.path, "] (wrong path ?)"))
@@ -100,47 +146,14 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     umi.total.nb <- sum(scmat)
     print(umi.total.nb)
 
-    ## Rename ensembl genes id by genes symbols
-    if (translation){
-      message('Translation to genes symbols...')
-      data = read.table(file = translation.file, header = FALSE, sep = " ")
-      gene_name=vector()
-      for(i in 1:nrow(scmat)) {
-        index = grep(gsub("\\.[0-9]*$", "",rownames(scmat)[i]), as.vector(data[,1]))
-        if(!is.na(index)) gene_name[i] = as.vector(data[index,2]) else gene_name[i] = rownames(scmat)[i]
-      }
-      ##deduplicate lines
-      #identify duplicate genes names and position
-      dup.genes <- unique(gene_name[duplicated(gene_name)])
-      if(length(dup.genes) > 0) {
-        dup.pos=grep(paste0("^",paste(dup.genes,collapse="$|^"),"$"), gene_name)
-        message(paste0("Found ", length(dup.genes), ' (', sprintf("%.2f", length(dup.genes) / nrow(scmat) * 100), "%) replicated genes causes by translation! Summing ..."))
-        #data not duplicated
-        scmat_without_dup = scmat[-dup.pos,]
-        rownames(scmat_without_dup)=gene_name[-dup.pos]
-        #data duplicated
-        dup_scmat = as.data.frame(as.matrix(scmat[dup.pos,]))
-        dup_gene_names=gene_name[dup.pos]
-        rm(scmat)
-        #transform in non duplicated data
-        dedup_scmat = Matrix::Matrix(as.matrix(rowsum(dup_scmat,group=dup_gene_names)), sparse = TRUE)
-        #merge data
-        scmat = rbind(scmat_without_dup,dedup_scmat)
-        rm(scmat_without_dup,dedup_scmat)
-      }else{
-        rownames(scmat) = gene_name
-        message('No replicated gene found.')
-      }
-    }
-    
     ## df for saturation plots and Kneeplot beging
     if(draw_plots){
       suppressMessages(library(dplyr))
       nb_umi_genes_by_barcode <- data.frame(nb_genes=Matrix::colSums(scmat>0), nb_umi=Matrix::colSums(scmat), barcodes=colnames(scmat))
-      nb_umi_genes_by_barcode <- nb_umi_genes_by_barcode %>% arrange(desc(nb_umi,nb_genes)) %>% dplyr::mutate(num_barcode=seq.int(ncol(scmat)))
+      nb_umi_genes_by_barcode <- nb_umi_genes_by_barcode %>% arrange_at(c("nb_umi","nb_genes"),desc) %>% dplyr::mutate(num_barcode=seq.int(ncol(scmat)))
       nb_umi_genes_by_barcode$log10GenesPerlog10UMI <- log10(nb_umi_genes_by_barcode$nb_genes) / log10(nb_umi_genes_by_barcode$nb_umi)
     }
-    
+
     if (!is.null(droplets.limit) && ncol(scmat) > droplets.limit && !is.null(emptydrops.fdr)) {
       ## Removing empty droplets
       message("Removing empty droplets with emptyDrops")
@@ -166,6 +179,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
       ## Cleaning
       rm(bc_rank)
       rm(scmat_filtered)
+      gc(verbose = FALSE)
     } else {
       umi.kept.nb <- umi.total.nb
       plot_emptydrops <- FALSE
@@ -176,12 +190,13 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
       library(patchwork)
       nb_umi_genes_by_barcode$droplets_state = "Empty Droplets"
       nb_umi_genes_by_barcode[nb_umi_genes_by_barcode$barcodes %in% colnames(scmat), "droplets_state"] ="Full Droplets"
-  
+
       kneeplot <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(y=nb_umi, x=num_barcode, color=droplets_state)) +
-        ggplot2::geom_point() + ggplot2::ggtitle(paste0("Kneeplot of ",sample.name)) + 
+        ggplot2::geom_point() +
+        ggplot2::ggtitle(paste0("Kneeplot of ",sample.name)) +
         ggplot2::theme(legend.title = ggplot2::element_blank()) +
-        ggplot2::scale_y_log10(name = "Number of umi by droplet (log scale)",breaks = c(0,1,10,100,500,1000,1500,2000,5000,10000,max(nb_umi_genes_by_barcode$nb_umi))) + 
-        ggplot2::scale_x_log10(name = "Droplet rank (log scale)", breaks = c(0,100,500,1000,2000,5000,10000,20000,max(nb_umi_genes_by_barcode$num_barcode)),guide = ggplot2::guide_axis(angle = 45)) +
+        ggplot2::scale_y_log10(name = "Number of umi by droplet (log scale)",breaks = c(0,1,10,100,500,1000,1500,2000,5000,10000,max(nb_umi_genes_by_barcode$nb_umi))) +
+        ggplot2::scale_x_log10(name = "Droplet rank (log scale)", breaks = c(0,10,100,500,1000,2000,5000,10000,20000,max(nb_umi_genes_by_barcode$num_barcode)),guide = ggplot2::guide_axis(angle = 45)) +
         ggplot2::expand_limits(x = 0, y = 0)
       if(plot_emptydrops){
         kneeplot <- kneeplot +
@@ -194,41 +209,32 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
           ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(linetype = c(0), shape = c(16))))
         sat_color=c("royalblue4")
       }
-      ggplot2::ggsave(paste0(out.dir, sample.name, "_kneeplot.png"), plot = kneeplot, width = 7, height = 5)
-      
-      saturation_plot1 <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(y = nb_genes ,x = nb_umi, color = droplets_state)) +
-        ggplot2::geom_point() + ggplot2::theme(legend.title = ggplot2::element_blank()) +
+
+      saturation_plot <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(y = nb_genes ,x = nb_umi, color = droplets_state)) +
+        ggplot2::geom_point() +
+        ggplot2::ggtitle(paste0("Saturation of ",sample.name)) +
+        ggplot2::theme(legend.title = ggplot2::element_blank()) +
         ggplot2::geom_smooth(colour = "red") +
-        ggplot2::scale_y_log10(name = "Number of genes by droplet (log scale)",breaks = c(0,1,10,50,100,200,500,1000,2000,max(nb_umi_genes_by_barcode$nb_genes))) + 
+        ggplot2::scale_y_log10(name = "Number of genes by droplet (log scale)",breaks = c(0,1,10,50,100,200,500,1000,2000,max(nb_umi_genes_by_barcode$nb_genes))) +
         ggplot2::scale_x_log10(name = "Number of umi by droplet (log scale)", breaks = c(0,1,10,100,500,1000,2000,5000,10000,max(nb_umi_genes_by_barcode$nb_umi)),guide = ggplot2::guide_axis(angle = 45)) +
         ggplot2::expand_limits(x = 0, y = 0) +
         ggplot2::scale_colour_manual(values = sat_color)
 
-      saturation_plot2 <- ggplot2::ggplot(nb_umi_genes_by_barcode, ggplot2::aes(x=log10GenesPerlog10UMI, color = droplets_state)) +
-    	  ggplot2::geom_density() + 
-    	  ggplot2::theme(legend.title = ggplot2::element_blank()) +
-  	    ggplot2::geom_vline(xintercept = 0.8, linetype="dashed", color = "red") +
-  	    ggplot2::annotate(geom="text", x=0.84, y=-1, label="0.8", color="red") +
-  	    ggplot2::ylab("Density") + ggplot2::xlab("log(Number of genes)/log(Number of umi)") +
-        ggplot2::scale_colour_manual(values = sat_color)
-      satplots = saturation_plot1 + saturation_plot2 + plot_annotation(title = paste0("Saturation of ",sample.name))
-      ggplot2::ggsave(paste0(out.dir, sample.name, "_saturation_plot.png"), plot = satplots, width = 14, height = 5)
-      
+      knee_satplots = kneeplot + saturation_plot
+      ggplot2::ggsave(paste0(out.dir, sample.name, "_kneeplot_saturation.png"), plot = knee_satplots, width = 14, height = 5)
+
       rm(nb_umi_genes_by_barcode)
     }
-    
-    #return matrix
-    if (return.matrix) return(scmat)
 
     ## Creation of the Seurat object
     sobj <- Seurat::CreateSeuratObject(counts = scmat, project = sample.name, assay = assay)
     rm(scmat)
     sobj[[paste0('log_nCount_', assay)]] <- log(sobj[[paste0('nCount_', assay)]])
-    
+
     ## Read run_info.json from alignement by Kellisto BUStools
     if(file.exists(paste0(data.path, "/run_info.json"))) {
       json_data <- rjson::fromJSON(file=paste0(data.path, "/run_info.json"))
- 
+
     ## Save excel measures
     sobj@misc$excel$Kallisto_Bustools_alignment$Total_reads <- json_data$n_processed
     sobj@misc$excel$Kallisto_Bustools_alignment$Pseudo_aligned_reads <- json_data$n_pseudoaligned
@@ -238,7 +244,7 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     }
     sobj@misc$excel$Droplet_Quality$captured_droplet <- droplets.nb
     sobj@misc$excel$Droplet_Quality$total_number_UMI <- umi.total.nb
-    if(file.exists(paste0(data.path, "/run_info.json"))) sobj@misc$excel$Droplet_Quality$sequencing_saturation <- (1 - (sobj@misc$excel$Kallisto_Bustools_alignment$Pseudo_aligned_reads / sobj@misc$excel$Droplet_Quality$total_number_UMI)) *100
+    if(file.exists(paste0(data.path, "/run_info.json"))) sobj@misc$excel$Droplet_Quality$sequencing_saturation <- (1 - (sobj@misc$excel$Droplet_Quality$total_number_UMI / sobj@misc$excel$Kallisto_Bustools_alignment$Pseudo_aligned_reads)) *100
     sobj@misc$excel$Droplet_Quality$estimated_cells <- ncol(sobj)
     sobj@misc$excel$Droplet_Quality$estimated_UMI <- umi.kept.nb
     sobj@misc$excel$Droplet_Quality$fraction_read_in_cells <- umi.kept.nb / umi.total.nb
@@ -247,20 +253,18 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
     sobj@misc$params$sobj_creation$emptydrops.fdr <- emptydrops.fdr
     sobj@misc$params$sobj_creation$droplets.limit <- droplets.limit
     sobj@misc$params$sobj_creation$emptydrops.retain <- emptydrops.retain
-    sobj@misc$params$sobj_creation$translation <- translation
-    sobj@misc$params$sobj_creation$translation.file <- translation.file
     sobj@misc$params$sobj_creation$Rsession <- utils::capture.output(devtools::session_info())
     sobj@misc$params$seed <- my.seed
-    
+
     ## Save command
-    sobj@misc$pipeline_commands <- paste0("load.sc.data(data.path = ", data.path, ", sample.name = ", sample.name, ", assay = ", assay, ", droplets.limit = ", droplets.limit, ", emptydrops.fdr = ", emptydrops.fdr, ", emptydrops.retain = ", emptydrops.retain, ", return.matrix = ", return.matrix, ", translation = ", translation, ",  translation.file = ", translation.file, ", BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = ", out.dir, ")")
-    
+    sobj@misc$pipeline_commands <- paste0("load.sc.data(data.path = ", data.path, ", sample.name = ", sample.name, ", assay = ", assay, ", droplets.limit = ", droplets.limit, ", emptydrops.fdr = ", emptydrops.fdr, ", emptydrops.retain = ", emptydrops.retain, ", BPPARAM = BiocParallel::SerialParam(), my.seed = 1337, out.dir = ", out.dir, ")")
+
     ## Save packages versions
     if(file.exists(paste0(data.path, "/run_info.json"))) sobj@misc$technical_info$kallisto <- json_data$kallisto_version
     sobj@misc$technical_info$BUSpaRse <- utils::packageVersion('BUSpaRse')
     sobj@misc$technical_info$DropletUtils <- utils::packageVersion('DropletUtils')
     sobj@misc$technical_info$Seurat <- utils::packageVersion('Seurat')
-    
+
     ## Save Materials&Methods
     if(file.exists(paste0(data.path, "/Materials_and_Methods.txt"))){
       tmp <- suppressMessages(readr::read_tsv(paste0(data.path, "/Materials_and_Methods.txt"), col_names = FALSE)$X1)
@@ -268,27 +272,23 @@ load.sc.data <- function(data.path = NULL, sample.name = NULL, assay = 'RNA', dr
       for (i in 1:length(tmp)) tmp2=paste(tmp2,tmp[i], sep="")
       sobj@misc$parameters$Materials_and_Methods$part0_Alignment <- tmp2
     }
-    
+
     return(sobj)
   } else stop('Data source does not exist, or no sample name specified !')
 }
 
 ## Basic QC metrics
-QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.genes.file = NULL, str.genes.file = NULL, pcmito.range = c(0, .1), pcribo.range = c(0, 1), min.features = 200, min.counts = 1000, nbin = 10, BPPARAM = BiocParallel::SerialParam()) {
+QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.genes.file = NULL, str.genes.file = NULL, pcmito.range = c(0, 10), pcribo.range = c(0, 100), min.features = 200, min.counts = 1000, nbin = 10) {
   if(!is.null(sobj)) {
     if(!is.null(mt.genes.file)) if (!file.exists(mt.genes.file)) stop('mt.genes.file not found !')
     if(!is.null(crb.genes.file)) if (!file.exists(crb.genes.file)) stop('crb.genes.file not found !')
     if(!is.null(str.genes.file)) if (!file.exists(str.genes.file)) stop('str.genes.file not found !')
 
     ## Save command
-    sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("QC.metrics(sobj = sobj, mt.genes.file = ", mt.genes.file, ", crb.genes.file = ", crb.genes.file, ", str.genes.file = ", str.genes.file, ", pcmito.range = c(", pcmito.range[1], ",", pcmito.range[2], ") , pcribo.range = c(", pcribo.range[1], ",", pcribo.range[2], ") , min.features = ", min.features, ", min.counts = ", min.counts, ", nbin = ", nbin, ", BPPARAM = BiocParallel::SerialParam())"))
+    sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("QC.metrics(sobj = sobj, mt.genes.file = ", mt.genes.file, ", crb.genes.file = ", crb.genes.file, ", str.genes.file = ", str.genes.file, ", pcmito.range = c(", pcmito.range[1], ",", pcmito.range[2], ") , pcribo.range = c(", pcribo.range[1], ",", pcribo.range[2], ") , min.features = ", min.features, ", min.counts = ", min.counts, ", nbin = ", nbin))
 
     ## Restoring seed
     my.seed <- sobj@misc$params$seed
-
-    ### percentage of counts in the top features
-    pcQC <- scater::perCellQCMetrics(Seurat::as.SingleCellExperiment(sobj), BPPARAM = BPPARAM)
-    sobj@meta.data <- cbind(sobj@meta.data, as.data.frame(pcQC[,grep("percent", colnames(pcQC))]))
 
     ### MITO
     mito.symbols <- if (!is.null(mt.genes.file)) readRDS(mt.genes.file) else if (!is.null(sobj@misc$params$QC$mito.symbols)) sobj@misc$params$QC$mito.symbols else NULL
@@ -296,8 +296,12 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       ## Manual percent
       sobj@misc$params$QC$mito.symbols = mito.symbols
       sobj@misc$params$QC$pcmito.range = pcmito.range
-      inmito <- rownames(sobj@assays$RNA@counts) %in% mito.symbols
-      sobj$percent_mt <- as.vector(Matrix::colSums(sobj@assays$RNA@counts[inmito,]) / sobj$nCount_RNA)
+      inmito <- rownames(sobj@assays$RNA) %in% mito.symbols
+      if(table(inmito)[2]>1){
+          sobj$percent_mt <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[inmito,])*100 / sobj$nCount_RNA)
+      }else{
+          sobj$percent_mt <- as.vector(sobj@assays$RNA@layers$counts[inmito,]*100 / sobj$nCount_RNA)
+      }
       message('% Mitochondrial expression :')
       print(summary(sobj$percent_mt))
       pcmito_leftbound <- sobj$percent_mt >= pcmito.range[1]
@@ -309,8 +313,6 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       levels(pcmito_factor)[levels(pcmito_factor) == 1] <- "in"
       levels(pcmito_factor)[levels(pcmito_factor) == 2] <- "out.right"
       print(table(pcmito_factor))
-      ## Seurat AddModuleScore
-      # sobj@meta.data$MTscore <- Seurat::AddModuleScore(object = sobj, features = list(mito.symbols), nbin = nbin, seed = my.seed, assay = 'RNA', name = 'SCORE')@meta.data$SCORE1
       if(is.null(sobj@misc$excel$Cells_Quality$mito_summary)) sobj@misc$excel$Cells_Quality$mito_summary <- summary(sobj$percent_mt) else sobj@misc$excel$Final_Cells_Quality$mito_summary <- summary(sobj$percent_mt)
     }
     ### RIBO
@@ -319,8 +321,12 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       ## Manual percent
       sobj@misc$params$QC$ribo.symbols = ribo.symbols
       sobj@misc$params$QC$pcribo.range = pcribo.range
-      inribo <- rownames(sobj@assays$RNA@counts) %in% ribo.symbols
-      sobj$percent_rb <- as.vector(Matrix::colSums(sobj@assays$RNA@counts[inribo,]) / sobj$nCount_RNA)
+      inribo <- rownames(sobj@assays$RNA) %in% ribo.symbols
+      if(table(inribo)[2]>1){
+          sobj$percent_rb <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[inribo,]) / sobj$nCount_RNA) *100
+      }else{
+          sobj$percent_rb <- as.vector(sobj@assays$RNA@layers$counts[inribo,] / sobj$nCount_RNA) *100
+      }
       message('% Ribosomal expression :')
       print(summary(sobj$percent_rb))
       pcribo_leftbound <- sobj$percent_rb >= pcribo.range[1]
@@ -332,8 +338,6 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       levels(pcribo_factor)[levels(pcribo_factor) == 1] <- "in"
       levels(pcribo_factor)[levels(pcribo_factor) == 2] <- "out.right"
       print(table(pcribo_factor))
-      ## Seurat AddModuleScore
-      # sobj@meta.data$RBscore <- Seurat::AddModuleScore(object = sobj, features = list(ribo.symbols), nbin = nbin, seed = my.seed, assay = 'RNA', name = 'SCORE')@meta.data$SCORE1
       if(is.null(sobj@misc$excel$Cells_Quality$ribo_summary)) sobj@misc$excel$Cells_Quality$ribo_summary <- summary(sobj$percent_rb) else sobj@misc$excel$Final_Cells_Quality$ribo_summary <- summary(sobj$percent_rb)
     }
     ### STRESS
@@ -341,12 +345,14 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
     if (!is.null(stress.symbols)) {
       ## Manual percent
       sobj@misc$params$QC$stress.symbols = stress.symbols
-      instress <- rownames(sobj@assays$RNA@counts) %in% stress.symbols
-      sobj$percent_st <- as.vector(Matrix::colSums(sobj@assays$RNA@counts[instress,]) / sobj$nCount_RNA)
+      instress <- rownames(sobj@assays$RNA) %in% stress.symbols
+      if(table(instress)[2]>1){
+          sobj$percent_st <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[instress,]) / sobj$nCount_RNA) *100
+      }else{
+          sobj$percent_st <- as.vector(sobj@assays$RNA@layers$counts[instress,] / sobj$nCount_RNA) *100
+      }
       message('% Stress response expression :')
       print(summary(sobj$percent_st))
-      ## Seurat AddModuleScore
-      # sobj@meta.data$STscore <- Seurat::AddModuleScore(object = sobj, features = list(stress.symbols), nbin = nbin, seed = my.seed, assay = 'RNA', name = 'SCORE')@meta.data$SCORE1
       if(is.null(sobj@misc$excel$Cells_Quality$stress_summary)) sobj@misc$excel$Cells_Quality$stress_summary <- summary(sobj$percent_st) else sobj@misc$excel$Final_Cells_Quality$stress_summary <- summary(sobj$percent_st)
     }
 
@@ -359,8 +365,8 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       sobj@misc$excel$Cells_Quality$filter_cells_genes <- sum(sobj$min_features)
       sobj@misc$excel$Cells_Quality$filter_cells_genes_pct <- (sobj@misc$excel$Cells_Quality$filter_cells_genes / sobj@misc$excel$Droplet_Quality$estimated_cells) *100
     }
-    if(is.null(sobj@misc$excel$Cells_Quality$genes_per_cell_summary)) sobj@misc$excel$Cells_Quality$genes_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@counts != 0)) else sobj@misc$excel$Final_Cells_Quality$genes_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@counts != 0))
-    
+    if(is.null(sobj@misc$excel$Cells_Quality$genes_per_cell_summary)) sobj@misc$excel$Cells_Quality$genes_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@layers$counts != 0)) else sobj@misc$excel$Final_Cells_Quality$genes_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@layers$counts != 0))
+
     ### NB COUNTS
     sobj@misc$params$QC$min.counts = min.counts
     sobj$min_counts <- sobj$nCount_RNA >= min.counts
@@ -370,13 +376,11 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       sobj@misc$excel$Cells_Quality$filter_cells_counts <- sum(sobj$min_counts)
       sobj@misc$excel$Cells_Quality$filter_cells_counts_pct <- (sobj@misc$excel$Cells_Quality$filter_cells_counts / sobj@misc$excel$Droplet_Quality$estimated_cells) *100
     }
-    if(is.null(sobj@misc$excel$Cells_Quality$UMI_per_cell_summary)) sobj@misc$excel$Cells_Quality$UMI_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@counts)) else sobj@misc$excel$Final_Cells_Quality$UMI_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@counts))
+    if(is.null(sobj@misc$excel$Cells_Quality$UMI_per_cell_summary)) sobj@misc$excel$Cells_Quality$UMI_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@layers$counts)) else sobj@misc$excel$Final_Cells_Quality$UMI_per_cell_summary <- summary(Matrix::colSums(sobj@assays$RNA@layers$counts))
 
     ## Save parameters
     sobj@misc$params$QC$Rsession <- utils::capture.output(devtools::session_info())
-    ## Save packages versions
-    sobj@misc$technical_info$scater <- utils::packageVersion('scater')
-    
+
   }
   return(sobj)
 }
@@ -387,10 +391,10 @@ QC.hist <- function(sobj = NULL, assay = 'RNA', out.dir = NULL) {
     require(patchwork)
     sample.name <- Seurat::Project(sobj)
     qcplots <-list(
-      histFEAT <- ggplot2::qplot(sobj[[paste(c('nFeature', assay), collapse = '_'), drop = TRUE]], geom = "histogram", bins = 101, fill = I("white"), col = I("black"), main=paste0(paste(c('nFeature', assay), collapse = '_'), ' (>= ', sobj@misc$params$QC$min.features, " : ", length(which(sobj$min_features)), " cells)"), xlab = paste(c('nFeature', assay), collapse = '_')) + ggplot2::geom_vline(xintercept = sobj@misc$params$QC$min.features, col = "red", linetype = "dashed", size = 2) + Seurat::DarkTheme(),
-      histNC <- ggplot2::qplot(sobj[[paste(c('nCount', assay), collapse = '_'), drop = TRUE]], geom = "histogram", bins = 101, fill = I("white"), col = I("black"), main=paste0(paste(c('nCount', assay), collapse = '_'), ' (>= ', sobj@misc$params$QC$min.counts, " : ", length(which(sobj$min_counts)), " cells)"), xlab = paste(c('nCount', assay), collapse = '_')) + ggplot2::geom_vline(xintercept = sobj@misc$params$QC$min.counts, col = "red", linetype = "dashed", size = 2) + Seurat::DarkTheme(),
-      histMT <- ggplot2::qplot(sobj$percent_mt, geom = "histogram", bins = 101, fill = I("white"), col = I("black"), main=paste0("%mito (in [", sobj@misc$params$QC$pcmito.range[1], ';', sobj@misc$params$QC$pcmito.range[2], "] : ", length(which(sobj$pcmito_inrange)), " cells)"), xlab = "%mito") + ggplot2::geom_vline(xintercept=c(0.05,0.10,0.15,0.20), col = "cyan4", linetype = "dashed", size = 1) + ggplot2::geom_vline(xintercept=sobj@misc$params$QC$pcmito.range, col = "red", linetype = "dashed", size = 2) + Seurat::DarkTheme(),
-      histRB <- ggplot2::qplot(sobj$percent_rb, geom = "histogram", bins = 101, fill = I("white"), col = I("black"), main=paste0("%ribo (in [", sobj@misc$params$QC$pcribo.range[1], ';', sobj@misc$params$QC$pcribo.range[2], "] : ", length(which(sobj$pcribo_inrange)), " cells)"), xlab = "%ribo") + ggplot2::geom_vline(xintercept=sobj@misc$params$QC$pcribo.range, col = "red", linetype = "dashed", size = 2) + Seurat::DarkTheme()
+      histFEAT <- ggplot2::ggplot(data.frame(x = sobj[[paste(c('nFeature', assay), collapse = '_'), drop = TRUE]]), ggplot2::aes(x = x)) + ggplot2::geom_histogram(bins = 101, fill = "white", color = "black") + ggplot2::geom_vline(xintercept = sobj@misc$params$QC$min.features, col = "red", linetype = "dashed", linewidth = 2) + ggplot2::labs(title = paste0(paste(c("nFeature", assay), collapse = "_"), " (>= ", sobj@misc$params$QC$min.features," : ", length(which(sobj$min_features)), " cells)"), x = paste(c('nFeature', assay), collapse = '_')) + Seurat::DarkTheme(),
+      histNC <- ggplot2::ggplot(data.frame(x = sobj[[paste(c("nCount", assay), collapse = "_"), drop = TRUE]]), ggplot2::aes(x = x)) + ggplot2::geom_histogram(bins = 101, fill = "white", color = "black") + ggplot2::geom_vline(xintercept = sobj@misc$params$QC$min.counts, col = "red", linetype = "dashed", linewidth = 2) + ggplot2::labs(title = paste0(paste(c("nCount", assay), collapse = "_"), " (>= ", sobj@misc$params$QC$min.counts, " : ", length(which(sobj$min_counts)), " cells)"), x = paste(c("nCount", assay), collapse = "_")) + Seurat::DarkTheme(),
+      histMT <- ggplot2::ggplot(data.frame(x = sobj$percent_mt), ggplot2::aes(x = x)) + ggplot2::geom_histogram(bins = 101, fill = "white", color = "black") + ggplot2::geom_vline(xintercept = c(5, 10, 15, 20), col = "cyan4", linetype = "dashed", linewidth = 1) + ggplot2::geom_vline(xintercept = sobj@misc$params$QC$pcmito.range, col = "red", linetype = "dashed", linewidth = 2) + ggplot2::labs(title = paste0("%mito (in [", sobj@misc$params$QC$pcmito.range[1], ";", sobj@misc$params$QC$pcmito.range[2], "] : ", length(which(sobj$pcmito_inrange)), " cells)" ), x = "%mito") + Seurat::DarkTheme(),
+      histRB <- ggplot2::ggplot(data.frame(x = sobj$percent_rb), ggplot2::aes(x = x)) + ggplot2::geom_histogram(bins = 101, fill = "white", color = "black") + ggplot2::geom_vline(xintercept = sobj@misc$params$QC$pcribo.range, col = "red", linetype = "dashed", linewidth = 2) + ggplot2::labs( title = paste0("%ribo (in [", sobj@misc$params$QC$pcribo.range[1], ";", sobj@misc$params$QC$pcribo.range[2], "] : ", length(which(sobj$pcribo_inrange)), " cells)"), x = "%ribo") + Seurat::DarkTheme()
     )
     png(paste0(out.dir, '/', sample.name, '_QChist.png'), width = 1000, height = 1000)
     print(patchwork::wrap_plots(qcplots))
@@ -401,7 +405,7 @@ QC.hist <- function(sobj = NULL, assay = 'RNA', out.dir = NULL) {
 }
 
 ## Filter cells based on QC metrics
-cells.QC.filter <- function(sobj = NULL, min.features = 200, min.counts = 1000, pcmito.range = c(0, .1), pcribo.range = c(0, 1)) {
+cells.QC.filter <- function(sobj = NULL, min.features = 200, min.counts = 1000, pcmito.range = c(0, 10), pcribo.range = c(0, 100)) {
   if (!is.null(sobj) & all(c('nFeature_RNA', 'nCount_RNA', 'percent_mt', 'percent_rb') %in% colnames(sobj@meta.data))) {
     ## Save command
     sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("cells.QC.filter(sobj = sobj, min.features = ", min.features, ", min.counts = ", min.counts, ", pcmito.range = c(", pcmito.range[1], ",", pcmito.range[2], ") , pcribo.range = c(", pcribo.range[1], ",", pcribo.range[2], "))"))
@@ -440,6 +444,7 @@ cell.cycle.predict <- function(sobj = NULL, assay = 'RNA', cc.cyclone.file = NUL
     cc_seurat <- readRDS(cc.seurat.file)
 
     ### Seurat
+    sobj <- Seurat::NormalizeData(sobj, assay = assay, layer = "counts")
     sobj <- Seurat::CellCycleScoring(object = sobj, s.features = cc_seurat$s.genes, g2m.features = cc_seurat$g2m.genes, assay = assay, nbin = nbin, seed = my.seed)
     sobj$Seurat.S.Score <- sobj$S.Score
     sobj$Seurat.G2M.Score <- sobj$G2M.Score
@@ -492,7 +497,7 @@ features.filter <- function(sobj = NULL, min.cells = 5)  {
       ## Filer processing
       message('Cell expression matrix dimensions (unfiltered) :')
       print(dim(sobj))
-      featureskeep <- which(apply(sobj@assays$RNA@counts,1,function(x){length(which(x>0))}) >= min.cells)
+      featureskeep <- which(apply(sobj@assays$RNA@layers$counts,1,function(x){length(which(x>0))}) >= min.cells)
       sobj <- sobj[featureskeep,]
       message('Cell expression matrix dimensions (filtered) :')
       print(dim(sobj))
@@ -526,18 +531,35 @@ find.doublets <- function(sobj = NULL, assay = 'RNA') {
 
     # scds
     set.seed(my.seed)
-    sobj$hybrid_score <- scds::cxds_bcds_hybrid(Seurat::as.SingleCellExperiment(sobj, assay = assay))$hybrid_score
-    sobj$hybrid_score.class <- unname(sobj$hybrid_score > 1)
-    message('scds-hybrid doublets :')
-    print(table(sobj$hybrid_score.class))
+    sobj <- tryCatch( {
+      sobj$scds.class <- scds::cxds_bcds_hybrid(Seurat::as.SingleCellExperiment(sobj, assay = assay), estNdbl = TRUE)$hybrid_call
+      sobj@misc$params$doublets$scds_method <- "hybrid"
+      sobj
+    },  error=function(error_message) {
+      message(paste0("Error in scds hybrid doublets identification : ", error_message))
+      if (ncol(sobj)<1000) message("There is probably not enough cells for the estimation by scds hybrid method.")
+      message("Try with cxds only.")
+      tryCatch( {
+        sobj$scds.class <- scds::cxds(Seurat::as.SingleCellExperiment(sobj, assay = assay), estNdbl = TRUE)$cxds_call
+        message("Identification by cxds only successful!")
+        sobj@misc$params$doublets$scds_method <- "cxds"
+        sobj
+      },  error=function(error_message) {
+        message(paste0("Error in scds cxds doublets identification : ", error_message))
+        stop("Launch again the pipieline without scds as a doublet finder tool.")
+      } )
+    } )
+    
+    message('scds doublets :')
+    print(table(sobj$scds.class))
 
     ## union scDblFinder & scds
-    sobj$doublets_consensus.class <- sobj$scDblFinder.class | sobj$hybrid_score.class
+    sobj$doublets_consensus.class <- sobj$scDblFinder.class | sobj$scds.class
     message('Consensus doublets :')
     print(table(sobj$doublets_consensus.class))
     sobj@misc$excel$After_QC_cells_feature_filtering$estim_doublets <- sum(sobj$doublets_consensus.class)
     sobj@misc$excel$After_QC_cells_feature_filtering$estim_doublets_pct <- (sobj@misc$excel$After_QC_cells_feature_filtering$estim_doublets / ncol(sobj)) *100
-    sobj@misc$doublets <- list(scDblFinder = length(which(sobj$scDblFinder.class)), scds_hybrid = length(which(sobj$hybrid_score.class)), union = length(which(sobj$doublets_consensus.class)))
+    sobj@misc$doublets <- list(scDblFinder = length(which(sobj$scDblFinder.class)), scds = length(which(sobj$scds.class)), union = length(which(sobj$doublets_consensus.class)))
 
     ## Save parameters
     sobj@misc$params$doublets$Rsession <- utils::capture.output(devtools::session_info())
@@ -549,7 +571,7 @@ find.doublets <- function(sobj = NULL, assay = 'RNA') {
 }
 
 ## Filtering doublets
-filter.doublets <- function(sobj = NULL, method = "all") { ## Method can be 'both', 'scDblFinder', 'scds'
+filter.doublets <- function(sobj = NULL, method = "all") { ## Method can be 'all', 'scDblFinder', 'scds'
   if (!is.null(sobj) && method %in% c('all', 'scDblFinder', 'scds')) {
     ## Save command
     sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("filter.doublets(sobj = sobj, method = ", method, ")"))
@@ -558,7 +580,7 @@ filter.doublets <- function(sobj = NULL, method = "all") { ## Method can be 'bot
     print(dim(sobj))
     if (method == 'all') sobj <- sobj[, !sobj$doublets_consensus.class]
     if (method == 'scDblFinder') sobj <- sobj[, !sobj$scDblFinder.class]
-    if (method == 'scds') sobj <- sobj[, !sobj$hybrid_score.class]
+    if (method == 'scds') sobj <- sobj[, !sobj$scds.class]
     message('Cell expression matrix dimensions (filtered) :')
     print(dim(sobj))
     ## Save parameters
@@ -576,8 +598,8 @@ tag.ctrl.genes <- function(sobj = NULL, ctrl.genes = c("GAPDH"), ctrl.min.counts
     sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("tag.ctrl.genes(sobj = sobj, ctrl.genes = c(", paste(ctrl.genes, collapse = ","), ") , ctrl.min.counts = ", ctrl.min.counts, ", assay = ", assay, ")"))
 
     if (length(ctrl.genes) > 0) {
-      ok.ctrl <- ctrl.genes %in% rownames(sobj@assays[[assay]]@counts)
-      if (any(ok.ctrl)) for (ctrlg in ctrl.genes[ctrl.genes %in% rownames(sobj@assays[[assay]]@counts)]) suppressMessages(sobj[[paste0('ctrl_', assay, '_', ctrlg)]] <- sobj@assays[[assay]]@data[rownames(sobj@assays[[assay]]@data) == ctrlg] >= ctrl.min.counts)
+      ok.ctrl <- ctrl.genes %in% rownames(sob[[assay]])
+      if (any(ok.ctrl)) for (ctrlg in ctrl.genes[ctrl.genes %in% rownames(sobj[[assay]])]) suppressMessages(sobj[[paste0('ctrl_', assay, '_', ctrlg)]] <- Seurat::GetAssayData(sobj, assay = assay, layer = "data")[rownames(sobj[[assay]]) == ctrlg] >= ctrl.min.counts)
 
       ## Save parameters
       sobj@misc$params$ctrl.genes <- ctrl.genes
@@ -588,41 +610,65 @@ tag.ctrl.genes <- function(sobj = NULL, ctrl.genes = c("GAPDH"), ctrl.min.counts
 }
 
 ## Normalization (Seurat: SCTransform ou LogNormalize ou CLR)
-sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = "SCTransform", features.n = 3000, vtr.biases = NULL) {
+sc.normalization <- function(sobj = NULL, assay = 'RNA', normalization.method = "SCTransform", features.n = 3000, vtr.biases = NULL, regex.genes.to.remove.from.HVG = NULL, HVG.FindVariableFeaturesMix = FALSE) {
   if (!is.null(sobj)) {
     if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
     if(!is.null(vtr.biases)) vtr.biases <- sort(vtr.biases)
 
     ## Save command
-    sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("sc.normalization(sobj = sobj, assay = ", assay, ", normalization.method = ", normalization.method, ", features.n = ", features.n, ", vtr.biases = ", if(is.null(vtr.biases)) "NULL" else paste0("c(", paste(vtr.biases, collapse = ","),")"), ")"))
+    sobj@misc$pipeline_commands <- c(sobj@misc$pipeline_commands, paste0("sc.normalization(sobj = sobj, assay = ", assay, ", normalization.method = ", normalization.method, ", features.n = ", features.n, ", vtr.biases = ", if(is.null(vtr.biases)) "NULL" else paste0("c(", paste(vtr.biases, collapse = ","),")"), ", regex.genes.to.remove.from.HVG = ", if(is.null(regex.genes.to.remove.from.HVG)) "NULL" else paste0("'", regex.genes.to.remove.from.HVG, "'"),", HVG.FindVariableFeaturesMix = ", if(is.null(HVG.FindVariableFeaturesMix)) "NULL" else paste0("'", HVG.FindVariableFeaturesMix, "'"),")"))
 
     ## Restoring seed and set assay.ori
     my.seed <- sobj@misc$params$seed
     assay.ori <- assay
-
+    
+    ## Normalization
+    sobj <- sc.normalization.funct(sobj = sobj, assay = assay, normalization.method = normalization.method, features.n = features.n, vtr.biases = vtr.biases, seed.use = my.seed, HVG.FindVariableFeaturesMix = HVG.FindVariableFeaturesMix)
     if (toupper(normalization.method) == toupper("SCTransform")) {
-      sobj <- suppressWarnings(Seurat::SCTransform(object = sobj, assay = assay, seed.use = my.seed, variable.features.n = features.n, vars.to.regress = vtr.biases, return.only.var.genes = TRUE))
       assay <- 'SCT'
-    } else if (toupper(normalization.method) == toupper("LogNormalize")) {
-      sobj <- Seurat::NormalizeData(sobj, normalization.method = 'LogNormalize', assay = assay)
-      sobj <- Seurat::FindVariableFeatures(sobj, assay = assay, nfeatures = features.n)
-    } else if (toupper(normalization.method) == toupper("CLR")) {
-      sobj <- Seurat::NormalizeData(sobj, normalization.method = 'CLR', assay = assay)
-      sobj <- Seurat::FindVariableFeatures(sobj, assay = assay, nfeatures = features.n)
-    } else stop('Unknown or unsupported normalization method !')
+    }
+    ## Remove some specific genes of sobj to not identify them as HVG
+    if (!is.null(regex.genes.to.remove.from.HVG)){
+        #identify genes to remove
+        genes_to_exclude <- grep(regex.genes.to.remove.from.HVG, rownames(sobj), value = TRUE) #ex: regex.genes.to.remove.from.HVG = "^Igkv"
+        print("These genes will be removed:")
+        print(genes_to_exclude)
+        # Remove unwanted genes from HVG
+        Seurat::VariableFeatures(sobj) <- setdiff(Seurat::VariableFeatures(sobj), genes_to_exclude)
+    }
 
     ## Save parameters
-    sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = normalization.method, assay.ori = assay.ori, assay.out = assay, features.used = features.n)
-    sobj@assays[[assay]]@misc$scaling = list(vtr.biases = if(is.null(vtr.biases)) NA else vtr.biases)
+    sobj@assays[[assay]]@misc$params$normalization <- list(normalization.method = normalization.method, assay.ori = assay.ori, assay.out = assay, features.used = features.n, regex.genes.to.remove.from.HVG = if (!is.null(regex.genes.to.remove.from.HVG)) regex.genes.to.remove.from.HVG else 'NA', HVG.FindVariableFeaturesMix = if (!is.null(HVG.FindVariableFeaturesMix)) HVG.FindVariableFeaturesMix else 'FALSE')
+    sobj@assays[[assay]]@misc$scaling <- list(vtr.biases = if(is.null(vtr.biases)) NA else vtr.biases)
     sobj@misc$params$normalization <- c(sobj@assays[[assay]]@misc$params$normalization, sobj@assays[[assay]]@misc$scaling)
-
     sobj@misc$params$normalization$Rsession <- utils::capture.output(devtools::session_info())
   }
   return(sobj)
 }
 
+sc.normalization.funct <- function(sobj = NULL, assay = 'RNA', normalization.method = "SCTransform", features.n = 3000, vtr.biases = NULL, seed.use = NULL, HVG.FindVariableFeaturesMix = FALSE) {
+    if (toupper(normalization.method) == toupper("SCTransform")) {
+      sobj <- suppressWarnings(Seurat::SCTransform(object = sobj, assay = assay, seed.use = seed.use, variable.features.n = features.n, vars.to.regress = vtr.biases, return.only.var.genes = TRUE))
+      assay <- 'SCT'
+    } else if (toupper(normalization.method) == toupper("LogNormalize")) {
+      sobj <- Seurat::NormalizeData(sobj, normalization.method = 'LogNormalize', assay = assay)
+      if(HVG.FindVariableFeaturesMix){
+        sobj <- mixhvg::FindVariableFeaturesMix(sobj, method.names = c("scran", "scran_pos", "seuratv1"), nfeatures = features.n)
+        sobj@misc$technical_info$mixhvg <- utils::packageVersion('mixhvg')
+      }else sobj <- Seurat::FindVariableFeatures(sobj, assay = assay, nfeatures = features.n)
+    } else if (toupper(normalization.method) == toupper("CLR")) {
+      sobj <- Seurat::NormalizeData(sobj, normalization.method = 'CLR', assay = assay)
+      if(HVG.FindVariableFeaturesMix){
+        sobj <- mixhvg::FindVariableFeaturesMix(sobj, method.names = c("scran", "scran_pos", "seuratv1"), nfeatures = features.n)
+        sobj@misc$technical_info$mixhvg <- utils::packageVersion('mixhvg')
+      }else sobj <- Seurat::FindVariableFeatures(sobj, assay = assay, nfeatures = features.n)
+    } else stop('Unknown or unsupported normalization method !')
+
+    return(sobj)
+}
+
 ## Dimensions reduction (now, character or factors are converted to a model.matrix)
-dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 'RNA', max.dims = 100L, vtr.biases = NULL, vtr.scale = TRUE, red.name = NULL) {
+dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 'RNA', max.dims = 100L, vtr.biases = NULL, vtr.scale = TRUE, red.name = NULL, del.scale.data = TRUE) {
   raw.methods <- c('scbfa', 'bpca')
   all.methods <- c(raw.methods, 'pca', 'mds', 'ica')
   if (is.null(sobj)) stop('No Seurat object provided !')
@@ -663,25 +709,10 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
     ## If vtr.biases is called, stop !
     if(!is.null(vtr.biases)) stop("vtr.biases can only be called when using any reduction method out of : ", paste(raw.methods, collapse = ', '))
     ## Scaling if necessary
-    if (sum(dim(sobj@assays[[assay]]@scale.data)) < 3) {
-      scale.vtr.all <- NULL
-      if(!any(is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases))) {
-        message(paste0("Found scaling coveriate(s) '", paste(sobj@assays[[assay]]@misc$scaling$vtr.biases, collapse = "', '"), "' to regress from normalization ..."))
-        scale.vtr.all <- c(scale.vtr.all, sobj@assays[[assay]]@misc$scaling$vtr.biases)
-      }
-      assay.ori <- Seurat::DefaultAssay(sobj)
-      Seurat::DefaultAssay(sobj) <- assay
-      if(assay == 'SCT') {
-        sobj <- Seurat::ScaleData(object = sobj,
-                                  vars.to.regress = scale.vtr.all,
-                                  do.scale = FALSE, scale.max = Inf, block.size = 750)
-      } else {
-        sobj <- Seurat::ScaleData(object = sobj,
-                                  vars.to.regress = scale.vtr.all,
-                                  do.scale = TRUE, scale.max = 10, block.size = 1000)
-      }
-      Seurat::DefaultAssay(sobj) <- assay.ori
-    }
+    if(!any(is.na(sobj@assays[[assay]]@misc$scaling$vtr.biases))) {
+          vtr.biases_all <- sobj@assays[[assay]]@misc$scaling$vtr.biases
+    } else vtr.biases_all <- NULL
+    sobj <- retrive_scale.data(sobj, assay = assay, vars.to.regress = vtr.biases_all)
   }
 
   if (reduction.method == 'pca') {
@@ -694,7 +725,7 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
     sobj@assays[[assay]]@misc$params$reductions$vtr.scale <- sobj@reductions[[red.name]]@misc$vtr.scale <- NA
   } else if (reduction.method == 'mds') {
     set.seed(my.seed)
-    mds.res <- scater::calculateMDS(x = sobj@assays[[assay]]@scale.data, ncomponents = max.dims)
+    mds.res <- scater::calculateMDS(x = Seurat::GetAssayData(sobj, assay = assay, layer = "scale.data"), ncomponents = max.dims)
     sobj@reductions[[red.name]] <- Seurat::CreateDimReducObject(embeddings = mds.res, loadings = matrix(nrow = 0, ncol = 0), assay = assay, stdev = matrixStats::colSds(mds.res), key = paste0(red.name, '_'), misc = list())
     sobj@assays[[assay]]@misc$params$reductions$vtr.biases <- sobj@reductions[[red.name]]@misc$vtr.biases <- NA
     sobj@assays[[assay]]@misc$params$reductions$vtr.scale <- sobj@reductions[[red.name]]@misc$vtr.scale <- NA
@@ -702,7 +733,7 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
     sobj@misc$technical_info$scater <- utils::packageVersion('scater')
   } else if (reduction.method == 'bpca') {
     set.seed(my.seed)
-    bpca.res <- scBFA::BinaryPCA(scData = as.matrix(sobj@assays[[assay]]@counts[sobj@assays[[assay]]@var.features,]), X = X)
+    bpca.res <- scBFA::BinaryPCA(scData = as.matrix(Seurat::GetAssayData(sobj, assay = assay, layer = "count")[sobj@assays[[assay]]@var.features,]), X = X)
     colnames(bpca.res$x) <- paste0('BPCA_', 1L:features.n)
     colnames(bpca.res$rotation) <- paste0('BPCA_', 1L:features.n)
     sobj@reductions[[red.name]] <- Seurat::CreateDimReducObject(embeddings = bpca.res$x, loadings = bpca.res$rotation, assay = assay, stdev = bpca.res$sdev, key = paste0(red.name, '_'), misc = list(center = bpca.res$center, scale = bpca.res$scale))
@@ -717,8 +748,8 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
 
   } else if (reduction.method == 'scbfa') {
     set.seed(my.seed)
-    bfa.res <- scBFA::scBFA(scData = as.matrix(sobj@assays[[assay]]@counts[sobj@assays[[assay]]@var.features,]), numFactors = max.dims, X = X)
-    dimnames(bfa.res$ZZ) <- list(colnames(sobj@assays[[assay]]@counts), paste0('SCBFA_', 1L:max.dims))
+    bfa.res <- scBFA::scBFA(scData = as.matrix(Seurat::GetAssayData(sobj, assay = assay, layer = "count")[sobj@assays[[assay]]@var.features,]), numFactors = max.dims, X = X)
+    dimnames(bfa.res$ZZ) <- list(colnames(sobj[[assay]]), paste0('SCBFA_', 1L:max.dims))
     dimnames(bfa.res$AA) <- list(sobj@assays[[assay]]@var.features, paste0('SCBFA_', 1L:max.dims))
     sobj@reductions[[red.name]] <- Seurat::CreateDimReducObject(embeddings = bfa.res$ZZ, loadings = bfa.res$AA, assay = assay, stdev = matrixStats::colSds(bfa.res$ZZ), key = paste0(red.name, '_'), misc = list())
     ## Save parameters
@@ -734,7 +765,7 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
   } else stop("Unknown reduction method !")
 
   ## Deleting @scale.data
-  sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
+  if(del.scale.data) sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = TRUE)
 
   ## Filling @misc
   sobj@reductions[[red.name]]@misc$from.assay <- assay
@@ -786,11 +817,13 @@ decontx.process <- function(sobj, assay = 'RNA', idents = NULL, ...) {
   sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("decontx.process(sobj = sobj, assay = ", assay, ", idents = ", idents, ", ...)"))
 
   ## Processing
-  my.counts = as.matrix(sobj@assays[[assay]]@counts)
+  my.counts = as.matrix(Seurat::GetAssayData(sobj, assay = assay, layer = "counts"))
   mode(my.counts) = "integer"
   my.z = as.factor(as.character(as.numeric(sobj@meta.data[[idents]])))
   dx.res <- celda::decontX(counts = my.counts, z = my.z, seed = sobj@misc$params$seed, ...)
-  sobj@assays[[assay]]@counts <- as(dx.res$resList$estNativeCounts, "dgCMatrix")
+  if ("layers" %in% slotNames(sobj@assays[[assay]])) { # layers: RNA
+    sobj@assays[[assay]]@layers$counts <- as(dx.res$resList$estNativeCounts, "dgCMatrix")
+  }else sobj@assays[[assay]]@counts <- as(dx.res$resList$estNativeCounts, "dgCMatrix") # SCT
 
   ## Cleaning
   rm(my.counts, dx.res, my.z)
@@ -812,7 +845,6 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
   if (!(reduction %in% names(sobj@reductions))) stop(paste0('Reduction "', reduction, '" not present in the provided Seurat object !'))
-  if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
   assay <- sobj@reductions[[reduction]]@misc$from.assay
   if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
   sample.name <- Seurat::Project(sobj)
@@ -821,30 +853,18 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
   if(slot == 'scale.data' && length(eval.markers) > 0 && (assay == "integrated")) stop("scale.data matrix can't be recomputed after integration by seurat")
   if(slot == 'scale.data' && length(eval.markers) > 0 && (!is.null(sobj@misc$params$integration$method)) && sobj@misc$params$integration$method == 'Liger') stop("scale.data matrix can't be recomputed after integration by Liger")
   if(slot == 'scale.data' && length(eval.markers) > 0 && (!is.null(sobj@misc$params$group$Keep.Norm)) && sobj@misc$params$group$Keep.Norm == 'TRUE') stop("scale.data matrix can't be recomputed after grouping data if normalization is kept.")
-  
+
   ## Regenerate full scaled matrix if eval.markers are available
   if (!is.null(eval.markers)) {
-    eval.markers <- sort(eval.markers[eval.markers %in% rownames(sobj@assays[[assay]]@data)])
+    eval.markers <- sort(eval.markers[eval.markers %in% rownames(sobj[[assay]])])
     if ((slot == 'scale.data') && (length(eval.markers) > 0)) {
       ## Scaling if necessary
-      if (sum(dim(sobj@assays[[assay]]@scale.data)) < 3) {
-        scale.vtr <- NULL
-        if(!is.na(sobj@reductions[[reduction]]@misc$vtr.biases)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$vtr.biases)
-        if("harmony" %in% names(sobj@reductions[[reduction]]@misc)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$harmony$vtr.biases)
-  
-        if (length(scale.vtr) > 0) future::plan("multiprocess", workers = nthreads, gc = TRUE)
-        if (assay == 'SCT') {
-          sobj <- Seurat::ScaleData(object = sobj,
-                                    vars.to.regress = scale.vtr,
-                                    do.scale = FALSE, scale.max = Inf, block.size = 750)
-        }
-        else {
-          sobj <- Seurat::ScaleData(object = sobj,
-                                    vars.to.regress = scale.vtr,
-                                    do.scale = TRUE, scale.max = 10, block.size = 1000)
-        }
-        if (length(scale.vtr) > 0) future:::ClusterRegistry("stop")
-      }
+      scale.vtr <- NULL
+      if(!is.na(sobj@reductions[[reduction]]@misc$vtr.biases)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$vtr.biases)
+      if("harmony" %in% names(sobj@reductions[[reduction]]@misc)) scale.vtr <- c(scale.vtr, sobj@reductions[[reduction]]@misc$harmony$vtr.biases)
+      if (length(scale.vtr) > 0) future::plan("multiprocess", workers = nthreads, gc = TRUE)
+      sobj <- retrive_scale.data(sobj, assay = assay, vars.to.regress = scale.vtr)
+      if (length(scale.vtr) > 0) future:::ClusterRegistry("stop")
     }
   }
 
@@ -860,7 +880,7 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
   }
   ## Calculation and plotting of eval.markers correlations
   if (!is.null(eval.markers)) {
-    mydata <- slot(sobj@assays[[assay]], slot)
+    mydata <- Seurat::GetAssayData(sobj, assay =assay, layer = slot)
     for(mym in seq_along(eval.markers)) {
       corvec <- vapply(seq_len(ndims), function(k) { (abs(cor(sobj@reductions[[reduction]]@cell.embeddings[,k], mydata[rownames(mydata) == eval.markers[mym],], method = cor.method))) }, .1)
       lines(corvec, type = "l", ylim = c(0,1), col = 1, lwd = 5, lty = mym+1L)
@@ -872,7 +892,14 @@ dimensions.eval <- function(sobj = NULL, reduction = 'RNA_scbfa', cor.method = '
 }
 
 ## Evaluating Louvain clusters (pca dims / resolution) (multithreading version)
-clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = seq.int(3,99, 2), resvec = seq(.1,1.2,.1), out.dir = NULL, solo.pt.size = 2, BPPARAM = BiocParallel::SerialParam()) {
+clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = seq.int(3,99, 2), resvec = seq(.1,1.2,.1), out.dir = NULL, solo.pt.size = 2, nthreads = 1) {
+  RcppParallel::setThreadOptions(numThreads = 1)      #PCA, scaling
+  future::plan("sequential")                          #FindMarkers, SCTransform, integration
+  options(future.globals.maxSize = 1000 * 1024^3)     #for a Seurat object of 1000Go (avoid error like: "Error: The total size of the global variables exported to the workers; for future expression (‘globals’) exceeds the maximum allowed size.")
+  options(future.rng.onMisuse = "ignore")             #remove useless warnings
+  options(SeuratCommand.umap.threads = nthreads)      #for RunUMAP() (replace the n.thread option of the function)
+  BPPARAM <- create.parallel.instance(nthreads = nthreads) # for foreach
+
   if (is.null(out.dir)) stop('No output dir provided !')
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
@@ -882,11 +909,11 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
   if(!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist !'))
   if (max(dimsvec) > ncol(sobj@reductions[[reduction]]@cell.embeddings)) stop(paste0('Max dimsvec requested is ', max(dimsvec), ' whereas max dimension in "', reduction, '" reduction is ', ncol(sobj@reductions[[reduction]]@cell.embeddings)))
   if (1 %in% dimsvec) stop("One should not request a reduction to a single dimension !")
-  
+
   ## Restoring seed and sample name from within the object
   my.seed <- sobj@misc$params$seed
   sample.name <- Seurat::Project(sobj)
-  
+
   ## Create output dir
   clustree.dir <- paste0(out.dir, "/clustree_", reduction, '/')
   umaps.clustree.dir <- paste0(clustree.dir, "/uMAPs/")
@@ -897,63 +924,60 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
   dir.create(res.clustree.dir, recursive = TRUE, showWarnings = FALSE)
   require(ggplot2)
   require(clustree)
-  
+  require(patchwork)
+
   ## Parameters
   plot.pix <- 600
-  # `%dopar%` <- foreach::"%dopar%"
-  `%mydo%` <- if (BiocParallel::bpworkers(BPPARAM) > 1) foreach::"%dopar%" else foreach::"%do%"
+  `%mydo%` <- if (nthreads > 1) foreach::"%dopar%" else foreach::"%do%" #"%dopar%" + seurat multi-threading = freezing => remove %dopart%
   `%do%` <- foreach::"%do%"
-  
+
   ## Builiding minimal Seurat object (for memory sake)
   miniobj <- sobj
   ### Removing other assays
   Seurat::DefaultAssay(miniobj) <- assay
-  other.assays <- names(miniobj@assays)[names(miniobj@assays) != assay]
-  if (length(other.assays) > 0) miniobj@assays[other.assays] <- NULL
-  ### Removing scale.data slot
-  miniobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
-  ### Removing misc
-  miniobj@assays[[assay]]@misc <- list()
+  miniobj@assays <- miniobj@assays[assay]
   ### Removing other reductions
-  other.reductions <- names(miniobj@reductions)[names(miniobj@reductions) != reduction]
-  if (length(other.reductions) > 0) miniobj@reductions[other.reductions] <- NULL
-  ### Slimming other slots
+  miniobj@reductions <- miniobj@reductions[reduction]
+  # Remove heavy matrices
+  miniobj <- reset_data_matrix(miniobj, assay = assay, data = "counts", to_matrix = TRUE)
+  miniobj <- reset_data_matrix(miniobj, assay = assay, data = "scale.data", to_matrix = TRUE)
+  ### Removing misc and commands
+  miniobj@assays[[assay]]@misc <- list()
   miniobj@commands <- miniobj@misc <- list()
-  require(Matrix)
-  miniobj@assays[[assay]]@counts <- new("dgCMatrix")
-  
-  ## Purging putative residues from a former run
+  ### Purging putative residues from a former run
   miniobj@meta.data[, grep(colnames(miniobj@meta.data), pattern = "seurat_clusters_LE_")] <- NULL
+  ### Cleaning
   rm(sobj)
-  gc()
-  
+  gc(verbose = FALSE)
+
   ## Reordering dimsvec if needed (as higher dims are longer to compute)
   if (which.max(dimsvec) != 1) dimsvec <- sort(dimsvec, decreasing = TRUE)
-  
-  resclust.all <- foreach::foreach(my.dims = dimsvec, .combine = "cbind", .inorder = FALSE, .errorhandling = "stop", .packages = c("Seurat", "ggplot2")) %mydo% {
-    
+
+  resclust.all <- foreach::foreach(my.dims = dimsvec, .combine = "cbind", .inorder = FALSE, .errorhandling = "stop", .packages = c("Seurat", "ggplot2")) %do% { #%do%
+
     miniobj@graphs <- list()
     message(paste0("Dimensions 1 to ", my.dims))
-    suppressMessages(miniobj <- Seurat::FindNeighbors(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction))
+    set.seed(my.seed)
     
+    suppressMessages(miniobj <- Seurat::FindNeighbors(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction))
+    umap.name <- paste(c(reduction, my.dims, 'umap'), collapse = '_')
+    miniobj <- Seurat::RunUMAP(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction, seed.use = my.seed, reduction.name = umap.name)
+    miniobj@reductions[[umap.name]]@misc$from.reduction <- reduction
+    technical.plot(sobj = miniobj, umap.name = umap.name, out.dir = clustree.dir, multi.pt.size = solo.pt.size, end.file.name = paste0("_dims", my.dims), only.ALL.plot = TRUE)
+
     resloop = list()
-    resloop <- foreach::foreach(my.res = resvec, .inorder = FALSE, .errorhandling = "stop", .noexport = objects()) %do% {
-      
+    resloop <- foreach::foreach(my.res = resvec, .inorder = FALSE, .errorhandling = "stop", .noexport = objects()) %mydo% {
+
       message(paste0("Testing resolution ", format(my.res, digits=2, nsmall=1, decimal.mark="."), " ..."))
-      
+
       miniobj <- Seurat::FindClusters(object = miniobj, random.seed = my.seed, resolution = my.res, graph.name = paste0(assay, '_snn'))
-      miniobj <- Seurat::RunUMAP(object = miniobj, assay = assay, dims = 1L:my.dims, reduction = reduction, seed.use = my.seed, reduction.name = paste(c(reduction, my.dims, 'umap'), collapse = '_'))
-      resdim.plot <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = miniobj, reduction = paste(c(reduction, my.dims, 'umap'), collapse = '_'), pt.size = solo.pt.size) + ggplot2::ggtitle(paste0(toupper(reduction), " dims =  ", my.dims, " ; resolution = ", format(my.res, digits=2, nsmall=1, decimal.mark="."))) + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
+      resdim.plot <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = miniobj, reduction = umap.name, pt.size = solo.pt.size) + ggplot2::ggtitle(paste0(toupper(reduction), " dims =  ", my.dims, " ; resolution = ", format(my.res, digits=2, nsmall=1, decimal.mark="."))) + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
       
-      #plot biases on each umap
-      umap.name <- paste(c(reduction, my.dims, 'umap'), collapse = '_')
-      miniobj@misc$ident2reduction[["seurat_clusters"]] <- umap.name
-      miniobj@reductions[[umap.name]]@misc$from.reduction <- reduction
-      technical.plot(sobj = miniobj, ident = "seurat_clusters", out.dir = clustree.dir, multi.pt.size = 2, end.file.name = paste0("_dims", my.dims,"_res",my.res), only.ALL.plot = TRUE)
+      gc(verbose = FALSE)
       
       return(list(resplot = resdim.plot, clusters = miniobj$seurat_clusters))
     }
-    
+
     ## Decomposing resloop
     resplots <- unlist(resloop, recursive = FALSE)[seq.int(1, length(resloop)*2, 2)]
     resclust <- as.data.frame(unlist(resloop, recursive = FALSE)[seq.int(2, length(resloop)*2, 2)])
@@ -961,29 +985,29 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
     rm(resloop)
     colnames(resclust) <- c(paste0(paste0("seurat_clusters_LE_", reduction, my.dims, "_res", format(resvec, digits=2, nsmall=1, decimal.mark="."))), paste0(paste0("seurat_clusters_LE_res", format(resvec, digits=2, nsmall=1, decimal.mark="."), "_", reduction, my.dims)))
     miniobj@meta.data <- cbind(miniobj@meta.data, resclust)
-    
+
     grid.xy <- grid.scalers(length(resplots))
     png(paste0(umaps.clustree.dir, '/', sample.name, '_uMAPs_', reduction, my.dims, '_ALLres.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
     print(patchwork::wrap_plots(resplots) + patchwork::plot_layout(ncol = grid.xy[1]))
     dev.off()
-    
+
     rm(resplots)
-    
+
     if (length(resvec) > 1) {
       cres <- clustree::clustree(subset(miniobj@meta.data, select = grepl(paste0("seurat_clusters_LE_", reduction, my.dims, "_res"), names(miniobj@meta.data))), prefix = paste0("seurat_clusters_LE_", reduction, my.dims, "_res"))
       png(paste0(pca.clustree.dir, '/', sample.name, '_', reduction, my.dims, '.png'), width = 800, height = 1000)
       print(cres + ggplot2::ggtitle(paste0(sample.name, ', ', toupper(reduction), ' = ', my.dims)))
       dev.off()
     }
-    
+
     gc(verbose = FALSE)
-    
+
     return(resclust)
   }
   miniobj@meta.data[, grep(colnames(miniobj@meta.data), pattern = "seurat_clusters_LE_")] <- NULL
   miniobj@meta.data <- cbind(miniobj@meta.data, resclust.all)
   rm(resclust.all)
-  
+
   for (my.res in resvec) {
     if (length(dimsvec) > 1) {
       cres <- clustree::clustree(miniobj, prefix = paste0("seurat_clusters_LE_res", format(my.res, digits=2, nsmall=1, decimal.mark="."), "_", reduction))
@@ -992,7 +1016,7 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
       dev.off()
     }
   }
-  
+
   rm(miniobj)
   gc(verbose = FALSE)
 }
@@ -1029,19 +1053,26 @@ louvain.cluster <- function(sobj = NULL, reduction = 'RNA_scbfa', max.dim = 100L
   Seurat::DefaultAssay(sobj) <- ori.assay
 
   ## Run UMAP
-  sobj <- Seurat::RunUMAP(object = sobj, assay = assay, dims = 1L:max.dim, reduction = reduction, graph.name = paste0(paste(c(reduction, max.dim), collapse = '.')), reduction.name = paste(c(reduction, max.dim, 'umap'), collapse = "_"), reduction.key = tolower(paste0(reduction, max.dim, 'umap_')), seed.use = my.seed)
-  sobj <- Seurat::RunUMAP(object = sobj, assay = assay, dims = 1L:max.dim, reduction = reduction, n.components = 3L, graph.name = paste0(reduction, '_snn'), reduction.name = paste(c(reduction, max.dim, 'umap3d'), collapse = "_"), reduction.key = tolower(paste0(reduction, max.dim, 'umap3d_')), seed.use = my.seed)
+  sobj <- Seurat::RunUMAP(object = sobj, assay = assay, dims = 1L:max.dim, reduction = reduction, reduction.name = paste(c(reduction, max.dim, 'umap'), collapse = "_"), reduction.key = tolower(paste0(sub("_","",reduction), max.dim, 'umap_')), seed.use = my.seed)
+  sobj <- Seurat::RunUMAP(object = sobj, assay = assay, dims = 1L:max.dim, reduction = reduction, n.components = 3L, reduction.name = paste(c(reduction, max.dim, 'umap3d'), collapse = "_"), reduction.key = tolower(paste0(sub("_","",reduction), max.dim, 'umap3d_')), seed.use = my.seed)
 
   if (!is.null(out.dir)) {
-    png(paste0(out.dir, '/', paste0(c(sample.name, reduction, 'uMAP', 'dim'), collapse = "_"), max.dim, "_res", resolution, '.png'), width = 1000, height = 1000)
-    print(Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = paste(c(reduction, max.dim, 'umap'), collapse = "_"), pt.size = solo.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold"))
+    png(paste0(out.dir, '/', paste0(c(sample.name, reduction, 'uMAP', 'dim'), collapse = "_"), max.dim, "_res", resolution, '.png'), width = 700, height = 700)
+    print(Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = paste(c(reduction, max.dim, 'umap'), collapse = "_"), pt.size = solo.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*2, repel = FALSE, color = "white", fontface = "bold"))
+    dev.off()
+    dir.create(path = paste0(out.dir,"/umap_display_modes/"), showWarnings = FALSE)
+    png(paste0(out.dir, '/umap_display_modes/', paste0(c(sample.name, reduction, 'uMAP', 'dim'), collapse = "_"), max.dim, "_res", resolution, '_white.png'), width = 700, height = 700)
+    print(Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = paste(c(reduction, max.dim, 'umap'), collapse = "_"), pt.size = solo.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)"), id = "ident", size = solo.pt.size*2, repel = FALSE, color = "black", fontface = "bold"))
+    dev.off()
+    png(paste0(out.dir, '/umap_display_modes/', paste0(c(sample.name, reduction, 'uMAP', 'dim'), collapse = "_"), max.dim, "_res", resolution, '_white_unlabelled.png'), width = 700, height = 700)
+    print(Seurat::DimPlot(object = sobj, reduction = paste(c(reduction, max.dim, 'umap'), collapse = "_"), pt.size = solo.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)"))
     dev.off()
     u3dlist <- list(
       Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = paste(c(reduction, max.dim, 'umap3d'), collapse = "_"), pt.size = solo.pt.size, dims = c(1,2)) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold"),
       Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = paste(c(reduction, max.dim, 'umap3d'), collapse = "_"), pt.size = solo.pt.size, dims = c(1,3)) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold"),
       Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = paste(c(reduction, max.dim, 'umap3d'), collapse = "_"), pt.size = solo.pt.size, dims = c(2,3)) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = solo.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
     )
-    png(paste0(out.dir, '/', paste0(c(sample.name, reduction, 'uMAP3d', 'dim'), collapse = "_"), max.dim, "_res", resolution, '.png'), width = 2000, height = 2000)
+    png(paste0(out.dir, '/umap_display_modes/', paste0(c(sample.name, reduction, 'uMAP3d', 'dim'), collapse = "_"), max.dim, "_res", resolution, '.png'), width = 2000, height = 2000)
     print(patchwork::wrap_plots(u3dlist) + patchwork::plot_layout(ncol = 2))
     dev.off()
   }
@@ -1078,7 +1109,7 @@ louvain.cluster <- function(sobj = NULL, reduction = 'RNA_scbfa', max.dim = 100L
 verif_counts_log <- function(sce = NULL){
   if ("logcounts" %in% assayNames(sce)){ #si slot "log_counts" non vide
     sce <- verif_log(sce)
-  }else{ #si logcounts n'existe pas 
+  }else{ #si logcounts n'existe pas
     sce <- verif_counts(sce)
   }
   sce
@@ -1205,48 +1236,48 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
   assay <- sobj@reductions[[reduction]]@misc$from.assay
   if (!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist in the provided Seurat object !'))
   if (!"seed" %in% names(sobj@misc$params)) stop("No seed found in Seurat object !")
-  
+
   ## Save command
   sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("cells.annot(sobj = sobj, ident = ", ident, ", slot = ", slot, ", singler.setnames = ", paste0("c(", paste(singler.setnames, collapse = ","),")"), ", clustifyr.setnames = ", paste0("c(", paste(clustifyr.setnames, collapse = ","),")"), ", scrnaseq.setnames = ", paste0("c(", paste(scrnaseq.setnames, collapse = ","),")"), ", custom.sce.ref = ", paste0("c(", paste(custom.sce.ref, collapse = ","),")"),  ", custom.markers.ref = ", paste0("c(", paste(custom.markers.ref, collapse = ","),")"), ", sr.minscore = ", sr.minscore, ", cfr.minscore = ", cfr.minscore, ", out.dir = ", out.dir, ", solo.pt.size = ", solo.pt.size, ", nthreads = ", nthreads, ")"))
-  
+
   # slot <- 'data' # NEVER CHANGE THIS !!
   library(patchwork)
-  
+
   ## Restoring seed, sample name and species from within the object
   my.seed <- sobj@misc$params$seed
   set.seed(my.seed)
   sample.name <- Seurat::Project(sobj)
   species <- sobj@misc$params$species
-  
+
   ## Building output structure
   cellannot.dir <- paste0(out.dir, "/cells_annotation/")
-  
-  
+
+
   ### EXPRESSION REFERENCES ANALYSIS ############################
-  
+
   ## Building output structure
   sr.cellannot.dir <- paste0(cellannot.dir, "singleR")
   cfr.cellannot.dir <- paste0(cellannot.dir, "clustifyR")
   dir.create(sr.cellannot.dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(cfr.cellannot.dir, recursive = TRUE, showWarnings = FALSE)
-  
+
   ## Retrieving data
-  mydata <- methods::slot(sobj@assays[[assay]], slot)
-  
+  mydata <- Seurat::GetAssayData(sobj, assay = "RNA", layer = "data")
+
   ## Format custom references
   if(!is.null(custom.sce.ref)){
     custom.setnames <- sapply(seq_along(custom.sce.ref), function(x) { sub("(.*)\\..*$", "\\1", basename(custom.sce.ref[x])) })
     names(custom.sce.ref) <- custom.setnames
   }else custom.setnames <- NULL
-  
+
   ## Group references names
   builtin.setnames <- c(singler.setnames,clustifyr.setnames,scrnaseq.setnames)
   all.setnames <- c(builtin.setnames,custom.setnames)
-  
+
   ## Annotation
   for (setname in all.setnames) {
     print(setname)
-    
+
     ### Get reference
     suppressMessages(require(celldex))
     suppressMessages(require(clustifyrdata))
@@ -1259,21 +1290,23 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
       rm(list = c(name_ref,'name_ref'))
       ref <- verif_counts_log(ref)
     }else stop("Unknown reference!")
-    
+
     ### SingleR
     if(!setname == "ref_hema_microarray"){ #there is an error with I don't know why
-      
+
       ## format ref
       SR_ref <- ref
-      
+
       ## per cell
       entryname <- paste0("SR_", setname, "_cells")
       tryCatch( {
         #annotation
-        singler.res <- SingleR::SingleR(test = mydata, ref = SR_ref, labels = SR_ref$labels)
-        singler.res$pruned.labels[singler.res@listData$tuning.scores$first < sr.minscore] <- NA
+        singler.res <- as.data.frame(SingleR::SingleR(test = mydata, ref = SR_ref, labels = SR_ref$labels))
+        singler.res$max_scores <- apply(singler.res[,grep("score",colnames(singler.res))], 1, max) # get the maximal score maximal for each cell
+        singler.res$pruned.labels[singler.res$max_scores < sr.minscore] <- "NA" # remove label of bad score cells
+        singler.res$pruned.labels[is.na(singler.res$pruned.label)] <- "NA" # replace NA by "NA"
         #save results
-        sobj@meta.data[[entryname]] <- as.factor(unname(singler.res$pruned.labels))
+        sobj@meta.data[[entryname]] <- as.factor(singler.res$pruned.label)
         #umap
         png(paste0(sr.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
         if (all(is.na(sobj@meta.data[[entryname]]))) { #no annotation find
@@ -1281,14 +1314,15 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
         } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("SingleR predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
         dev.off()
       },  error=function(error_message) { message(paste0("Error in singleR function for cells with database ", setname," : ", error_message))} )
-      
+
       ## per cluster
       entryname <- paste0("SR_", setname, "_clust")
       tryCatch( {
         #annotation
         sobj@meta.data[[entryname]] <- sobj@meta.data[[ident]]
-        singler.res <- SingleR::SingleR(test = mydata, ref = SR_ref, labels = SR_ref$labels, clusters = sobj[[entryname, drop = TRUE]])
-        singler.res$pruned.labels[singler.res@listData$tuning.scores$first < sr.minscore] <- NA
+        singler.res <- as.data.frame(SingleR::SingleR(test = mydata, ref = SR_ref, labels = SR_ref$labels, clusters = sobj[[entryname, drop = TRUE]]))
+        singler.res$max_scores <- apply(singler.res[,grep("score",colnames(singler.res))], 1, max) # get the maximal score maximal for each cluster
+        singler.res$pruned.labels[singler.res$max_scores < sr.minscore] <- NA # remove label of bad score clusters
         #save results
         levels(sobj@meta.data[[entryname]]) <- singler.res$pruned.labels
         #umap
@@ -1302,7 +1336,8 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
           dev.off()
           #heatmap
           annot_col <- data.frame(labels = singler.res$pruned.labels, clusters = rownames(singler.res), row.names = rownames(singler.res))
-          df_annot <- t(singler.res$scores)
+          df_annot <- t(singler.res[,grep("score",colnames(singler.res))])
+          rownames(df_annot) <- sub("scores.", "", rownames(df_annot))
           colnames(df_annot) <- rownames(singler.res)
           pheat <- cowplot::plot_grid(ggplotify::as.grob(pheatmap::pheatmap(df_annot, annotation_col = annot_col, color = grDevices::colorRampPalette(viridis::viridis(100))(100), border_color = NA, fontsize = 15)), ncol = 1)
           pheat <- pheat + plot_annotation(title = 'Heatmap of correlation scores',
@@ -1313,22 +1348,22 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
           dev.off()
         }
       },  error=function(error_message) { message(paste0("Error in singleR function for clusters with database ", setname," : ", error_message))} )
-      
+
     }
-    
+
     ### CLUSTIFYR
-    
+
     ## format ref
     if(any(duplicated(ref$labels))){
-      CFR_ref <- clustifyr::average_clusters(mat = ref@assays@data$logcounts, metadata = ref$labels, if_log = TRUE) #necessary if the cell type is present several times
+      CFR_ref <- clustifyr::average_clusters(mat = SummarizedExperiment::assay(ref, "logcounts"), metadata = ref$labels, if_log = TRUE) #necessary if the cell type is present several times
     }else{
       CFR_ref <- ref@assays@data$logcounts
       colnames(CFR_ref) <- ref$labels
     }
-    
+
     ## get non-variable genes
-    non.var.genes <- rownames(sobj@assays[[assay]]@data)[!(rownames(sobj@assays[[assay]]@data) %in% sobj@assays[[assay]]@var.features)]
-    
+    non.var.genes <- rownames(Seurat::GetAssayData(sobj, assay = "RNA", layer = "data"))[!(rownames(Seurat::GetAssayData(sobj, assay = "RNA", layer = "data")) %in% Seurat::VariableFeatures(sobj, assay = assay))]
+
     ## per cell
     entryname <- paste0("CFR_", setname, "_cells")
     tryCatch( {
@@ -1347,7 +1382,7 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
       } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("clustifyr predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
       dev.off()
     },  error=function(error_message) { message(paste0("Error in clustifyR function for cells with database ", setname," : ", error_message))} )
-    
+
     ## per cluster
     entryname <- paste0("CFR_", setname, "_clust")
     tryCatch( {
@@ -1380,11 +1415,11 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
         dev.off()
       }
     },  error=function(error_message) { message(paste0("Error in clustifyR function for clusters with database ", setname," : ", error_message))} )
-    
+
   }
-  
+
   ### MARKERS REFERENCES ANALYSIS ############################
-  
+
   ## Building output structure
   cid.cellannot.dir <- paste0(cellannot.dir, "CelliD")
   dir.create(cid.cellannot.dir, recursive = TRUE, showWarnings = FALSE)
@@ -1394,14 +1429,14 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
     custom.setnames <- sapply(seq_along(custom.markers.ref), function(x) { sub("(.*)\\..*$", "\\1", basename(custom.markers.ref[x])) })
     names(custom.markers.ref) <- custom.setnames
   }else custom.setnames <- NULL
-  
+
   ## Group references names
   all.setnames <- c("pangloa", custom.setnames)
-  
+
   ## Annotation
   for (setname in all.setnames) {
     print(setname)
-    
+
     ### Get reference
     if (setname == "pangloa"){
       ref <- pangloa_markers_ref(species = species)
@@ -1414,13 +1449,13 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
       ref <- setNames(ref$geneset, ref$`cell type`)
       ref <- ref[sapply(ref, length) >= 10] # Remove very short signatures
     }else stop("Unknown reference!")
-    
-    
+
+
     ### CelliD
-    
+
     ## format ref
     CID_ref <- ref
-    
+
     ## per cell
     entryname <- paste0("CID_", setname, "_cells")
     tryCatch( {
@@ -1432,129 +1467,16 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
       #save results
       sobj@meta.data[[entryname]] <- as.factor(unname(cid.labels))
       #umap
-      png(paste0(cid.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-      if (all(is.na(sobj@meta.data[[entryname]]))) { #no annotation find
-        suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-      } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
+      png(paste0(cid.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 2200)
+      if (!all(is.na(sobj@meta.data[[entryname]]))) { # annotation find
+        suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom",plot.margin = ggplot2::margin(t = 10, r = 10, b = min(200,40 + 30 * ceiling(length(as.factor(unname(cid.labels))) / 10)), l = 10)) + Seurat::DarkTheme()))
+      }
       dev.off()
       #clean
       sobj@reductions$mca <- NULL
-      
+
     },  error=function(error_message) { message(paste0("Error in CelliD function for cells with database ", setname," : ", error_message))} )
-    
-    # ## per cluster : be careful the tool is not made for that
-    # entryname <- paste0("CID_", setname, "_clust")
-    # tryCatch( {
-    #   #format a new seurat object with mean expression by cluster
-    #   sobj_clust_table_log <- clustifyr::average_clusters(mat = sobj@assays[[assay]]@data, metadata = sobj@meta.data[[ident]], if_log = TRUE)
-    #   clust_sobj <- suppressWarnings(Seurat::CreateSeuratObject(counts = sobj_clust_table_log, project = "clust_sobj", min.cells = 0, min.features = 0))
-    #   clust_sobj@assays$RNA@data <- clust_sobj@assays$RNA@counts
-    #   clust_sobj@meta.data[[ident]] <- colnames(clust_sobj)
-    #   clust_sobj <- Seurat::ScaleData(clust_sobj, features = rownames(clust_sobj))
-    #   #annotation
-    #   clust_sobj <- suppressWarnings(CelliD::RunMCA(X = clust_sobj, nmcs = (length(colnames(clust_sobj))-2), slot = 'data', assay = 'RNA', reduction = "mca"))
-    #   cid.res <- CelliD::RunCellHGT(clust_sobj, pathways = CID_ref, reduction = "mca", dims = 1:(length(colnames(clust_sobj))-2), n.features = 200, minSize = 0)
-    #   cid.labels <- rownames(cid.res)[apply(cid.res, 2, which.max)] #assign the best label (best pvalue)
-    #   cid.labels <- ifelse(apply(cid.res, 2, max)>2, yes = cid.labels, NA) #assign NA if pvalue is not significant (p-value is <1e-02 (-log10(p-value)>2))
-    #   #save results
-    #   sobj@meta.data[[entryname]] <- sobj@meta.data[[ident]]
-    #   levels(sobj@meta.data[[entryname]]) <- as.factor(unname(cid.labels))
-    #   #umap
-    #   png(paste0(cid.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-    #   if (all(is.na(sobj@meta.data[[entryname]]))) { #no annotation find
-    #     suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ")for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-    #   } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("CelliD predicted cell types (", setname, ") for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-    #   dev.off()
-    #   #heatmap
-    #   if (!all(is.na(cid.labels))){
-    #     annot_col <- data.frame(labels = cid.labels, clusters = names(cid.labels), row.names = names(cid.labels))
-    #     if(length(which(Matrix::rowSums(cid.res)==0)) == length(rownames(cid.res))) df_annot <- cid.res else df_annot <- cid.res[-which(Matrix::rowSums(cid.res) == 0),] #del if 0 on all line
-    #     pheat <- cowplot::plot_grid(ggplotify::as.grob(pheatmap::pheatmap(df_annot, annotation_col = annot_col, color = grDevices::colorRampPalette(viridis::viridis(100))(100), border_color = NA, fontsize = 15)), ncol = 1)
-    #     pheat <- pheat + plot_annotation(title = 'Heatmap of correlation scores',
-    #                                      subtitle = paste0('To detect the ambiguity of the cell type assignment (labels from ', setname, ')'),
-    #                                      theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 30),plot.subtitle = ggplot2::element_text(size = 20)))
-    #     png(paste0(cid.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '_heatmap.png'), width = if(setname == "pangloa") 1500 else 1100, height = if(setname == "pangloa") 2000 else 1100)
-    #     print(pheat)
-    #     dev.off()
-    #   }
-    #   #clean
-    #   rm(sobj_clust_table_log, clust_sobj, cid.res, cid.labels)
-    # },  error=function(error_message) { message(paste0("Error in CelliD function for clusters with database ", setname," : ", error_message))} )
-    
-    # ### CellAssign
-    # 
-    # ## per cell
-    # entryname <- paste0("CA_", setname, "_cells")
-    # tryCatch( {
-    #   #format ref and data
-    #   sce_sobj <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = sobj@assays[[assay]]@counts))
-    #   sce_sobj<- scran::computeSumFactors(sce_sobj)
-    #   CA_ref <- cellassign::marker_list_to_mat(list(`Acinar cells (Endoderm, Pancreas)` = ref[[1]], `Adipocytes (Mesoderm, Connective tissue)` = ref[[2]]))
-    #   common_genes <- intersect(rownames(CA_ref),row.names(sce_sobj))
-    #   sce_sobj <- sce_sobj[common_genes,] # keep common gene only
-    #   CA_ref <- CA_ref[common_genes, ]
-    #   CA_ref <- CA_ref[ order(row.names(sce_sobj)), ] # order genes ref like genes counts
-    #   sizefact <- SingleCellExperiment::sizeFactors(sce_sobj)
-    #   n_batches <- round(dim(sce_sobj)[2]/200) # groups of 200 cells
-    #   #annotation
-    #   ca.res <- suppressWarnings(cellassign::cellassign(exprs_obj = sce_sobj, s = sizefact, marker_gene_info = CA_ref, learning_rate = 1e-2, shrinkage = TRUE, verbose = FALSE, thread = nthreads, n_batches = n_batches))
-    #   #ca.res <- suppressWarnings(cellassign::cellassign(exprs_obj = sce_sobj, s = sizefact, marker_gene_info = CA_ref, learning_rate = 1e-2, shrinkage = TRUE, verbose = FALSE, thread = nthreads))
-    #   ca.labels <- sub("unassigned", NA ,cellassign::celltypes(ca.res))
-    #   #save results
-    #   sobj@meta.data[[entryname]] <- as.factor(unname(ca.labels))
-    #   #umap plot
-    #   png(paste0(ca.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-    #   if (all(is.na(sobj@meta.data[[entryname]]))) { #no annotation find
-    #     suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("CellAssign predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-    #   } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("CellAssign predicted cell types (", setname, ") for ", ncol(sobj), " cells")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-    #   dev.off()
-    #   
-    # },  error=function(error_message) { message(paste0("Error in CellAssign function for cells with database ", setname," : ", error_message))} )
-    # 
-    # ## per cluster : be careful the tool is not made for that
-    # entryname <- paste0("CA_", setname, "_clust")
-    # tryCatch( {
-    #   #format ref and data
-    #   sobj_clust_table_counts <- clustifyr::average_clusters(mat = sobj@assays[[assay]]@counts, metadata = sobj@meta.data[[ident]], if_log = FALSE, output_log = FALSE)
-    #   sce_sobj <- SingleCellExperiment::SingleCellExperiment(assays = list(counts = sobj_clust_table_counts))
-    #   sce_sobj<- scran::computeSumFactors(sce_sobj)
-    #   CA_ref <- cellassign::marker_list_to_mat(ref)
-    #   common_genes <- intersect(rownames(CA_ref),row.names(sce_sobj))
-    #   sce_sobj <- sce_sobj[common_genes,] # keep common gene only
-    #   CA_ref <- CA_ref[common_genes, ]
-    #   CA_ref <- CA_ref[ order(row.names(sce_sobj)), ] # order genes ref like genes counts
-    #   sizefact <- SingleCellExperiment::sizeFactors(sce_sobj)
-    #   #annotation
-    #   ca.res <- suppressWarnings(cellassign::cellassign(exprs_obj = sce_sobj, s = sizefact, marker_gene_info = CA_ref, learning_rate = 1e-2, shrinkage = TRUE, verbose = FALSE, thread = nthreads))
-    #   ca.labels <- sub("unassigned", NA ,cellassign::celltypes(ca.res))
-    #   names(ca.labels) <- levels(sobj@meta.data[[ident]])
-    #   #save results
-    #   sobj@meta.data[[entryname]] <- sobj@meta.data[[ident]]
-    #   levels(sobj@meta.data[[entryname]]) <- as.factor(unname(ca.labels))
-    #   #umap
-    #   png(paste0(ca.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '.png'), width = 1500, height = 1500)
-    #   if (all(is.na(sobj@meta.data[[entryname]]))) { #no annotation find
-    #     suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, cols = "grey50", group.by = entryname) + ggplot2::ggtitle(paste0("CellAssign predicted cell types (", setname, ")for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-    #   } else suppressMessages(print(Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = solo.pt.size, group.by = entryname) + ggplot2::ggtitle(paste0("CellAssign predicted cell types (", setname, ") for ", nlevels(sobj@meta.data[[entryname]]), " cluster(s)")) + ggplot2::theme(legend.position = "bottom") + Seurat::DarkTheme()))
-    #   dev.off()
-    #   #heatmap
-    #   annot_col <- data.frame(labels = ca.labels, clusters = names(ca.labels), row.names = names(ca.labels))
-    #   df_annot <- t(cellassign::cellprobs(ca.res))
-    #   colnames(df_annot) <- levels(sobj@meta.data[[ident]])
-    #   
-    #   pheat <- cowplot::plot_grid(ggplotify::as.grob(pheatmap::pheatmap(df_annot, annotation_col = annot_col, color = grDevices::colorRampPalette(viridis::viridis(100))(100), border_color = NA, fontsize = 15)), ncol = 1)
-    #   pheat <- pheat + plot_annotation(title = 'Heatmap of correlation scores',
-    #                                    subtitle = paste0('To detect the ambiguity of the cell type assignment (labels from ', setname, ')'),
-    #                                    theme = ggplot2::theme(plot.title = ggplot2::element_text(size = 30),plot.subtitle = ggplot2::element_text(size = 20)))
-    #   png(paste0(ca.cellannot.dir, '/', sample.name, '_', assay, '_uMAP_', entryname, '_heatmap.png'), width = if(setname == "pangloa") 1500 else 1100, height = if(setname == "pangloa") 2000 else 1100)
-    #   print(pheat)
-    #   dev.off()
-    #   
-    #   #clean
-    #   rm(sobj_clust_table_log, clust_sobj, cid.res, cid.labels)
-    #   
-    # },  error=function(error_message) { message(paste0("Error in CellAssign function for clusters with database ", setname," : ", error_message))} )
-    
+
   }
   ## Save parameters
   sobj@misc$params$annot <- list(ident = ident,
@@ -1574,13 +1496,13 @@ cells.annot <- function(sobj = NULL, ident = NULL, slot = 'data', singler.setnam
   sobj@misc$technical_info$clustifyr <- utils::packageVersion('clustifyr')
   sobj@misc$technical_info$CelliD <- utils::packageVersion('CelliD')
   # sobj@misc$technical_info$cellassign <- utils::packageVersion('cellassign')
-  
+
   return(sobj)
 }
 
 
 ## Find markers
-find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.use = 'wilcox', min.pct = .75, logfc.threshold = .5, only.pos = TRUE, adjp.p.max = 5E-02, topn = 10, heatmap.cols = c("gold", "blue"), out.dir = NULL) {
+find.markers.quick <- function(sobj = NULL, ident = NULL, test.use = 'wilcox', min.pct = .75, logfc.threshold = .5, only.pos = TRUE, adjp.p.max = 5E-02, topn = 20, heatmap.cols = c("gold", "blue"), out.dir = NULL) {
   if (is.null(out.dir)) stop('No output directory provided !')
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
@@ -1592,55 +1514,34 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
   if (!reduction %in% names(sobj@reductions)) stop(paste0("Could not find reduction '", reduction, "' from ident !"))
   assay <- sobj@reductions[[reduction]]@misc$from.assay
   if (!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist in the provided Seurat object !'))
+  if (!("RNA" %in% names(sobj@assays))) stop(paste0('Assay "RNA" does not exist in the provided Seurat object !'))
   if (!"seed" %in% names(sobj@misc$params)) stop("No seed found in Seurat object !")
   suppressPackageStartupMessages(require(UpSetR))
   suppressPackageStartupMessages(require(dplyr))
 
   #Save command
-  sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("find.markers.quick(sobj = sobj, ident = ", ident, ", slot = ", slot, ", test.use = ", test.use, ", min.pct = ", min.pct, ", logfc.threshold = ", logfc.threshold, ", only.pos = ", only.pos, ", adjp.p.max = ", adjp.p.max, ", topn = ", topn, ", heatmap.cols = ", paste0("c(", paste(heatmap.cols, collapse = ","),")"), ", out.dir = ", out.dir, ")"))
+  sobj@misc$pipeline_commands=c(sobj@misc$pipeline_commands, paste0("find.markers.quick(sobj = sobj, ident = ", ident, ", test.use = ", test.use, ", min.pct = ", min.pct, ", logfc.threshold = ", logfc.threshold, ", only.pos = ", only.pos, ", adjp.p.max = ", adjp.p.max, ", topn = ", topn, ", heatmap.cols = ", paste0("c(", paste(heatmap.cols, collapse = ","),")"), ", out.dir = ", out.dir, ")"))
 
-  ## NEVER CHANGE THIS
-  # slot <- 'data'
-
-  ## Restoring seed and sample name from within the object
+   ## Restoring seed and sample name from within the object
   my.seed <- sobj@misc$params$seed
   sample.name <- Seurat::Project(sobj)
 
   ## Scaling (for heatmap)
-  if (sum(dim(sobj@assays[[assay]]@scale.data)) < 3) {
-    assay.ori <- Seurat::DefaultAssay(sobj)
-    Seurat::DefaultAssay(sobj) <- assay
-    if(assay == 'SCT') {
-      sobj <- Seurat::ScaleData(object = sobj,
-                                vars.to.regress = NULL,
-                                do.scale = FALSE, scale.max = Inf, block.size = 750)
-    } else {
-      sobj <- Seurat::ScaleData(object = sobj,
-                                vars.to.regress = NULL,
-                                do.scale = TRUE, scale.max = 10, block.size = 1000)
-    }
-    Seurat::DefaultAssay(sobj) <- assay.ori
-  }
+  sobj <- retrive_scale.data(sobj, assay = assay, vars.to.regress = NULL)
 
   ## Keeping track of original ident (to restore it after our computations)
   ori.ident <- Seurat::Idents(sobj)
   Seurat::Idents(sobj) <- ident
 
   ## Computing differentials
-  fmark <- Seurat::FindAllMarkers(sobj, assay = assay, slot = slot, test.use = test.use, min.pct = min.pct, logfc.threshold = logfc.threshold, only.pos = only.pos, random.seed = my.seed)
+  fmark <- Seurat::FindAllMarkers(sobj, assay = "RNA", slot = "data", test.use = test.use, min.pct = min.pct, logfc.threshold = logfc.threshold, only.pos = only.pos, random.seed = my.seed)
   if (dim(fmark)[1]!=0){
     ## Filtering markers
     fmark <- fmark[fmark$p_val_adj < adjp.p.max, ]
     if (dim(fmark)[1]!=0){
       fmark <- fmark[order(fmark$cluster, fmark$p_val_adj),]
-
-      if(slot == 'data') {
-        mytop <- fmark %>% group_by(cluster) %>% top_n(n = topn, wt = avg_log2FC)
-        avg_name <- 'avg_log2FC'
-      } else if(slot == 'scale.data') {
-        mytop <- fmark %>% group_by(cluster) %>% top_n(n = topn, wt = avg_diff)
-        avg_name <- 'avg_diff'
-      }
+      mytop <- fmark %>% group_by(cluster) %>% top_n(n = topn, wt = avg_log2FC)
+      avg_name <- 'avg_log2FC'
 
       ## Creating output dir
       fmark.dir <- paste0(out.dir, '/found_markers/')
@@ -1656,7 +1557,7 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
         heatmapplot <- print(Seurat::DoHeatmap(mini.sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
         rm(df_barcodes_ident, barcodes_tokeep, mini.sobj)
       } else heatmapplot <- print(Seurat::DoHeatmap(sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
-      png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_heatmap.png'), width = 1600, height = 1000)
+      png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_heatmap.png'), width = 3200, height = 2000)
       print(heatmapplot)
       dev.off()
 
@@ -1685,17 +1586,17 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
         mytop.k <- mytop[mytop$cluster == k,]
         if (nrow(mytop.k) > 0) {
           fm.list <- sapply(seq_len(nrow(mytop.k)), function(g) { Seurat::VlnPlot(sobj, assay = assay, features = mytop.k$gene[g]) + Seurat::NoLegend() + ggplot2::ggtitle(mytop.k$gene[g], subtitle = paste0(avg_name, ' = ', format(mytop.k[[avg_name]][g], digits= 3), ' ; adj.p = ', format(mytop.k$p_val_adj[g], digits = 2, scientific = TRUE))) }, simplify = FALSE)
-          png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_cluster', k, '_vln.png'), width = 2000, height = 1000)
+          png(paste0(fmark.dir, '/', sample.name, '_findmarkers_top', topn, '_cluster', k, '_vln.png'), width = 2000, height = (if(nrow(mytop.k)<6) 500 else if(nrow(mytop.k)<11) 1000 else if(nrow(mytop.k)<21) 2000))
           print(patchwork::wrap_plots(fm.list) + patchwork::plot_layout(ncol = 5))
           dev.off()
         }
       }
-      
+
       ## Save table
-      df_res=data.frame(genes = fmark$gene, logFC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All", min.pct = min.pct)
-      write.table(df_res,file = paste0(fmark.dir, '/', sample.name, '_', ident, '_findmarkers_all.txt'), sep = "\t",quote = FALSE, row.names = FALSE, col.names = TRUE, dec = ",")
+      df_res=data.frame(genes = fmark$gene, logFC = fmark[avg_name], p_val = fmark$p_val, adj.P.Val = fmark$p_val_adj, pct.1 = fmark$pct.1, pct.2 = fmark$pct.2, tested_cluster = fmark$cluster, control_cluster = "All_Others", min.pct = min.pct)
+      write.table(df_res,file = paste0(fmark.dir, '/', sample.name, '_', ident, '_findmarkers_all.csv'), sep = ";",quote = FALSE, row.names = FALSE, col.names = TRUE, dec = ",")
       sobj@misc$find.markers.quick <- df_res
-    
+
     }else{
       message("No markers pass the pvalue adjusted threshold!")
       sobj@misc$find.markers.quick <- matrix(nrow = 0, ncol = 0)
@@ -1708,9 +1609,8 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
   ## Restoring original ident
   Seurat::Idents(sobj) <- ori.ident
 
-  
   ## Cleaning
-  sobj@assays[[assay]]@scale.data <- matrix(nrow = 0, ncol = 0)
+  sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = TRUE)
 
   ## Save parameters
   sobj@misc$params$find.markers.quick <- list(ident = ident,
@@ -1721,15 +1621,15 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, slot = 'data', test.us
                                               only.pos = only.pos,
                                               topn = topn)
   sobj@misc$params$find.markers.quick$Rsession <-  utils::capture.output(devtools::session_info())
-  
+
   return(sobj)
 }
 
 get.markers.from.markersfiles <- function(markfiles=NULL){
-  
+
   markfiles <- unlist(stringr::str_split(markfiles, ","))
   markers <- data.frame(genes=character(), signatures=character())
-  
+
   #get markers
   for (mf in markfiles){
     file.extension <- strsplit(basename(mf), split="\\.")[[1]][-1] #get file's extension
@@ -1743,7 +1643,7 @@ get.markers.from.markersfiles <- function(markfiles=NULL){
     names(markers.tmp) <- names(markers)
     markers <- rbind(markers, markers.tmp)
   }
-  
+
   #remove duplicated lines
   markers <- markers[!duplicated(markers), ]
   #formatting
@@ -1755,48 +1655,48 @@ get.markers.from.markersfiles <- function(markfiles=NULL){
 
 
 ## Technical uMAPs
-technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.size = 1, gradient.cols = c("gold", "blue"),end.file.name = NULL, only.ALL.plot = FALSE) {
+technical.plot <- function(sobj = NULL, ident = NULL, umap.name = NULL, out.dir = NULL, multi.pt.size = 1, gradient.cols = c("gold", "blue"), end.file.name = NULL, only.ALL.plot = FALSE) {
   if (is.null(out.dir)) stop('No output dir provided !')
   if (!dir.exists(out.dir)) stop('Output directory does not exist !')
   if (is.null(sobj)) stop('No Seurat object provided !')
-  if (is.null(ident)) stop("No ident name provided !")
-  if (!ident %in% colnames(sobj@meta.data)) stop(paste0("Ident '", ident, "' not found in Seurat object !"))
-  umap.name <- sobj@misc$ident2reduction[[ident]]
+  if (is.null(ident) && is.null(umap.name)) stop("No ident or umap.name provided !")
+  if (!is.null(ident)){
+    if (!ident %in% colnames(sobj@meta.data)) stop(paste0("Ident '", ident, "' not found in Seurat object !"))
+    umap.name <- sobj@misc$ident2reduction[[ident]]
+  }
   if (!umap.name %in% names(sobj@reductions)) stop(paste0("Could not find expected uMAP reduction '", umap.name, "' from ident !"))
   reduction <- sobj@reductions[[umap.name]]@misc$from.reduction
   if (!reduction %in% names(sobj@reductions)) stop(paste0("Could not find reduction '", reduction, "' from ident !"))
   assay <- sobj@reductions[[reduction]]@misc$from.assay
   if (!(assay %in% names(sobj@assays))) stop(paste0('Assay "', assay, '" does not exist in the provided Seurat object !'))
   require(patchwork)
-  
+
   ## Creating ouput directory
   tech.dir <- paste0(out.dir, '/technical/')
   dir.create(tech.dir, recursive = TRUE, showWarnings = FALSE)
-  
+
   ## Restoring sample name from within the object
   sample.name <- Seurat::Project(sobj)
-  
+
   ## Setting plot parameters
   plot.num.add <- if(!is.null(ident)) 1 else 0
   plot.pix <- 600
-  
+
   ## CLUSTERS
   if (!is.null(ident)) {
-    # ori.ident <- Seurat::Idents(sobj)
     Seurat::Idents(sobj) <- ident
     upCLUST <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = multi.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
-    # Seurat::Idents(sobj) <- ori.ident
   }
-  
+
   ## METRICS
   metrics.plotlist <- list(
-    'percent_mt' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "percent_mt", max.cutoff = .2, cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
-    'percent_rb' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "percent_rb", max.cutoff = .25, cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
-    'percent_st' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "percent_st", max.cutoff = .25, cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
+    'percent_mt' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "percent_mt", max.cutoff = 20, cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
+    'percent_rb' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "percent_rb", max.cutoff = 25, cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
+    'percent_st' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "percent_st", max.cutoff = 25, cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
     'log_nCount_RNA' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "log_nCount_RNA", cols = gradient.cols, order = TRUE) + Seurat::DarkTheme(),
     'nFeature_RNA' = Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "nFeature_RNA", cols = gradient.cols, order = TRUE) + Seurat::DarkTheme()
   )
-  
+
   if (!only.ALL.plot){
     for (p in seq_along(metrics.plotlist)) {
       png(paste0(tech.dir, '/', sample.name, '_technical_SINGLE_METRICS_', names(metrics.plotlist)[p], '_uMAP.png'), width = plot.pix, height = plot.pix)
@@ -1808,7 +1708,7 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
     if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), metrics.plotlist))) else print(wrap_plots(metrics.plotlist))
     dev.off()
   }
-  
+
   ## CELL CYCLE (cyclone)
   if ('Cyclone.Phase' %in% colnames(sobj@meta.data)) {
     c_cycle.plotlist <- list(
@@ -1832,7 +1732,7 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
   }else{
     c_cycle.plotlist <- list(plot_spacer())
   }
-  
+
   ## CELL CYCLE (Seurat)
   if ('Seurat.Phase' %in% colnames(sobj@meta.data)) {
     s_cycle.plotlist <- list(
@@ -1855,7 +1755,7 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
   }else{
     s_cycle.plotlist <- list(plot_spacer())
   }
-  
+
   ## CELL CYCLE (all)
   if (('Cyclone.Phase' %in% colnames(sobj@meta.data)) & ('Seurat.Phase' %in% colnames(sobj@meta.data)) & (!only.ALL.plot)) {
     grid.xy <- grid.scalers(length(c_cycle.plotlist) + length(s_cycle.plotlist) + plot.num.add)
@@ -1863,11 +1763,11 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
     if(!is.null(ident)) print(wrap_plots(c(list(upCLUST), c_cycle.plotlist, s_cycle.plotlist))) else print(wrap_plots(c(c_cycle.plotlist, s_cycle.plotlist)))
     dev.off()
   }
-  
+
   ## DOUBLETS
   doublets.plotlist <- list()
   if("scDblFinder.class" %in% colnames(sobj@meta.data)) doublets.plotlist[['ScDblFinder']] <- Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, group.by = "scDblFinder.class") + ggplot2::ggtitle("Cell doublets (scDblFinder)") + Seurat::DarkTheme()
-  if("hybrid_score.class" %in% colnames(sobj@meta.data)) doublets.plotlist[['scds_hybrid']] <- Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, group.by = "hybrid_score.class") + ggplot2::ggtitle("Cell doublets (scds-hybrid)") + Seurat::DarkTheme()
+  if("scds.class" %in% colnames(sobj@meta.data)) doublets.plotlist[['scds']] <- Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, group.by = "scds.class") + ggplot2::ggtitle("Cell doublets (scds)") + Seurat::DarkTheme()
   if("doublets_consensus.class" %in% colnames(sobj@meta.data)) doublets.plotlist[['Doublets_union']] <- Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, group.by = "doublets_consensus.class") + ggplot2::ggtitle("Cell doublets (union)") + Seurat::DarkTheme()
   if("log_scran.doubletscore" %in% colnames(sobj@meta.data)) doublets.plotlist[['Doublets_scran']] <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = multi.pt.size, features = "log_scran.doubletscore", cols = gradient.cols, order = TRUE)  + ggplot2::ggtitle("Cell doublets (scran (log))") + Seurat::DarkTheme()
   if (length(doublets.plotlist) > 0) {
@@ -1885,7 +1785,7 @@ technical.plot <- function(sobj = NULL, ident = NULL, out.dir = NULL, multi.pt.s
   }else{
     doublets.plotlist <- list(plot_spacer())
   }
-  
+
   ## MULTI:ALL
   grid.xy <- grid.scalers(length(metrics.plotlist) + length(doublets.plotlist) + length(c_cycle.plotlist) + length(s_cycle.plotlist) + plot.num.add)
   png(paste0(tech.dir, '/', sample.name, '_technical_MULTI_ALL_uMAPs',end.file.name,'.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
@@ -1932,18 +1832,26 @@ markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir
 
   ## Restoring sample name from within the object and checking markers
   sample.name <- Seurat::Project(sobj)
-  markers <- markers[markers %in% rownames(sobj@assays[[assay]]@data)]
+  markers <- markers[markers %in% rownames(sobj@assays[[assay]])]
+  
+  ## Computing UCell scores
+  markers_fmt <- list()
+  for (sign in unique(sort(names(markers)))){
+      markers_fmt[[sign]] <- unique(sort(markers[names(markers) == sign]))
+  }
+  Seurat::DefaultAssay(sobj) <- "RNA" #UCell works on raw counts data
+  sobj <- UCell::AddModuleScore_UCell(sobj, features = markers_fmt, name = "_UCell_score")
+  Seurat::DefaultAssay(sobj) <- assay
 
   #Creating output directory
   mark.dir <- paste0(out.dir, '/markers/')
-  mark.dir.type.umaps <- paste0(mark.dir, '/type/umaps/')
-  mark.dir.type.violinplots <- paste0(mark.dir, '/type/violinplots/')
-  mark.dir.type.dotplots <- paste0(mark.dir, '/type/dotplots/')
+  mark.dir.signature.umaps <- paste0(mark.dir, '/signature/umaps/')
+  mark.dir.signature.violinplots <- paste0(mark.dir, '/signature/violinplots/')
+  mark.dir.signature.dotplots <- paste0(mark.dir, '/signature/dotplots/')
   mark.dir.single.umaps <- paste0(mark.dir, '/single/umaps/')
   mark.dir.single.violinplots <- paste0(mark.dir, '/single/violinplots/')
+  for (folder in c(mark.dir.single.umaps, mark.dir.single.violinplots, mark.dir.signature.umaps, mark.dir.signature.violinplots, mark.dir.signature.dotplots)){ dir.create(folder, recursive = TRUE, showWarnings = FALSE) }
 
-  for (folder in c(mark.dir.single.umaps, mark.dir.single.violinplots, mark.dir.type.umaps, mark.dir.type.violinplots, mark.dir.type.dotplots)){ dir.create(folder, recursive = TRUE, showWarnings = FALSE) }
-  
   ## Setting plot parameters
   plot.num.add <- if(!is.null(ident)) 1 else 0
   plot.pix <- 600
@@ -1955,7 +1863,8 @@ markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir
     upCLUST <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = markers.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
     Seurat::Idents(sobj) <- ori.ident
   }
-
+  
+  ## ALL
   marklist.umap <- list()
   marklist.violin <- list()
   marknames <- unique(names(markers))
@@ -1967,38 +1876,38 @@ markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir
           #remove duplicates
           mini.markers <- unique(mini.markers)
           names(mini.markers) <- rep(mn, length(mini.markers))
-          
+
           #umaps
           mn.umaplist <- sapply(mini.markers, function(x) { Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = x, cols = dimplot.cols) + Seurat::DarkTheme() }, simplify = FALSE)
-          if (length(mini.markers)==1) sum.exp <- sobj@assays[[assay]]@data[mini.markers, ] else sum.exp <- Matrix::colSums(x = sobj@assays[[assay]]@data[mini.markers, ])
-          sobj <- Seurat::AddMetaData(sobj, sum.exp, col.name = paste0("SumExp_",mn))
-          mn.plotsum <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = paste0("SumExp_",mn), cols = dimplot.cols) + ggplot2::ggtitle(paste0("Sum of the ", mn, " markers expression")) + Seurat::DarkTheme()
-          grid.xy <- grid.scalers(length(mn.umaplist) + plot.num.add + 1) # +1 for the sum of expression
-          png(paste0(mark.dir.type.umaps, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+          #if (length(mini.markers)==1) sum.exp <- Seurat::GetAssayData(sobj, assay = assay, layer = "data")[mini.markers, ] else sum.exp <- Matrix::colSums(x = Seurat::GetAssayData(sobj, assay = assay, layer = "data")[mini.markers, ])
+          #sobj <- Seurat::AddMetaData(sobj, sum.exp, col.name = paste0("SumExp_",mn))
+          mn.plotsum <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = paste0(mn,"_UCell_score"), cols = dimplot.cols) + ggplot2::ggtitle(paste0("UCell score of the ", mn, " markers expression")) + Seurat::DarkTheme()
+          grid.xy <- grid.scalers(length(mn.umaplist) + plot.num.add + 1) # +1 for the UCell score
+          png(paste0(mark.dir.signature.umaps, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
           if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST, mn.plotsum), mn.umaplist)) + patchwork::plot_layout(ncol = grid.xy[1])) else print(patchwork::wrap_plots(mn.umaplist)) + patchwork::plot_layout(ncol = grid.xy[1])
           dev.off()
           marklist.umap <- c(marklist.umap, list(mn.umaplist))
-          
+
           #violinplots
           mn.violinlist <- sapply(mini.markers, function(x) { Seurat::VlnPlot(object = sobj, features = x, assay = assay, pt.size = markers.pt.size) }, simplify = FALSE)
-          grid.xy <- grid.scalers(length(mn.violinlist) + plot.num.add)
-          png(paste0(mark.dir.type.violinplots, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_violinplots.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+          grid.xy <- grid.scalers(length(mn.violinlist))
+          png(paste0(mark.dir.signature.violinplots, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_violinplots.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
           print(patchwork::wrap_plots(mn.violinlist)) + patchwork::plot_layout(ncol = grid.xy[1])
           dev.off()
           marklist.violin <- c(marklist.violin, list(mn.violinlist))
-          
+
           #dotplot
-          names(mini.markers)=NULL
-          png(paste0(mark.dir.type.dotplots, '/', sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_dotplot.png'), width = length(unique(sobj@meta.data[[ident]]))*50, height = length(mini.markers)*20)
+          names(mini.markers) <- NULL
+          png(paste0(mark.dir.signature.dotplots, '/', sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_dotplot.png'), width = length(unique(sobj@meta.data[[ident]]))*30+200, height = length(mini.markers)*30+200)
           print(Seurat::DotPlot(object = sobj, features = mini.markers, cols = dimplot.cols) + ggplot2::coord_flip() + ggplot2::ggtitle(gsub(pattern = "_", replacement = " ", mn)) + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
           dev.off()
-          
+
       },  error=function(error_message) { message(paste0("Error in the plot of the sum of makers genes expression : ", error_message))} )
     }
   }
   marklist.umap <- unlist(marklist.umap, recursive = FALSE)
   marklist.violin <- unlist(marklist.violin, recursive = FALSE)
-  
+
   ## SINGLES
   #umap
   for(x in seq_along(marklist.umap)) {
@@ -2012,30 +1921,14 @@ markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir
     print(marklist.violin[[x]])
     dev.off()
   }
-  
-  ## ALL
-  #umap
-  #if (length(markers) <= 15) {
-  #  grid.xy <- grid.scalers(length(marklist.umap) + plot.num.add)
-  #  png(paste0(mark.dir, '/', sample.name, '_markers_ALL_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-  #  if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST), marklist.umap))) + patchwork::plot_layout(ncol = grid.xy[1]) else print(patchwork::wrap_plots(marklist.umap)) + patchwork::plot_layout(ncol = grid.xy[1])
-  #  dev.off()
-  #}
-  #violin
-  #if (length(markers) <= 15) {
-  #  grid.xy <- grid.scalers(length(marklist.violin) + plot.num.add)
-  #  png(paste0(mark.dir, '/', sample.name, '_markers_ALL_violinplot.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-  #  if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST), marklist.violin))) + patchwork::plot_layout(ncol = grid.xy[1]) else print(patchwork::wrap_plots(marklist.violin)) + patchwork::plot_layout(ncol = grid.xy[1])
-  #  dev.off()
-  }
-  
+
   ## Save parameter
   sobj@misc$markers.in <- markers
 
   return(sobj)
 }
 
-norm.red.plot.quick <- function(sobj = NULL, assay = 'RNA', sample.name.GE = NULL, pre.out.dir = NULL, norm.method = 'LogNormalize', features.n = 3000, normalization.vtr = NULL, dimred.method = 'pca', reduction.vtr = NULL, vtr.scale = FALSE, max.dims = 50, keep.dims = 15, keep.res = 0.8, solo.pt.size = 3, multi.pt.size = 2, file.name = NULL){
+norm.red.plot.quick <- function(sobj = NULL, assay = 'RNA', sample.name.ge = NULL, pre.out.dir = NULL, norm.method = 'LogNormalize', features.n = 3000, normalization.vtr = NULL, dimred.method = 'pca', reduction.vtr = NULL, vtr.scale = FALSE, max.dims = 50, keep.dims = 15, keep.res = 0.8, solo.pt.size = 3, multi.pt.size = 2, file.name = NULL){
   if (is.null(pre.out.dir)) stop('No output dir provided !')
   if (!dir.exists(pre.out.dir)) stop('Output directory does not exist !')
 
@@ -2051,7 +1944,7 @@ norm.red.plot.quick <- function(sobj = NULL, assay = 'RNA', sample.name.GE = NUL
   dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
 
   ### Saving reduced normalized object
-  save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(sample.name.GE, file.name, norm.method, dimred.method), collapse = '_'), '.rda'), compress = "bzip2")
+  save(sobj, file = paste0(norm.dim.red.dir, '/', paste(c(sample.name.ge, file.name, norm.method, dimred.method), collapse = '_'), '.rda'), compress = "bzip2")
 
   ### Building clustered output dir
   clust.dir <- paste(norm.dim.red.dir, paste0("dims", keep.dims, "_res", keep.res), sep = '/')
@@ -2067,7 +1960,7 @@ norm.red.plot.quick <- function(sobj = NULL, assay = 'RNA', sample.name.GE = NUL
   technical.plot(sobj = sobj, ident = ident.name, out.dir = clust.dir, multi.pt.size = multi.pt.size)
 
   ### Saving reduced object
-  save(sobj, file = paste0(clust.dir, '/', paste(c(sample.name.GE, file.name, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = '_'), '.rda'), compress = "bzip2")
+  save(sobj, file = paste0(clust.dir, '/', paste(c(sample.name.ge, file.name, norm_vtr, dimred_vtr, keep.dims, keep.res), collapse = '_'), '.rda'), compress = "bzip2")
 }
 
 ## Control genes
@@ -2090,7 +1983,7 @@ ctrl.umap.plot <- function(sobj = NULL, ctrl.genes = NULL, ident = NULL, out.dir
 
   ## Restoring sample name from within the object and cheking ctrl.genes
   sample.name <- Seurat::Project(sobj)
-  ctrl.genes <- unique(ctrl.genes[ctrl.genes %in% rownames(sobj@assays[[assay]]@data)])
+  ctrl.genes <- unique(ctrl.genes[ctrl.genes %in% rownames(sobj@assays[[assay]])])
 
   ## Setting plot parameters
   plot.num.add <- if(!is.null(ident)) 1 else 0
@@ -2229,7 +2122,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
 
   ## Get most expressed genes (@counts slot)
   cat("\nGet most expressed genes...\n")
-  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj), silent = TRUE) #RNA assay by default
+  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj, assay = assay), silent = TRUE)
   if('most_expressed_genes' %in% names(sobj@misc)) {
     ## Removing MT genes (if requested)
     if (remove.mt.genes) {
@@ -2254,7 +2147,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
   ## Get Marker Genes
   cat("\nGet Marker Genes...\n")
   # sobj <- cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", organism = species, only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test)
-  
+
   # Download bbd for "genes on cell surface" column for get markers
   require(dplyr)
   if (add.surface.prot.info){
@@ -2266,7 +2159,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
       temp_dataset <- 'mmusculus_gene_ensembl'
     }
     while(!exists('genes_on_cell_surface')){
-      try( 
+      try(
         genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
       )
     }
@@ -2287,7 +2180,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
     tmp_markers <- Seurat::FindAllMarkers(sobj, only.pos = only_pos, min.pct = min_pct, logfc.threshold = thresh_logFC, test.use = test)
     tmp_markers <- tmp_markers[tmp_markers$p_val_adj < thresh_p_val, ]
     if (dim(tmp_markers)[1]!=0){
-      tmp_markers <- tmp_markers[order(tmp_markers$cluster, tmp_markers$p_val_adj),] 
+      tmp_markers <- tmp_markers[order(tmp_markers$cluster, tmp_markers$p_val_adj),]
       sobj@misc$marker_genes$by_sample <- data.frame(sample=tmp_markers$cluster, gene=tmp_markers$gene, p_val=tmp_markers$p_val, avg_logFC=tmp_markers$avg_log2FC, pct.1=tmp_markers$pct.1, pct.2=tmp_markers$pct.2, p_val_adj=tmp_markers$p_val_adj)
       if (add.surface.prot.info){ sobj@misc$marker_genes$by_sample <- sobj@misc$marker_genes$by_sample %>% dplyr::mutate(on_cell_surface = sobj@misc$marker_genes$by_sample$gene %in% genes_on_cell_surface) }
     } else sobj@misc$marker_genes$by_sample <- 'no_markers_found'
@@ -2295,7 +2188,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
     Idents(sobj) <- tmp_ident
     rm(tmp_ident, tmp_markers)
   }else sobj@misc$marker_genes$by_sample <- 'no_markers_found'
-  
+
   ## Checking if all samples/clusters have marker genes (to bypass a cerebroApp bug that goes on error if at least one sample has no marker genes)
   ### For samples
   # if('by_sample' %in% names(sobj@misc$marker_genes)) {
@@ -2366,7 +2259,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
           temp_dataset <- 'mmusculus_gene_ensembl'
         }
         while(!exists('genes_on_cell_surface')){
-          try( 
+          try(
               genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
           )
         }
@@ -2403,7 +2296,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
     names(false_sample) <- names(sobj$sample)
     sobj$sample <- false_sample
   }
-  tryCatch( { 
+  tryCatch( {
     sobj <- cerebroApp::getEnrichedPathways(object = sobj)
   },
   error=function(error_message) { message("Error in cerebroApp::getEnrichedPathways function.")} )
@@ -2411,7 +2304,7 @@ seurat2cerebro <- function(sobj = NULL, ident = NULL, clusters.colnames = NULL, 
    #restaure real clusters and sample name
   sobj$cluster <- true_clusters
   sobj$sample <- true_sample
-  
+
   ## Perform GSEA by Cerebro
   cat("\nPerform GSEA...\n")
   if(!is.null(gmt.file)) sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", GMT_file = gmt.file, parallel.sz = nthreads)
@@ -2530,7 +2423,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
     message(paste0("Assay forced to : '", force.assay, "'."))
   }
   groups = c('sample', ident, groups)
-  
+
   ## Translation
   cat("\nTranslation names...\n")
   sample.name <- Seurat::Project(sobj)
@@ -2552,7 +2445,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   }
   reduction <- stringr::str_replace(reduction, "pca", "PrincipalComponentAnalysis")
   umap.name <- stringr::str_replace(umap.name, "pca", "PrincipalComponentAnalysis")
-  
+
   ## Add relationship tree based on dimension reduction
   cat("\nAdd relationship tree...\n")
   for (group in groups){
@@ -2567,7 +2460,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   }
   sobj@tools <- list()
   Seurat::Idents(sobj) <- sobj@meta.data[[ident]]
-  
+
   ## Clean meta.data
   cat("\nClean meta.data...\n")
   sobj@meta.data[[sample.colname]] <- NULL
@@ -2583,10 +2476,10 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
   if('seurat_clusters' %in% colnames(sobj@meta.data)) sobj@meta.data$seurat_clusters <- NULL
   percent_top_col = grep("percent_top_", colnames(sobj@meta.data), value = TRUE)
   if(length(percent_top_col) > 0) sobj@meta.data[percent_top_col] <- NULL
-  
+
   ## Get most expressed genes (@counts slot)
   cat("\nGet most expressed genes...\n")
-  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj, groups=groups), silent = TRUE) #RNA assay by default
+  try(sobj <- cerebroApp::getMostExpressedGenes(object = sobj, assay = assay, groups = groups), silent = TRUE) #RNA assay by default
   if('most_expressed_genes' %in% names(sobj@misc)) {
     ## Removing MT genes (if requested)
     if (remove.mt.genes) {
@@ -2607,7 +2500,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
       if('by_cluster' %in% names(sobj@misc$most_expressed_genes)) sobj@misc$most_expressed_genes$by_cluster <- sobj@misc$most_expressed_genes$by_cluster[!sobj@misc$most_expressed_genes$by_cluster$gene %in% stress.symbols,]
     }
   }
-  
+
   ## Get Marker Genes
   cat("\nGet Marker Genes...\n")
   sobj <- suppressMessages(cerebroApp::getMarkerGenes(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", organism = if (add.surface.prot.info) species else "", groups = groups, name = 'classical_markers', only_pos = only_pos, min_pct = min_pct, thresh_logFC = thresh_logFC, thresh_p_val = thresh_p_val, test = test))
@@ -2619,12 +2512,12 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
     if(length(names_misc_DE)>0){
       #get test names
       test.used=unique(sort(stringr::str_replace_all(names_misc_DE, "1vsAll_|1vs1_|SvsS_|conditions_", "")))
-      
+
       df_all_clust=NULL
       df_all_cond=NULL
       for (test in test.used){
         sub_names_misc_DE=names_misc_DE[stringr::str_detect(names_misc_DE, test)]
-        
+
         for (i in sub_names_misc_DE){
           #get DE_type
           DE_type=stringr::str_split(i, "_")[[1]][1]
@@ -2658,7 +2551,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
           temp_dataset <- 'mmusculus_gene_ensembl'
         }
         while(!exists('genes_on_cell_surface')){
-          try( 
+          try(
             genes_on_cell_surface <- biomaRt::getBM(attributes = temp_attributes, filters = 'go', values = 'GO:0009986', mart = biomaRt::useMart('ensembl', dataset = temp_dataset))[,1]
             )
         }
@@ -2676,18 +2569,18 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
       }
     }
   }
-  
+
   ## Perform Enrichment by Cerebro
   cat("\nPerform Enrichment...\n")
   tryCatch( { sobj <- cerebroApp::getEnrichedPathways(object = sobj, marker_genes_input = 'classical_markers') },
             error=function(error_message) { message("Error in cerebroApp::getEnrichedPathways function.")} )
   if(!is.null(sobj@misc$marker_genes[["differential_custom"]])) tryCatch( { sobj <- cerebroApp::getEnrichedPathways(object = sobj, marker_genes_input = 'differential_custom') },
             error=function(error_message) { message("Error in cerebroApp::getEnrichedPathways function.")} )
-  
+
   ## Perform GSEA by Cerebro
   cat("\nPerform GSEA...\n")
   if(!is.null(gmt.file)) for (group in groups){ try(sobj <- cerebroApp::performGeneSetEnrichmentAnalysis(object = sobj, assay = if("SCT" %in% Seurat::Assays(sobj)) "SCT" else "RNA", groups = group, name = 'GSVA', GMT_file = gmt.file, parallel.sz = nthreads)) }
-  
+
   ## Add some experiment information
   cat("\nAdd experiment information...\n")
   organism <- if (species == 'hg') "Homo sapiens" else if(species == 'mm') "Mus musculus" else if(species == 'rn') "Rattus norvegicus"
@@ -2774,7 +2667,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
     out.idents <- idents.idx[idents.idx != cur.ident.idx]
     if(length(out.idents) > 0) sobj@meta.data <- sobj@meta.data[,-c(out.idents)]
   }
-  
+
   ## Conversion in cerebro objet
   cat("\nConversion in cerebro objet...\n")
   file = paste(c(file, if(remove.mt.genes) 'noMT' else NULL, if(remove.crb.genes) 'noRB' else NULL, if(remove.str.genes) 'noSTR' else NULL), collapse = '_')
@@ -2786,7 +2679,7 @@ seurat2cerebro_1.3 <- function(sobj = NULL, ident = NULL, groups = NULL, sample.
 ### assay features must be in the same order !
 feature.cor <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.features = NULL, assay2.features = NULL, slot = 'data', cor.method = 'spearman', zero.filter = TRUE, gene.names = NULL, min.cutoff = NULL, max.cutoff = NULL) {
   #max and min assay2 cutoff
-  if(is.null(min.cutoff)) min.cutoff = rep(0,length(gene.names))
+  if(is.null(min.cutoff)) min.cutoff = rep("q0",length(gene.names))
   if(is.null(max.cutoff)) max.cutoff = rep("q100",length(gene.names))
   min.cutoff <- as.numeric(stringr::str_replace_all(min.cutoff, "q", ""))/100
   max.cutoff <- as.numeric(stringr::str_replace_all(max.cutoff, "q", ""))/100
@@ -2800,9 +2693,9 @@ feature.cor <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.feat
     if(length(which(cell.idx)) < 2) return(c(NA,NA,NA)) # must to get at least 2 cells with RNA and protein expressions to compute correlation
     tryCatch({
       suppressMessages(library(dplyr))
-      data_ADT <- slot(sobj@assays[[assay2]], slot)[rownames(slot(sobj@assays[[assay2]], slot)) == assay2.features[k],cell.idx]
+      data_ADT <- Seurat::GetAssayData(sobj, assay = assay2, layer = slot)[rownames(sobj@assays[[assay2]]) == assay2.features[k],cell.idx]
       data_ADT <- data_ADT[data_ADT >= quantile(data_ADT, min.cutoff[k]) & data_ADT <= quantile(data_ADT, max.cutoff[k])]
-      data_RNA <- slot(sobj@assays[[assay1]], slot)[rownames(slot(sobj@assays[[assay1]], slot)) == assay1.features[k],names(data_ADT)]
+      data_RNA <- Seurat::GetAssayData(sobj, assay = assay1, layer = slot)[rownames(sobj@assays[[assay1]]) == assay1.features[k],names(data_ADT)]
       res <- cor.test(data_RNA, data_ADT, method = cor.method, exact = FALSE)
       res_pval <- as.numeric(format(res$p.value, scientific=TRUE, digits=3))
       res_cor <- as.numeric(format(res$estimate, scientific=FALSE, digits=3))
@@ -2817,8 +2710,8 @@ feature.cor <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.feat
   colnames(res_cor) <- c("nb_cells","cor","pval","significant_cor")
 
   if(zero.filter) colnames(res_cor) <- paste0(colnames(res_cor), "_0filter")
-  if(any(min.cutoff != 0)) colnames(res_cor) <- paste0(colnames(res_cor), "_qmin")
-  if(any(max.cutoff != 1)) colnames(res_cor) <- paste0(colnames(res_cor), "_qmax")
+  colnames(res_cor) <- paste0(colnames(res_cor), "_q", min.cutoff[1]*100)
+  colnames(res_cor) <- paste0(colnames(res_cor), "_q", max.cutoff[1]*100)
   return(res_cor)
 }
 
@@ -2846,8 +2739,8 @@ feature_plots <- function(sobj, assay, features, slot, reduction, min.cutoff, ma
 
 ## Get cells with non-null expression in assay1 and assay2, with corresponding features between assays
 zerocells.get <- function(sobj = NULL, assay1 = 'RNA', assay2 = 'ADT', assay1.feature = NULL, assay2.feature = NULL, slot = 'data') {
-  cell.idx1 <- slot(sobj@assays[[assay1]], slot)[rownames(slot(sobj@assays[[assay1]], slot)) == assay1.feature,] > 0
-  cell.idx2 <- slot(sobj@assays[[assay2]], slot)[rownames(slot(sobj@assays[[assay2]], slot)) == assay2.feature,] > 0
+  cell.idx1 <- Seurat::GetAssayData(sobj, assay = assay1, layer = slot)[rownames(Seurat::GetAssayData(sobj, assay = assay1, layer = slot)) == assay1.feature,] > 0
+  cell.idx2 <- Seurat::GetAssayData(sobj, assay = assay2, layer = slot)[rownames(Seurat::GetAssayData(sobj, assay = assay2, layer = slot)) == assay2.feature,] > 0
   if(length(cell.idx1)==0) cell.idx1 = rep(FALSE, ncol(sobj@assays[[assay1]]))
   if(length(cell.idx2)==0) cell.idx2 = rep(FALSE, ncol(sobj@assays[[assay2]]))
   return(cell.idx1 & cell.idx2)
@@ -2890,33 +2783,61 @@ grid.scalers <- function(n = 1) {
   # print(paste0("Y : ", y))
   return(c(x, y))
 }
-# save statistics from sobj (nb cells, genes, mito etc.)
+
+## save statistics from sobj (nb cells, genes, mito etc.)
 save_stat <- function(sobj = NULL, sample.names = NULL, title = NULL, out.dir = NULL){
   if(length(sobj) != length(sample.names)) stop(paste0("sample.names does not correspond to sobj provided! (not the same length: ", length(sobj), "sobj  for ", length(sample.names), "name(s) )"))
-  if(class(sobj) != "list") sobj.list = list(sobj) else sobj.list = sobj
+  if(class(sobj) != "list") sobj.list <- list(sobj) else sobj.list <- sobj
   rm(sobj)
-  gc()
+  gc(verbose = FALSE)
   names(sobj.list) = sample.names
-  stat_tot=data.frame(matrix(vector(), 29, 0),stringsAsFactors=F)
+  stat_tot <- data.frame(matrix(vector(), 38, 0),stringsAsFactors=F)
   for (i in sample.names){
-    stat=format(as.data.frame(unlist(sobj.list[[i]]@misc$excel)), trim = TRUE, drop0trailing = TRUE, decimal.mark = ",", scientific = FALSE)
-    names_row_stat=c("Kallisto_Bustools_alignment.Total_reads", "Kallisto_Bustools_alignment.Pseudo_aligned_reads",
-                     "Kallisto_Bustools_alignment.Pseudo_aligned_reads_percent", "Kallisto_Bustools_alignment.Pseudo_aligned_reads_to_unique_target_sequence",
-                     "Kallisto_Bustools_alignment.Pseudo_aligned_reads_to_unique_target_sequence_percent",
-                     "Droplet_Quality.captured_droplet", "Droplet_Quality.total_number_UMI", "Droplet_Quality.estimated_cells",
-                     "Droplet_Quality.estimated_UMI", "Droplet_Quality.fraction_read_in_cells", "Cells_Quality.mito_summary.Median",
-                     "Cells_Quality.ribo_summary.Median", "Cells_Quality.stress_summary.Median", "Cells_Quality.filter_cells_genes",
-                     "Cells_Quality.filter_cells_counts", "Cells_Quality.genes_per_cell_summary.Median", "Cells_Quality.UMI_per_cell_summary.Median",
-                     "After_QC_cells_filtering.estim_cells",
-                     "After_QC_cells_filtering.estim_cells_G1","After_QC_cells_filtering.estim_cells_G2M", "After_QC_cells_filtering.estim_cells_S",
-                     "After_QC_cells_filtering.Genes_covered", "After_QC_cells_feature_filtering.estim_doublets","Final_Cells_Quality.mito_summary.Median",
-                     "Final_Cells_Quality.ribo_summary.Median","Final_Cells_Quality.stress_summary.Median","Final_Cells_Quality.genes_per_cell_summary.Median",
-                     "Final_Cells_Quality.UMI_per_cell_summary.Median","Final_Cells_Quality.nb_genes", "Final_Cells_Quality.nb_cells")
-    stat=as.data.frame(stat[names_row_stat,], row.names = names_row_stat)
-    colnames(stat)=i
-    stat_tot=cbind(stat_tot, stat)
+    stat <- format(round(as.data.frame(unlist(sobj.list[[i]]@misc$excel)),2), trim = TRUE, drop0trailing = TRUE, decimal.mark = ".", scientific = FALSE)
+    names_row_stat <- c("Kallisto_Bustools_alignment.Total_reads",
+                        "Kallisto_Bustools_alignment.Pseudo_aligned_reads",
+                        "Kallisto_Bustools_alignment.Pseudo_aligned_reads_percent",
+                        "Kallisto_Bustools_alignment.Pseudo_aligned_reads_to_unique_target_sequence",
+                        "Kallisto_Bustools_alignment.Pseudo_aligned_reads_to_unique_target_sequence_percent",
+                        "Droplet_Quality.captured_droplet",
+                        "Droplet_Quality.total_number_UMI",
+                        "Droplet_Quality.sequencing_saturation",
+                        "Droplet_Quality.estimated_cells",
+                        "Droplet_Quality.estimated_UMI",
+                        "Droplet_Quality.fraction_read_in_cells",
+                        "Cells_Quality.mito_summary.Median",
+                        "Cells_Quality.ribo_summary.Median",
+                        "Cells_Quality.stress_summary.Median",
+                        "Cells_Quality.filter_cells_genes",
+                        "Cells_Quality.filter_cells_genes_pct",
+                        "Cells_Quality.filter_cells_counts",
+                        "Cells_Quality.filter_cells_counts_pct",
+                        "Cells_Quality.genes_per_cell_summary.Median",
+                        "Cells_Quality.UMI_per_cell_summary.Median",
+                        "After_QC_cells_filtering.estim_cells",
+                        "After_QC_cells_filtering.estim_cells_G1",
+                        "After_QC_cells_filtering.estim_cells_G1_pct",
+                        "After_QC_cells_filtering.estim_cells_G2M",
+                        "After_QC_cells_filtering.estim_cells_G2M_pct",
+                        "After_QC_cells_filtering.estim_cells_S",
+                        "After_QC_cells_filtering.estim_cells_S_pct",
+                        "After_QC_cells_filtering.Genes_covered",
+                        "After_QC_cells_feature_filtering.estim_doublets",
+                        "Final_Cells_Quality.mito_summary.Median",
+                        "Final_Cells_Quality.ribo_summary.Median",
+                        "Final_Cells_Quality.stress_summary.Median",
+                        "Final_Cells_Quality.genes_per_cell_summary.Median",
+                        "Final_Cells_Quality.UMI_per_cell_summary.Median",
+                        "Final_Cells_Quality.nb_genes",
+                        "Final_Cells_Quality.nb_cells", 
+                        "QC_genomic_core_facility.nb_reads_per_cells_CellRanger_like",
+                        "QC_genomic_core_facility.nb_reads_per_cells_final"
+                        )
+    stat <- as.data.frame(stat[names_row_stat,], row.names = names_row_stat)
+    colnames(stat) <- i
+    stat_tot <- cbind(stat_tot, stat)
   }
-  write.table(stat_tot, file = paste0(out.dir, title, '_stat.txt'), sep = ";", row.names = TRUE, col.names = TRUE, quote = FALSE)
+  write.table(stat_tot, file = paste0(out.dir, title, '_stat.csv'), sep = ";", row.names = TRUE, col.names = TRUE, quote = FALSE)
 }
 
 ## Add metadata.file information into @meta.data slot of seurat object
@@ -2961,37 +2882,39 @@ Add_name_mail_author <- function(sobj = NULL, list.author.name = NULL, list.auth
 
 ## Loading TCR data and filter barcode according to sobj
 load.sc.tcr.bcr <- function(x = 1, sobj = NULL, vdj.input.file = NULL, sample.name = NULL){
+  print(x)
+  if (is.null(vdj.input.file) || is.null(sobj)) stop("No 'vdj.input.file' and/or 'sobj' provided!")
   message(paste0("Loading '", vdj.input.file[x], "' ..."))
-  df <- read.table(file = vdj.input.file[x], sep = ',', header = TRUE, stringsAsFactors = FALSE)
-  df$barcode <- gsub(pattern = '-1', replacement = '', x = df$barcode)
-  if (!is.null(sample.name)) df$barcode=paste0(sample.name[x],"_", df$barcode)
-  df <- df[df$barcode %in% colnames(sobj),]
-  if (!is.null(sample.name)) df$barcode=gsub(pattern = paste0(sample.name[x],"_"), replacement = '', x = df$barcode)
+  df <- scRepertoire::loadContigs(dirname(vdj.input.file[x]), format = "10X")
+  df[[1]]$barcode <- gsub(pattern = '-1$', '', df[[1]]$barcode)
+  if (!is.null(sample.name))  df[[1]]$barcode <- paste0(sample.name[x],"_",  df[[1]]$barcode)
+  df[[1]] <- df[[1]][df[[1]]$barcode %in% colnames(sobj), , drop = FALSE]
+  if (!is.null(sample.name))  df[[1]]$barcode <- gsub(pattern = paste0(sample.name[x],"_"),'',  df[[1]]$barcode)
   return(df)
 }
 
+
 ## Basic QC metrics for TCR/BCR
-QC.tcr.bcr <- function(cr_res=NULL, out.dir=global_output, type = 'TCR'){
+QC.tcr.bcr <- function(cr_res = NULL, out.dir = global_output, type = 'TCR', two_col_graph = c("#e76461", "#ffa43e")){
   require(patchwork)
   require(ggplot2)
   require(dplyr)
-  ## Quantification analysis
-  cr_res$productive[cr_res$productive == "True"] <- "Productive"
-  cr_res$productive[cr_res$productive == "False"] <- "No productive"
   ### Quatification total Productive TCR: (sometimes 2 TCR for 1 cell)
-  plot_productive = ggplot(cr_res, aes(x=chain, fill=productive)) +
-    geom_bar(stat="count", position=position_dodge()) +
-    xlab("") + ylab("") + ggtitle("Productivity") +
-    labs(caption = paste("(Don't forget: sometimes there are more than 1 ", type," by cell)"))
+  plot_productive <- ggplot(cr_res[[1]], aes(x = chain, fill = productive)) +
+    geom_bar(stat = "count", position = position_dodge()) +
+    xlab("") + ylab("Number of TCR") + ggtitle("Productivity") + theme_classic() +
+    scale_fill_manual(values = two_col_graph)
+
   ### Quantification nb TCR/cell/productivity
-  table_receptor_number = cr_res %>% select("barcode","chain", "productive") %>% group_by(productive, barcode, chain) %>% summarise(nb = n()) %>% as.data.frame()
-  table_receptor_number$nb = as.character(table_receptor_number$nb)
-  plot_receptor_number = ggplot(table_receptor_number, aes(x=chain, fill=nb)) +
-    geom_bar(stat="count", position=position_dodge2(preserve = "single")) + facet_grid(. ~ productive) +
-    xlab("") + ylab("log10(counts)") + ggtitle(type," quantification by cell") + scale_y_log10()
+  table_receptor_number <- cr_res[[1]] %>% select("barcode","chain", "productive") %>% group_by(productive, barcode, chain) %>% summarise(nb = n()) %>% as.data.frame()
+  table_receptor_number$nb <- as.character(table_receptor_number$nb)
+  plot_receptor_number <- ggplot(table_receptor_number, aes(x = chain, fill = productive)) +
+    geom_bar(stat="count", position = position_dodge2(preserve = "single")) + facet_grid(. ~ nb) +
+    xlab("") + ylab("Number of TCR") + ggtitle(type," Number of TCR by cell") +
+    theme_classic() + scale_fill_manual(values = two_col_graph)
   ### Save
-  nb_cell_without_receptor=length(colnames(sobj)[!(colnames(sobj) %in% cr_res$barcode)]) #nb of cells without TCR/BCR
-  png(paste0(out.dir,'/QC_quantif.png'), width = 1200, height = 400)
+  nb_cell_without_receptor <- length(colnames(sobj)[!(colnames(sobj) %in% cr_res[[1]]$barcode)]) #nb of cells without TCR/BCR
+  png(paste0(out.dir,'/QC.png'), width = 1200, height = 400)
   print(((plot_productive | plot_receptor_number ) +
       plot_annotation(title = sample.name, subtitle = paste0("(",nb_cell_without_receptor, " cells without ", type," on ",dim(sobj)[2]," cells)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) +
       plot_layout(width = c(1, 2))))
@@ -2999,120 +2922,131 @@ QC.tcr.bcr <- function(cr_res=NULL, out.dir=global_output, type = 'TCR'){
 }
 
 ## Quantification of global unique contig analysis
-Quantif.unique.g <- function(combined = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
+Quantif.unique.g <- function(combined = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name = NULL){
   require(patchwork)
   require(dplyr)
   for(x in list_type_clT) {
     ### Tables
-    scR_res = scRepertoire::quantContig(combined, cloneCall=x, scale = T, exportTable = T)
-    tmp = scR_res %>% select("total_contigs_nb"="total","unique_contig_nb"="contigs","unique_contig_pct"="scaled") %>% round(2)
-    assign(paste0("table_quantContig_",sub("\\+","_",x)),data.frame(lapply(tmp, as.character), row.names = scR_res$values))
+    scR_res = scRepertoire::clonalQuant(combined, cloneCall=x, scale = T, exportTable = T)
+    tmp = scR_res %>% select("total_clones_nb"="total","unique_clones_nb"="contigs","unique_clones_pct"="scaled") %>% round(2)
+    assign(paste0("table_clonalQuant_",x),data.frame(lapply(tmp, as.character), row.names = scR_res$values))
     ### Plots
-    assign(paste0("plot_quantUniqueContig_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::quantContig(combined, cloneCall=x, scale = T) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.6, face="bold"))) + Seurat::NoLegend()))
+    assign(paste0("plot_clonalQuant_",x),patchwork::wrap_elements(scRepertoire::clonalQuant(combined, cloneCall=x, scale = T) + ggplot2::xlab("") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.6, face="bold"))) + Seurat::NoLegend()))
   }
   ### Save
-  png(paste0(out.dir,'/quantUniqueContig.png'), width = 1800, height = 600)
-  print((plot_quantUniqueContig_gene_nt | plot_quantUniqueContig_gene | plot_quantUniqueContig_nt | plot_quantUniqueContig_aa ) / (gridExtra::grid.arrange( gridExtra::tableGrob(table_quantContig_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(table_quantContig_gene, theme = gridExtra::ttheme_default(base_size = 10)), gridExtra::tableGrob(table_quantContig_nt, theme = gridExtra::ttheme_default(base_size = 10)), gridExtra::tableGrob(table_quantContig_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
+  png(paste0(out.dir,'/clonalQuant.png'), width = (2200 + 100*(length(combined)-1)), height = (500 + 13*(length(combined)-1))) #, width = 2100, height = (300+50*length(rownames(scR_res))) ) # height = 800
+  print((plot_clonalQuant_strict | plot_clonalQuant_gene | plot_clonalQuant_nt | plot_clonalQuant_aa ) / (gridExtra::grid.arrange( gridExtra::tableGrob(table_clonalQuant_strict, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(table_clonalQuant_gene, theme = gridExtra::ttheme_default(base_size = 10)), gridExtra::tableGrob(table_clonalQuant_nt, theme = gridExtra::ttheme_default(base_size = 10)), gridExtra::tableGrob(table_clonalQuant_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1)) +
       plot_annotation(title = sample.name, subtitle = paste0("(",dim(sobj)[2]," cells)"), caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) +
       plot_layout(heights = c(2, 1)))
   dev.off()
 }
 
 ## Global clonal Homeostasis analysis
-Homeo.g <-function(combined = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
+Homeo.g <-function(combined = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
   require(patchwork)
   require(dplyr)
   for(x in list_type_clT) {
     ### Tables
-    scR_res = scRepertoire::clonalHomeostasis(combined, cloneCall = x, exportTable = TRUE) %>% as.data.frame() %>% round(4)
-    colnames(scR_res)=c("Rare","Small","Medium", "Large", "Hyperexpanded")
-    assign(paste0("table_clhomeo_",sub("\\+","_",x)),data.frame(lapply(scR_res, as.character), row.names = rownames(scR_res)))
+    scR_res <- scRepertoire::clonalHomeostasis(combined, cloneCall = x, exportTable = TRUE) %>% as.data.frame() %>% round(4)
+    colnames(scR_res) <- c("Rare","Small","Medium", "Large", "Hyperexpanded")
+    assign(paste0("table_clonalHomeostasis_",x),data.frame(lapply(scR_res, as.character), row.names = rownames(scR_res)))
     ### Plots
-    assign(paste0("plot_clhomeo_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalHomeostasis(combined, cloneCall = x) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.65, face="bold"))) ))
+    assign(paste0("plot_clonalHomeostasis_",x),patchwork::wrap_elements(scRepertoire::clonalHomeostasis(combined, cloneCall = x) + ggplot2::xlab("") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.65, face="bold"))) ))
   }
   ### Save
-  png(paste0(out.dir,'/clhomeo.png'), width = 2100, height = 800)
-  print( (plot_clhomeo_gene_nt | plot_clhomeo_gene | plot_clhomeo_nt | plot_clhomeo_aa )  / (gridExtra::grid.arrange( gridExtra::tableGrob(table_clhomeo_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clhomeo_gene, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clhomeo_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clhomeo_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
+  png(paste0(out.dir,'/clonalHomeostasis.png'), width = (2200 + 800*(length(combined)-1)), height =  (500 + 13*(length(combined)-1))) #, width = 2100, height = (300+50*length(rownames(scR_res))) ) # height = 800
+  print( (plot_clonalHomeostasis_strict | plot_clonalHomeostasis_gene | plot_clonalHomeostasis_nt | plot_clonalHomeostasis_aa )  / (gridExtra::grid.arrange( gridExtra::tableGrob(table_clonalHomeostasis_strict, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalHomeostasis_gene, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalHomeostasis_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalHomeostasis_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
            plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) +
            plot_layout(heights = c(2, 1)))
   dev.off()
 }
 
 ## Global Clonal Proportions analysis
-Prop.g <-function(combined = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
+Prop.g <-function(combined = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
   require(patchwork)
   require(dplyr)
   for(x in list_type_clT) {
     ### Tables
-    scR_res = scRepertoire::clonalProportion(combined, cloneCall = x, exportTable = TRUE) %>% as.data.frame() %>% round(4)
-    tmp=data.frame(lapply(scR_res, as.character), row.names = rownames(scR_res))
-    colnames(tmp)=colnames(scR_res)
-    assign(paste0("table_clprop_",sub("\\+","_",x)),tmp)
+    scR_res <- scRepertoire::clonalProportion(combined, cloneCall = x, exportTable = TRUE) %>% as.data.frame() %>% round(4)
+    tmp <- data.frame(lapply(scR_res, as.character), row.names = rownames(scR_res))
+    colnames(tmp) <- colnames(scR_res)
+    assign(paste0("table_clonalProportion_",x),tmp)
     ### Plots
-    assign(paste0("plot_clprop_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalProportion(combined, cloneCall = x) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.65, face="bold"))) ))
+    assign(paste0("plot_clonalProportion_",x),patchwork::wrap_elements(scRepertoire::clonalProportion(combined, cloneCall = x) + ggplot2::xlab("") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.65, face="bold"))) ))
   }
   ### Save
-  png(paste0(out.dir,'/clprop.png'), width = 2100, height = 800)
-  print( (plot_clprop_gene_nt | plot_clprop_gene | plot_clprop_nt | plot_clprop_aa )  / (gridExtra::grid.arrange( gridExtra::tableGrob(table_clprop_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clprop_gene, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clprop_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clprop_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
+  png(paste0(out.dir,'/clonalProportion.png'), width = (2800 + 1500*(length(combined)-1)), height = (500 + 13*(length(combined)-1))) #, width = 2100, height = (300+50*length(rownames(scR_res))) ) # height = 800
+  print( (plot_clonalProportion_strict | plot_clonalProportion_gene | plot_clonalProportion_nt | plot_clonalProportion_aa )  / (gridExtra::grid.arrange( gridExtra::tableGrob(table_clonalProportion_strict, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalProportion_gene, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalProportion_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalProportion_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
            plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) +
            plot_layout(heights = c(2, 1)))
   dev.off()
 }
 
 ## Diversity analysis
-Div.g <-function(combined = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
+Div.g <-function(combined = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
   require(patchwork)
   require(dplyr)
-  for(x in list_type_clT) {
-    ### Tables
-    scR_res = scRepertoire::clonalDiversity(combined, cloneCall = x, group = "samples", exportTable = TRUE) %>% select("Shannon", "Inv.Simpson", "Chao", "ACE") %>% round(2)
-    assign(paste0("table_cldiv_",sub("\\+","_",x)),data.frame(lapply(scR_res, as.character), row.names = rownames(scR_res)))
-    ### Plots
-    assign(paste0("plot_cldiv_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalDiversity(combined, cloneCall = x, group = "samples") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold"))) ))
+  for (metric in c("shannon", "inv.simpson", "gini.simpson", "norm.entropy", "pielou", "ace", "chao1", "gini", "d50", "hill0", "hill1", "hill2")){
+      for(x in list_type_clT) {
+        scR_all_res <- scRepertoire::clonalDiversity(combined, cloneCall = x, metric = metric, group.by = "sample")
+        ### Tables
+        scR_res <- data.frame(unlist(lapply(scR_all_res@data$value %>% round(2), as.character)), row.names = scR_all_res@data$sample)
+        colnames(scR_res) <-"value"
+        assign(paste0("table_clonalDiversity_",x),scR_res)
+        ### Plots
+        assign(paste0("plot_clonalDiversity_",x),patchwork::wrap_elements(scR_all_res + ggplot2::xlab("") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold"))) ))
+
+      }
+      ### Save
+      png(paste0(out.dir,'/clonalDiversity_',metric,'.png'), width = 2500, height = (300+12*length(rownames(scR_res)))) #, width = 2100, height = (300+50*length(rownames(scR_res))) ) # height = 800
+      print( (plot_clonalDiversity_strict | plot_clonalDiversity_gene | plot_clonalDiversity_nt | plot_clonalDiversity_aa )  / (gridExtra::grid.arrange( gridExtra::tableGrob(table_clonalDiversity_strict, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalDiversity_gene, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalDiversity_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_clonalDiversity_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
+               plot_annotation(title = paste0(sample.name," (",metric,")"), caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) +
+               plot_layout(heights = c(2, 1)))
+      dev.off()
   }
-  ### Save
-  png(paste0(out.dir,'/cldiv.png'), width = 2100, height = 800)
-  print( (plot_cldiv_gene_nt | plot_cldiv_gene | plot_cldiv_nt | plot_cldiv_aa )  / (gridExtra::grid.arrange( gridExtra::tableGrob(table_cldiv_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_cldiv_gene, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_cldiv_nt, theme = gridExtra::ttheme_default(base_size = 10)),gridExtra::tableGrob(table_cldiv_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
-           plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) +
-           plot_layout(heights = c(2, 1)))
-  dev.off()
 }
 
-### Spliting CTstrict (into separate columns for TRA-V/J/C, TRB-V/J/C and corresponding sequences, with 2 possible clonotypes) and save as metadata
+### Spliting CTstrict (into separate columns for TRA-V/J/C, TRB-V/J/C and corresponding sequences, with 2 possible clones) and save as metadata
 ### and Adding length of TR sequence to meta.data
-split.CTstrict.tcr <- function(sobj=NULL){
-  ctsplit <- t(vapply(sobj@meta.data$CTstrict, function(x) {
-    outvec <- rep('NA', 18)
+split.CTstrict.tcr <- function(sobj = NULL){
+  # Intern function to parse CTstrict
+  parse_cell <- function(x){
+    outvec <- rep(NA_character_, 9) # TRA V/J/C, TRA_seq, TRB V/None/J/C, TRB_seq
+
     if (!is.na(x)) {
-      pass1 <- unlist(strsplit(x = x, split = "\\_"))
-      pass2a <- unlist(strsplit(x = pass1[1], split = "(\\;|\\.)"))
-      if (length(pass2a) %% 3 == 0) {
-        outvec[1:length(pass2a)] <- pass2a
-      } else if (length(pass2a) > 1) {
-        outvec[4:6] <- pass2a[2:4]
+      parts <- strsplit(x, "_", fixed = TRUE)[[1]]
+
+      # TRA
+      if(parts[1] != "NA;NA"){
+        tra_split <- unlist(strsplit(parts[1], "(\\;|\\.)"))
+        outvec[1:4] <- tra_split
       }
-      pass2b <- unlist(strsplit(x = pass1[2], split = "\\;"))
-      outvec[7:(6+length(pass2b))] <- pass2b
-      pass2c <- unlist(strsplit(x = pass1[3], split = "(\\;|\\.)"))
-      if (length(pass2c) %% 4 == 0) {
-        outvec[9:(8 + length(pass2c))] <- pass2c
+
+      # TRB
+      if(parts[2] != "NA;NA"){
+        trb_split <- unlist(strsplit(parts[2], "(\\;|\\.)"))
+        outvec[5:9] <- trb_split
       }
-      pass2d <- unlist(strsplit(x = pass1[4], split = "\\;"))
-      outvec[17:(16+length(pass2d))] <- pass2d
     }
+
     return(outvec)
-  }, rep('NA', 18), USE.NAMES = FALSE))
-  colnames(ctsplit) <- c(
-    'TRAV_1', 'TRAJ_1', 'TRAC_1',
-    'TRAV_2', 'TRAJ_2', 'TRAC_2',
-    'TRA_nt_1', 'TRA_nt_2',
-    'TRBV_1', 'TRBJ_1', 'None_1', 'TRBC_1',
-    'TRBV_2', 'TRBJ_2', 'None_2', 'TRBC_2',
-    'TRB_nt_1', 'TRB_nt_2')
-  ctsplit[ctsplit == "NA"] <- NA # Correcting NAs
-  sobj@meta.data <- cbind(sobj@meta.data, ctsplit)
-  ### Adding length of TR sequence
-  for(x in c("TRA_nt_1", "TRA_nt_2", "TRB_nt_1", "TRB_nt_2")) sobj@meta.data[paste0(x,"_len")] = nchar(sapply(sobj@meta.data[x], as.character))
+  }
+
+  # Apply on the whole CTstrict vector
+  ctsplit <- t(vapply(sobj@meta.data$CTstrict, parse_cell, rep(NA_character_, 9), USE.NAMES = FALSE))
+  colnames(ctsplit) <- c("TRAV","TRAJ","TRAC","TRA_nt",
+                         "TRBV","TRBD","TRBJ", "TRBC","TRB_nt")
+
+  # Correcting NAs
+  ctsplit[ctsplit %in% c("", "NA")] <- NA
+
+  # Save into seurat object
+  sobj@meta.data <- cbind(sobj@meta.data, as.data.frame(ctsplit))
+
+  # Add sequences length (managing "" and NA)
+  for(col in c("TRA_nt","TRB_nt")){
+    sobj@meta.data[[paste0(col,"_len")]] <- nchar(as.character(sobj@meta.data[[col]]))
+  }
 
   return(sobj)
 }
@@ -3145,100 +3079,96 @@ split.bcr <- function(sobj=NULL){
 }
 
 ## Frequency analysis
-Freq.g <- function(sobj=NULL, out.dir = NULL, sample.name=NULL, reduction=NULL, freq_col="Frequency"){
+Freq.g <- function(sobj = NULL, out.dir = NULL, sample.name = NULL, reduction = NULL, freq_col = "clonalFrequency"){
   require(patchwork)
   require(dplyr)
 
   ## Frequency analysis
   ### UMAP of all frequencies
-  png(paste0(out.dir,'/Frequency_umap',sample.name,'.png'), width = 800, height = 1000)
+  png(paste0(out.dir,'/Frequency_umap',sample.name,'.png'), width = 700, height = 1000)
   print((Seurat::FeaturePlot(sobj, reduction = reduction, features = freq_col) + Seurat::DarkTheme() + ggplot2::ggtitle("")) /
-          (Seurat::DimPlot(sobj, reduction = reduction, group.by = "cloneType") + Seurat::DarkTheme() + ggplot2::ggtitle("") ) +
-          plot_annotation(title = "Clonotype frequency", theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))))
+          (Seurat::DimPlot(sobj, reduction = reduction, group.by = "cloneSize") + Seurat::DarkTheme() + ggplot2::ggtitle("") ) +
+          plot_annotation(title = "Clone frequency", theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))))
   dev.off()
-  ### Calculation of clonotypes
+  ### Calculation of clones
   #All
-  sequences = sobj@meta.data %>% select(.data[[freq_col]],CTaa) %>% distinct() %>% arrange(desc(.data[[freq_col]])) %>% na.omit()
-  sobj <- scRepertoire::highlightClonotypes(sobj, cloneCall = "aa", sequence = sequences$CTaa)
-  sobj$highlight_aa_all = as.character(sobj$highlight)
-  sobj$highlight=NULL
+  sequences <- sobj@meta.data %>% select(.data[[freq_col]],CTaa) %>% distinct() %>% arrange(desc(.data[[freq_col]])) %>% na.omit()
+  sobj <- scRepertoire::highlightClones(sobj, cloneCall = "aa", sequence = sequences$CTaa)
+  sobj$highlight_aa_all <- as.character(sobj$highlight)
+  sobj$highlight <- NULL
   #Top 10 frequencies, and top 10 to top 20 frequencies
-  top20_freq = sobj@meta.data %>% select(.data[[freq_col]],CTaa,highlight_aa_all) %>% distinct() %>% arrange(desc(.data[[freq_col]])) %>% na.omit() %>% top_n(n = 20, wt = .data[[freq_col]])
-  if(dim(top20_freq)[1]>20) top20_freq = top20_freq[1:20,]
-  rownames(top20_freq)=top20_freq$highlight_aa_all
+  top20_freq <- sobj@meta.data %>% select(.data[[freq_col]],CTaa,highlight_aa_all) %>% distinct() %>% arrange(desc(.data[[freq_col]])) %>% na.omit() %>% top_n(n = 20, wt = .data[[freq_col]])
+  if(dim(top20_freq)[1]>20) top20_freq <- top20_freq[1:20,]
+  rownames(top20_freq) <- top20_freq$highlight_aa_all
   sobj$highlight_aa_top10_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[1:10], sobj$highlight_aa_all, NA)
   if(dim(top20_freq)[1]>10) sobj$highlight_aa_top11to20_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[11:length(top20_freq$highlight)], sobj$highlight_aa_all, NA)
   sobj$highlight_aa_top20_freq <- ifelse(sobj$highlight_aa_all %in% top20_freq$highlight[1:length(top20_freq$highlight)], sobj$highlight_aa_all, NA)
 
   #UMAP of top 10 frequencies
-  png(paste0(out.dir,'/Frequency_top_10_umap',sample.name,'.png'), width = 800, height = (400+350))
+  png(paste0(out.dir,'/Frequency_top_10_uMAP_',sample.name,'.png'), width = 700, height = (400+350))
   print(patchwork::wrap_elements( (Seurat::DimPlot(sobj, reduction = reduction, group.by = "highlight_aa_top10_freq")  + Seurat::DarkTheme()) / gridExtra::tableGrob(top20_freq[1:10,c(freq_col,"CTaa")], theme = gridExtra::ttheme_default(base_size = 10)) +
-                                    plot_annotation(title = paste0("Top 10 Clonotypes (by frequencies)"),  subtitle = paste0("(",dim(sobj)[2]," cells)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0.5, face="bold"))) +
+                                    plot_annotation(title = paste0("Top 10 Clones (by frequencies)"),  subtitle = paste0("(",dim(sobj)[2]," cells)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0.5, face="bold"))) +
                                     plot_layout(heights = c(2, 1))))
   dev.off()
   #UMAP of top 11 to 20 frequencies
   if(dim(top20_freq)[1]>10){
-    png(paste0(out.dir,'/Frequency_top11to20_umap',sample.name,'.png'), width = 800, height = (400+350))
+    png(paste0(out.dir,'/Frequency_top11to20_uMAP_',sample.name,'.png'), width = 700, height = (400+350))
     print(patchwork::wrap_elements( (Seurat::DimPlot(sobj, reduction = reduction, group.by = "highlight_aa_top11to20_freq")  + Seurat::DarkTheme()) / gridExtra::tableGrob(top20_freq[11:length(top20_freq$CTaa),c(freq_col,"CTaa")], theme = gridExtra::ttheme_default(base_size = 10)) +
-                                      plot_annotation(title = paste0("Top 11 to ", dim(top20_freq)[1], " Clonotypes (by frequencies)"),  subtitle = paste0("(",dim(sobj)[2]," cells)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0.5, face="bold"))) +
+                                      plot_annotation(title = paste0("Top 11 to ", dim(top20_freq)[1], " Clones (by frequencies)"),  subtitle = paste0("(",dim(sobj)[2]," cells)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0.5, face="bold"))) +
                                       plot_layout(heights = c(2, 1))))
     dev.off()
   }
-  
+
   return(sobj)
 }
 
 ## Physicochemical properties of the CDR3
-Physicochemical_properties.g <- function(sobj=NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, sample.name=NULL, type='TCR'){
+Physicochemical_properties.g <- function(sobj=NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, sample.name=NULL, type='TCR'){
   require(patchwork)
   require(ggplot2)
   ### Get cdr3 aa
   if(type == 'TCR'){
     CTaa_split <- as.data.frame(t(sapply(sobj@meta.data$CTaa, function(x) {
-      outvec <- rep(NA, 4)
+      outvec <- rep(NA, 2)
       if (!is.na(x)) {
-        tmp <- unlist(strsplit(x = x, split = "\\_"))
-        tmp1 <- unlist(strsplit(x = tmp[1], split = "(\\;)"))
-        tmp2 <- unlist(strsplit(x = tmp[2], split = "(\\;)"))
-        outvec[1:2]=tmp1[1:2]
-        outvec[3:4]=tmp2[1:2]
+        outvec[1:2] <- unlist(strsplit(x = x, split = "\\_"))
       }
       return(outvec)
     }, USE.NAMES = FALSE)))
-    colnames(CTaa_split)=c("TRA_cdr3_1", "TRA_cdr3_2", "TRB_cdr3_1", "TRB_cdr3_2")
+    colnames(CTaa_split) <- c("TRA_cdr3_1","TRB_cdr3_1")
   }else if(type == 'BCR'){
     CTaa_split <- as.data.frame(t(sapply(sobj@meta.data$CTaa, function(x) {
       outvec <- rep(NA, 2)
       if (!is.na(x)) outvec <- unlist(strsplit(x = x, split = "\\_"))
       return(outvec)
     }, USE.NAMES = FALSE)))
-    colnames(CTaa_split)=c("IGH_cdr3", "IGL_cdr3")
+    colnames(CTaa_split) <- c("IGH_cdr3", "IGL_cdr3")
   }
   CTaa_split[CTaa_split == "NA"] <- NA # Correcting NAs
-  rownames(CTaa_split)=rownames(sobj@meta.data)
+  rownames(CTaa_split) <- rownames(sobj@meta.data)
   ### Calculation of aa properties for each TRA/TRB or IG
   for (i in colnames(CTaa_split)){
-    CTaa_split_global_withoutNA = CTaa_split[(!is.na(CTaa_split[i])),] #suppr NA values
-    if(dim(CTaa_split_global_withoutNA)[1]!=0){
-      aaProPerties <- alakazam::aminoAcidProperties(CTaa_split_global_withoutNA, seq=i, nt=F, trim=F, label=i)
+    CTaa_split_global_withoutNA <- CTaa_split[(!is.na(CTaa_split[i])),] #suppr NA values
+    if(dim(CTaa_split_global_withoutNA)[1] != 0){
+      aaProPerties <- alakazam::aminoAcidProperties(CTaa_split_global_withoutNA, seq = i, nt = F, trim = F, label = i)
       ### Merging results
-      CTaa_split_global = if(type=='TCR') merge(CTaa_split, aaProPerties[,5:dim(aaProPerties)[2]], by="row.names", all.x=TRUE, all.y=TRUE) else merge(CTaa_split, aaProPerties[,3:dim(aaProPerties)[2]], by="row.names", all.x=TRUE, all.y=TRUE)
+      CTaa_split_global <- merge(CTaa_split, aaProPerties[,3:dim(aaProPerties)[2]], by="row.names", all.x=TRUE, all.y=TRUE)
       rownames(CTaa_split_global) <- CTaa_split_global$Row.names
       CTaa_split_global$Row.names <- NULL
-      summary=NULL
+      summary_df=NULL
       names_properties = stringr::str_replace(grep("_aa_",colnames(aaProPerties), value=TRUE), ".+_aa_", "")
       for (j in names_properties){
         ### Table
-        summary=rbind(summary,summary(CTaa_split_global[[paste0(i,"_aa_", j)]]) %>% round(2))
+        summary_df=rbind(summary_df,summary(CTaa_split_global[[paste0(i,"_aa_", j)]]) %>% round(2))
         ### Plots
         assign(paste0("plot_aaProperties_",j),patchwork::wrap_elements(ggplot(cbind(sobj@meta.data,CTaa_split_global), aes(x=orig.ident, y=.data[[paste0(i,"_aa_", j)]])) +
                                                                          geom_boxplot(aes(fill=orig.ident)) +
-                                                                         ggtitle(paste0(ifelse(j=="gravy", "hydrophobicity", j))) + xlab("") + ylab("") + theme(legend.position='none')))
+                                                                         ggtitle(paste0(ifelse(j=="gravy", "hydrophobicity", j))) + xlab("") + ylab("") + theme_classic() + theme(legend.position='none')))
       }
       ### Formatting table
-      rownames(summary)=names_properties
+      rownames(summary_df) <- names_properties
       ### Formatting Plot
-      assign(paste0("plot_aaProperties_",i),patchwork::wrap_elements((plot_aaProperties_length | plot_aaProperties_gravy | plot_aaProperties_bulk | plot_aaProperties_aliphatic | plot_aaProperties_polarity | plot_aaProperties_charge | plot_aaProperties_basic | plot_aaProperties_acidic | plot_aaProperties_aromatic | gridExtra::tableGrob(summary, theme = gridExtra::ttheme_default(base_size = 10))) +
+      assign(paste0("plot_aaProperties_",i),patchwork::wrap_elements((plot_aaProperties_length | plot_aaProperties_gravy | plot_aaProperties_bulk | plot_aaProperties_aliphatic | plot_aaProperties_polarity | plot_aaProperties_charge | plot_aaProperties_basic | plot_aaProperties_acidic | plot_aaProperties_aromatic | gridExtra::tableGrob(summary_df, theme = gridExtra::ttheme_default(base_size = 10))) +
                                                                        patchwork::plot_annotation(title =  paste(unlist(strsplit(x = i, split = "_cdr3_")), collapse=" ")) +
                                                                        plot_layout(widths = c(1,1,1,1,1,1,1,1,1,2)) ) )
     }else{
@@ -3250,7 +3180,7 @@ Physicochemical_properties.g <- function(sobj=NULL, list_type_clT = c("gene+nt",
   ### Save
   png(paste0(out.dir,'/aaProperties.png'), width = 3500, height = 250*length(colnames(CTaa_split)))
   if(type == 'TCR'){
-    print( (plot_aaProperties_TRA_cdr3_1 / plot_aaProperties_TRA_cdr3_2 / plot_aaProperties_TRB_cdr3_1 / plot_aaProperties_TRB_cdr3_2 ) +
+    print( (plot_aaProperties_TRA_cdr3_1 / plot_aaProperties_TRB_cdr3_1 ) +
              plot_annotation(title = sample.name, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
   }else if(type =='BCR'){
     print( (plot_aaProperties_IGH_cdr3 / plot_aaProperties_IGL_cdr3 ) +
@@ -3260,50 +3190,51 @@ Physicochemical_properties.g <- function(sobj=NULL, list_type_clT = c("gene+nt",
 }
 
 ## Quantification of unique contig analysis
-Quantif.unique.c <- function(sobj = NULL, ident.name=NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, filtred_metadata_aa=NULL, filtred_metadata_nt=NULL, filtred_metadata_gene=NULL, filtred_metadata_gene_nt=NULL){
+Quantif.unique.c <- function(sobj = NULL, ident.name = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption = NULL, sample.name = NULL){
   require(patchwork)
   require(dplyr)
-  df_nb_cells=as.data.frame(table(sobj[[ident.name]]), row.names = paste0("Cluster ", as.data.frame(table(sobj[[ident.name]]))$Var1))
-  df_nb_cells$Var1=NULL
-  colnames(df_nb_cells)="nb_cells"
+  df_nb_cells <- as.data.frame(table(sobj[[ident.name]]))
+  rownames(df_nb_cells) <- paste0("Cluster ", df_nb_cells[[ident.name]])
+  df_nb_cells[[ident.name]] <- NULL
+  colnames(df_nb_cells) <- "nb_cells"
   for(x in list_type_clT){
     ### Tables
-    tmp = scRepertoire::quantContig(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall=x, scale = T, exportTable = T)
-    tmp = data.frame(lapply((tmp %>% select("total_nb_contigs"="total","unique_nb_contig"="contigs","unique_contig_pct"="scaled") %>% round(2)), as.character), row.names = paste0("Cluster ", tmp$values))
-    tmp = merge(df_nb_cells, tmp, by="row.names", all=TRUE) %>% arrange(desc(nb_cells))
-    rownames(tmp)=tmp$Row.names
-    tmp$Row.names=NULL
-    colnames(tmp)[1]="total_nb_cells"
-    assign(paste0("clust_quantUniqueContig_",sub("\\+","_",x)),tmp)
-    sobj@misc$scRepertoire$clonalQuantifContig[[paste0("clust_quantUniqueContig_",sub("\\+","_",x))]]=get(paste0("clust_quantUniqueContig_",sub("\\+","_",x)))
+    tmp <- scRepertoire::clonalQuant(sobj, group.by = ident.name, cloneCall=x, scale = T, exportTable = T)
+    tmp <- data.frame(lapply((tmp %>% select("total_clones_nb"="total","unique_clones_nb"="contigs","unique_clones_pct"="scaled") %>% round(2)), as.character), row.names = paste0("Cluster ", tmp$values))
+    tmp <- merge(df_nb_cells, tmp, by="row.names", all=TRUE) %>% arrange(desc(nb_cells))
+    rownames(tmp) <- tmp$Row.names
+    tmp$Row.names <- NULL
+    colnames(tmp)[1] <- "total_nb_cells"
+    assign(paste0("clust_clonalQuant_",x),tmp)
+    sobj@misc$scRepertoire$clonalQuantifContig[[paste0("clust_clonalQuant_",x)]] <- get(paste0("clust_clonalQuant_",x))
     ### Plots
-    assign(paste0("plot_clust_quantUniqueContig_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::quantContig(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall=x, scale = T) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.6, face="bold")))))
+    assign(paste0("plot_clust_clonalQuant_",x),patchwork::wrap_elements(scRepertoire::clonalQuant(sobj, group.by = ident.name, cloneCall=x, scale = T) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.6, face="bold")))))
   }
   ### Save
-  png(paste0(out.dir,'/clust_quantContig_',sample.name,'.png'), width =2100, height = 800)
-  print(( (plot_clust_quantUniqueContig_gene_nt | plot_clust_quantUniqueContig_gene | plot_clust_quantUniqueContig_nt | plot_clust_quantUniqueContig_aa ) /
-            gridExtra::grid.arrange(gridExtra::tableGrob(clust_quantUniqueContig_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_quantUniqueContig_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_quantUniqueContig_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_quantUniqueContig_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
+  png(paste0(out.dir,'/clust_clonalQuant_',sample.name,'.png'), width = 2100, height = (500 + 25*(dim(tmp)[1]))) #, width = 2100, height = 800)
+  print(( (plot_clust_clonalQuant_strict | plot_clust_clonalQuant_gene | plot_clust_clonalQuant_nt | plot_clust_clonalQuant_aa ) /
+            gridExtra::grid.arrange(gridExtra::tableGrob(clust_clonalQuant_strict, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clonalQuant_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clonalQuant_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_clonalQuant_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
           plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
   dev.off()
   return(sobj)
 }
 
 ## Clonal Homeostasis analysis
-Homeo.c <- function(sobj = NULL, ident.name=NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, filtred_metadata_aa=NULL, filtred_metadata_nt=NULL, filtred_metadata_gene=NULL, filtred_metadata_gene_nt=NULL){
+Homeo.c <- function(sobj = NULL, ident.name=NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
   ### Tables
   for(x in list_type_clT){
     ### Tables
-    scR_res = scRepertoire::clonalHomeostasis(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, exportTable = TRUE) %>% as.data.frame() %>% round(4)
+    scR_res = scRepertoire::clonalHomeostasis(sobj, group.by = ident.name, cloneCall = x, exportTable = TRUE) %>% as.data.frame() %>% round(4)
     colnames(scR_res)=c("Rare","Small","Medium", "Large", "Hyperexpanded")
-    assign( paste0("clust_clhomeo_",sub("\\+","_",x)), data.frame(lapply(scR_res, as.character), row.names = paste0("Cluster ", row.names(scR_res))))
-    # sobj@misc$scRepertoire$clonalHomeostasis[[paste0("clust_clhomeo_",sub("\\+","_",x))]]=get(paste0("clust_clhomeo_",sub("\\+","_",x)))
+    assign( paste0("clust_clonalHomeostasis_",x), data.frame(lapply(scR_res, as.character), row.names = paste0("Cluster ", row.names(scR_res))))
+    # sobj@misc$scRepertoire$clonalHomeostasis[[paste0("clust_clonalHomeostasis_",x)]]=get(paste0("clust_clonalHomeostasis_",x))
     ### Plots
-    assign(paste0("plot_clust_clhomeo_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalHomeostasis(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
+    assign(paste0("plot_clust_clonalHomeostasis_",x),patchwork::wrap_elements(scRepertoire::clonalHomeostasis(sobj, group.by = ident.name, cloneCall = x) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
   }
   ### Save
-  png(paste0(out.dir,'/clust_clhomeo_',sample.name,'.png'), width =2000, height = 800)
-  print(( (plot_clust_clhomeo_gene_nt | plot_clust_clhomeo_gene | plot_clust_clhomeo_nt | plot_clust_clhomeo_aa ) /
-            gridExtra::grid.arrange(gridExtra::tableGrob(clust_clhomeo_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clhomeo_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clhomeo_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_clhomeo_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
+  png(paste0(out.dir,'/clust_clonalHomeostasis_',sample.name,'.png'), width = 2500, height =  (500 + 25*(dim(scR_res)[1]))) #, width = 2000, height = 800)
+  print(( (plot_clust_clonalHomeostasis_strict | plot_clust_clonalHomeostasis_gene | plot_clust_clonalHomeostasis_nt | plot_clust_clonalHomeostasis_aa ) /
+            gridExtra::grid.arrange(gridExtra::tableGrob(clust_clonalHomeostasis_strict, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clonalHomeostasis_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clonalHomeostasis_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_clonalHomeostasis_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
           plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
   dev.off()
 
@@ -3311,51 +3242,53 @@ Homeo.c <- function(sobj = NULL, ident.name=NULL, list_type_clT = c("gene+nt","g
 }
 
 ## Clonal Proportions analysis
-Prop.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, filtred_metadata_aa=NULL, filtred_metadata_nt=NULL, filtred_metadata_gene=NULL, filtred_metadata_gene_nt=NULL){
+Prop.c <- function(sobj = NULL, ident.name=NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
   require(patchwork)
   require(dplyr)
   for(x in list_type_clT){
     ### Tables
-    tmp = scRepertoire::clonalProportion(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, exportTable = TRUE)
-    tmp = tmp %>% as.data.frame() %>% mutate_all(as.character) %>% as.data.frame(row.names = paste0("Cluster ", row.names(tmp)))
-    assign( paste0("clust_clprop_",sub("\\+","_",x)), tmp)
-    sobj@misc$scRepertoire$clonalProportion[[paste0("clust_clprop_",sub("\\+","_",x))]]=get(paste0("clust_clprop_",sub("\\+","_",x)))
+    tmp <- scRepertoire::clonalProportion(sobj, cloneCall = x, exportTable = TRUE) # group.by = ident.name, produce error but it is the defaut parameter
+    tmp <- tmp %>% as.data.frame() %>% mutate_all(as.character) %>% as.data.frame(row.names = paste0("Cluster ", row.names(tmp)))
+    assign( paste0("clust_clonalProportion_",x), tmp)
+    sobj@misc$scRepertoire$clonalProportion[[paste0("clust_clonalProportion_",x)]] <- get(paste0("clust_clonalProportion_",x))
     ### Plots
-    assign(paste0("plot_clust_clprop_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalProportion(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
+    assign(paste0("plot_clust_clonalProportion_",x),patchwork::wrap_elements(scRepertoire::clonalProportion(sobj, cloneCall = x) + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
   }
   ### Save
-  png(paste0(out.dir,'/clust_clprop_', sample.name, '.png'), width =2000, height = 800)
-  print(( (plot_clust_clprop_gene_nt | plot_clust_clprop_gene | plot_clust_clprop_nt | plot_clust_clprop_aa ) /
-       gridExtra::grid.arrange(gridExtra::tableGrob(clust_clprop_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clprop_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clprop_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_clprop_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
+  png(paste0(out.dir,'/clust_clonalProportion_', sample.name, '.png'), width = 2500, height = (500 + 13*(dim(tmp)[1]))) #, width = 2300, height = 800)
+  print(( (plot_clust_clonalProportion_strict | plot_clust_clonalProportion_gene | plot_clust_clonalProportion_nt | plot_clust_clonalProportion_aa ) /
+       gridExtra::grid.arrange(gridExtra::tableGrob(clust_clonalProportion_strict, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clonalProportion_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clonalProportion_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_clonalProportion_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
       plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
   dev.off()
   return(sobj)
 }
 
 ## Diversity analysis
-Div.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, filtred_metadata_aa=NULL, filtred_metadata_nt=NULL, filtred_metadata_gene=NULL, filtred_metadata_gene_nt=NULL){
+Div.c <- function(sobj = NULL, ident.name = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
   require(patchwork)
   require(dplyr)
-  for(x in list_type_clT){
-    ### Tables
-    tmp = scRepertoire::clonalDiversity(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, group = "cluster", exportTable = TRUE)
-    tmp[tmp=='NaN']=NA
-    assign( paste0("clust_cldiv_",sub("\\+","_",x)), data.frame(lapply(( tmp %>% mutate_all(function(x){ as.numeric(as.character(x)) }) %>% round(2) %>% select("Shannon","Inv.Simpson","Chao","ACE") ), as.character), row.names = paste0("Cluster ", tmp$cluster)))
-    # sobj@misc$scRepertoire$clonalDiversity[[paste0("clust_cldiv_",sub("\\+","_",x))]]=get(paste0("clust_cldiv_",sub("\\+","_",x)))
-    ### Plots
-    assign(paste0("plot_clust_cldiv_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalDiversity(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, group = "cluster") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
+  for (metric in c("shannon", "inv.simpson", "gini.simpson", "norm.entropy", "pielou", "ace", "chao1", "gini", "d50", "hill0", "hill1", "hill2")){
+      for(x in list_type_clT){
+        scR_all_res <- scRepertoire::clonalDiversity(sobj, group.by = ident.name, cloneCall = x, metric = metric)
+        ### Tables
+        scR_res <- data.frame(unlist(lapply(scR_all_res@data$value %>% round(2), as.character)), row.names = paste0("Cluster ",scR_all_res@data[[ident.name]]))
+        colnames(scR_res) <-"value"
+        assign(paste0("clust_clonalDiversity_",x),scR_res)
+        ### Plots
+        assign(paste0("plot_clust_clonalDiversity_",x),patchwork::wrap_elements(scR_all_res + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
+      }
+      ### Save
+      png(paste0(out.dir,'/clust_clonalDiversity_' ,metric, '_', sample.name, '.png'), width = 1000, height = (300+25*dim(scR_res)[1])) #, width = 1000, height = 600)
+      print(( (plot_clust_clonalDiversity_strict | plot_clust_clonalDiversity_gene | plot_clust_clonalDiversity_nt | plot_clust_clonalDiversity_aa ) /
+                gridExtra::grid.arrange(gridExtra::tableGrob(clust_clonalDiversity_strict, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clonalDiversity_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_clonalDiversity_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_clonalDiversity_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
+              plot_annotation(title = paste0(sample.name," (",metric,")"), caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
+      dev.off()
   }
-  ### Save
-  png(paste0(out.dir,'/clust_cldiv_', sample.name, '.png'), width =2000, height = 800)
-  print(( (plot_clust_cldiv_gene_nt | plot_clust_cldiv_gene | plot_clust_cldiv_nt | plot_clust_cldiv_aa ) /
-            gridExtra::grid.arrange(gridExtra::tableGrob(clust_cldiv_gene_nt, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_cldiv_gene, theme = gridExtra::ttheme_default(base_size = 10)) , gridExtra::tableGrob(clust_cldiv_nt, theme = gridExtra::ttheme_default(base_size = 10)) ,  gridExtra::tableGrob(clust_cldiv_aa, theme = gridExtra::ttheme_default(base_size = 10)), nrow=1) ) +
-          plot_annotation(title = sample.name, caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
-  dev.off()
   return(sobj)
 }
 
 ## Frequency analysis
-Freq.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, ident.name=NULL, reduction=NULL, freq_col="Frequency", filtred_metadata_aa=NULL, filtred_metadata_nt=NULL, filtred_metadata_gene=NULL, filtred_metadata_gene_nt=NULL){
+Freq.c <- function(sobj = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, ident.name=NULL, reduction=NULL, freq_col="clonalFrequency"){
   require(patchwork)
   require(dplyr)
   require(ggplot2)
@@ -3368,46 +3301,49 @@ Freq.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), o
     ggplot2::xlab("Clusters")
   dev.off()
 
-  ### Calculation of clonotypes
+  ### Calculation of clones
   #Top 10 frequencies by clusters
   for(cluster in levels(Seurat::Idents(sobj))){
-    if(!any(!is.na(subset(sobj, idents = cluster)@meta.data["highlight_aa_all"]))) next # if no clonotype for this cluster -> next
-    #For all clonotype of the cluster
+    if(!any(!is.na(subset(sobj, idents = cluster)@meta.data["highlight_aa_all"]))) next # if no clone for this cluster -> next
+    #For all clone of the cluster
     sobj@meta.data[[paste0("highlight_aa_clust",cluster)]] <- ifelse(sobj@meta.data[[ident.name]]==cluster,sobj@meta.data$highlight_aa_all, NA)
     tmp = sobj@meta.data %>% add_count(.data[[paste0("highlight_aa_clust",cluster)]], name = paste0("Frequency_aa_clust",cluster))
     sobj@meta.data[[paste0("Frequency_aa_clust",cluster)]]=tmp[[paste0("Frequency_aa_clust",cluster)]] #NB: on ne peut pas rajouter la colone directement dans le meta.data sinon ça fait planter les plots pour une raison inconnue.
     sobj@meta.data[[paste0("Frequency_aa_clust",cluster)]] <- ifelse(is.na(sobj@meta.data[[paste0("highlight_aa_clust",cluster)]]), NA, sobj@meta.data[[paste0("Frequency_aa_clust",cluster)]])
-    #For top 10 clonotypes of the cluster
-    top10_freq = sobj@meta.data[,c(.data[[freq_col]], paste0("Frequency_aa_clust",cluster),"CTaa",paste0("highlight_aa_clust",cluster))] %>% distinct() %>% na.omit() %>% arrange(desc(.data[[paste0("Frequency_aa_clust",cluster)]])) %>% top_n(n = 10, wt = .data[[paste0("Frequency_aa_clust",cluster)]])
+    #For top 10 clones of the cluster
+    top10_freq = sobj@meta.data[,c(freq_col, paste0("Frequency_aa_clust",cluster),"CTaa",paste0("highlight_aa_clust",cluster))] %>% distinct() %>% na.omit() %>% arrange(desc(.data[[paste0("Frequency_aa_clust",cluster)]])) %>% top_n(n = 10, wt = .data[[paste0("Frequency_aa_clust",cluster)]])
     if(dim(top10_freq)[1]>10) top10_freq=top10_freq[1:10,]
     rownames(top10_freq)=top10_freq[[paste0("highlight_aa_clust",cluster)]]
     sobj@meta.data$highlight_aa_top10_freq_cluster <- ifelse(sobj@meta.data[[paste0("highlight_aa_clust",cluster)]] %in% top10_freq[[paste0("highlight_aa_clust",cluster)]],sobj@meta.data[[paste0("highlight_aa_clust",cluster)]], NA)
     #UMAP of top 10 frequencies
-    png(paste0(out.dir,'/Frequency_top_10_clust',cluster,'_umap', sample.name, '.png'), width = 600, height = 750)
-    print(patchwork::wrap_elements( (Seurat::DimPlot(sobj, reduction = reduction, group.by = "highlight_aa_top10_freq_cluster") + Seurat::DarkTheme()) / gridExtra::tableGrob(top10_freq[,c(.data[[freq_col]], paste0("Frequency_aa_clust",cluster),"CTaa")], theme = gridExtra::ttheme_default(base_size = 10)) +
-                                      plot_annotation(title = paste0("Top ", dim(top10_freq)[1], " Clonotypes (by frequencies)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0.5, face="bold")))))
+    png(paste0(out.dir,'/Frequency_top_10_clust',cluster,'_umap', sample.name, '.png'), width = 800, height = 750)
+    print(patchwork::wrap_elements( (Seurat::DimPlot(sobj, reduction = reduction, group.by = "highlight_aa_top10_freq_cluster") + Seurat::DarkTheme()) / gridExtra::tableGrob(top10_freq[,c(freq_col, paste0("Frequency_aa_clust",cluster),"CTaa")], theme = gridExtra::ttheme_default(base_size = 10)) +
+                                      plot_annotation(title = paste0("Top ", dim(top10_freq)[1], " Clones (by frequencies)"), theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0.5, face="bold")))))
     dev.off()
   }
 }
 
 ## Clonal Overlap analysis
-Overlap.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, filtred_metadata_aa=NULL, filtred_metadata_nt=NULL, filtred_metadata_gene=NULL, filtred_metadata_gene_nt=NULL){
+Overlap.c <- function(sobj = NULL, ident.name = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL){
   require(patchwork)
   require(dplyr)
   require(ggplot2)
   ### Plots
-  for(x in list_type_clT) assign(paste0("plot_clust_clOverlap_",sub("\\+","_",x)),patchwork::wrap_elements(scRepertoire::clonalOverlap(get(paste0("filtred_metadata_", sub("\\+","_",x))), cloneCall = x, method="overlap") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
+  for(x in list_type_clT) assign(paste0("plot_clust_clonalOverlap_",x),patchwork::wrap_elements(scRepertoire::clonalOverlap(sobj, group.by = ident.name, cloneCall = x, method="overlap") + plot_annotation(title = x, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=10, hjust=0.5, face="bold")))))
   ### Save
-  png(paste0(out.dir,'/clust_clOverlap_',sample.name,'.png'), width = 2000, height = 600)
-  print( (plot_clust_clOverlap_gene_nt | plot_clust_clOverlap_gene | plot_clust_clOverlap_nt | plot_clust_clOverlap_aa ) +
-           plot_annotation(title = sample.name,subtitle ="It is looking at the overlap of clonotypes scaled to the smaller number of unique clonotypes in the compared clusters", caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
+  png(paste0(out.dir,'/clust_clonalOverlap_',sample.name,'.png'), width = 2000, height = 600)
+  print( (plot_clust_clonalOverlap_strict | plot_clust_clonalOverlap_gene | plot_clust_clonalOverlap_nt | plot_clust_clonalOverlap_aa ) +
+           plot_annotation(title = sample.name,subtitle ="It is looking at the overlap of clones scaled to the smaller number of unique clones in the compared clusters", caption = caption, theme = ggplot2::theme(plot.caption = ggplot2::element_text(hjust=0), plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
   dev.off()
   ### Complete table
   for(x in list_type_clT) {
     ### Clusters names identification
-    name_clust = names(get(paste0("filtred_metadata_",sub("\\+","_",x))))
+    cloneCall=paste0("CT",x)
+    name_clust <- unique(sort(sobj@meta.data[!is.na(sobj@meta.data[[cloneCall]]),ident.name]))
+    df <- sobj@meta.data[,c(cloneCall,ident.name)]
+    df$barcode <- rownames(df)
     ### Create dataframe for results
-    overlap_res=data.frame(tested_clust=character(),
+    overlap_res <- data.frame(tested_clust=character(),
                            nb_unique_seq_tested_clust=double(),
                            ref_clust=character(),
                            nb_unique_seq_ref_clust=double(),
@@ -3415,57 +3351,53 @@ Overlap.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa")
                            list_sequences=character(),
                            stringsAsFactors=FALSE)
     ### Analyse
-    if(x=="gene+nt") cloneCall="CTstrict" else cloneCall=paste0("CT",x)
-    df = get(paste0("filtred_metadata_",sub("\\+","_",x)))
     for (i in name_clust){
-      df.i <- df[[i]]
+      df.i <- df[df[[ident.name]] == i,]
       df.i <- df.i[,c("barcode",cloneCall)]
       df.i_unique <- df.i[!duplicated(df.i$barcode),]
-      nb_i_unique=dim(df.i_unique)[1]
+      df.i_unique <- df.i_unique[!is.na(df.i_unique[,cloneCall]), ]
+      nb_i_unique <- dim(df.i_unique)[1]
       for (j in name_clust){
         if(i != j){
-          df.j <- df[[j]]
+          df.j <- df[df[[ident.name]] == j,]
           df.j <- df.j[,c("barcode",cloneCall)]
           df.j_unique <- df.j[!duplicated(df.j$barcode),]
-          nb_j_unique=dim(df.j_unique)[1]
+          df.j_unique <- df.j_unique[!is.na(df.j_unique[,cloneCall]), ]
+          nb_j_unique <- dim(df.j_unique)[1]
           overlap <- intersect(df.i_unique[,cloneCall], df.j_unique[,cloneCall])
-          nb_overlap = length(overlap)
-          if(nb_overlap==0) overlap='NA'
-          overlap_res=rbind(overlap_res, data.frame(tested_clust=i,
-                                                    nb_unique_seq_tested_clust=nb_i_unique,
-                                                    tested_clust_list_sequences=paste(df.i_unique[,cloneCall], collapse=";"),
-                                                    ref_clust=j,
-                                                    nb_unique_seq_ref_clust=nb_j_unique,
-                                                    ref_clust_list_sequences=paste(df.j_unique[,cloneCall], collapse=";"),
-                                                    nb_overlap=nb_overlap,
-                                                    overlap_list_sequences=paste(overlap, collapse=";"),
-                                                    stringsAsFactors=FALSE))
+          nb_overlap <- length(overlap)
+          if(nb_overlap==0) overlap <- 'NA'
+          overlap_res <-rbind(overlap_res, data.frame(tested_clust=i,
+                                                      nb_unique_seq_tested_clust=nb_i_unique,
+                                                      tested_clust_list_sequences=paste(df.i_unique[,cloneCall], collapse=";"),
+                                                      ref_clust=j,
+                                                      nb_unique_seq_ref_clust=nb_j_unique,
+                                                      ref_clust_list_sequences=paste(df.j_unique[,cloneCall], collapse=";"),
+                                                      nb_overlap=nb_overlap,
+                                                      overlap_list_sequences=paste(overlap, collapse=";"),
+                                                      stringsAsFactors=FALSE))
         }
       }
     }
     ### Save
-    write.table(overlap_res, file = paste0(out.dir,"/clust_overlap_",sub("\\+","_",x),"_",sample.name,".txt"), quote = FALSE, sep = "\t", na = "NA", row.names = FALSE, col.names = TRUE, append=FALSE, dec=",")
+    write.table(overlap_res, file = paste0(out.dir,"/clust_overlap_",sub("\\+","_",x),"_",sample.name,".tsv"), quote = FALSE, sep = "\t", na = "NA", row.names = FALSE, col.names = TRUE, append=FALSE, dec=".")
   }
 }
 
 ### Get cdr3 aa
-Physicochemical_properties.c <- function(sobj = NULL, list_type_clT = c("gene+nt","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, ident.name=NULL, filtred_metadata_aa=NULL, filtred_metadata_nt=NULL, filtred_metadata_gene=NULL, filtred_metadata_gene_nt=NULL, type='TCR'){
+Physicochemical_properties.c <- function(sobj = NULL, list_type_clT = c("strict","gene","nt","aa"), out.dir = NULL, caption=NULL, sample.name=NULL, ident.name=NULL, type='TCR'){
   require(patchwork)
   require(ggplot2)
   ### Get cdr3 aa
   if(type == 'TCR'){
     CTaa_split <- as.data.frame(t(sapply(sobj@meta.data$CTaa, function(x) {
-      outvec <- rep(NA, 4)
+      outvec <- rep(NA, 2)
       if (!is.na(x)) {
-        tmp <- unlist(strsplit(x = x, split = "\\_"))
-        tmp1 <- unlist(strsplit(x = tmp[1], split = "(\\;)"))
-        tmp2 <- unlist(strsplit(x = tmp[2], split = "(\\;)"))
-        outvec[1:2]=tmp1[1:2]
-        outvec[3:4]=tmp2[1:2]
+        outvec[1:2] <- unlist(strsplit(x = x, split = "\\_"))
       }
       return(outvec)
     }, USE.NAMES = FALSE)))
-    colnames(CTaa_split)=c("TRA_cdr3_1", "TRA_cdr3_2", "TRB_cdr3_1", "TRB_cdr3_2")
+    colnames(CTaa_split) <- c("TRA_cdr3_1","TRB_cdr3_1")
   }else if(type =='BCR'){
     CTaa_split <- as.data.frame(t(sapply(sobj@meta.data$CTaa, function(x) {
       outvec <- rep(NA, 2)
@@ -3476,28 +3408,30 @@ Physicochemical_properties.c <- function(sobj = NULL, list_type_clT = c("gene+nt
   }
   CTaa_split[CTaa_split == "NA"] <- NA # Correcting NAs
   rownames(CTaa_split)=rownames(sobj@meta.data)
-  CTaa_split_clust=cbind(sobj[[ident.name]],CTaa_split)
+  CTaa_split=cbind(sobj[[ident.name]],CTaa_split)
   ### Calculation of aa properties for each TRA and TRB
-  for (i in colnames(CTaa_split_clust)[-1]){
-    CTaa_split_clust_withoutNA = CTaa_split_clust[(!is.na(CTaa_split_clust[i])),] #suppr NA values
+  for (i in colnames(CTaa_split)[-1]){
+    CTaa_split_clust_withoutNA = CTaa_split[(!is.na(CTaa_split[i])),] #suppr NA values
     if(dim(CTaa_split_clust_withoutNA)[1]!=0){
       aaProPerties <- alakazam::aminoAcidProperties(CTaa_split_clust_withoutNA, seq=i, nt=F, trim=F, label=i)
       ### Merging results
-      CTaa_split_clust = if(type=='TCR') merge(CTaa_split_clust, aaProPerties[,6:dim(aaProPerties)[2]], by="row.names", all.x=TRUE, all.y=TRUE) else merge(CTaa_split_clust, aaProPerties[,4:dim(aaProPerties)[2]], by="row.names", all.x=TRUE, all.y=TRUE)
+      CTaa_split_clust = merge(CTaa_split, aaProPerties[,4:dim(aaProPerties)[2]], by="row.names", all.x=TRUE, all.y=TRUE)
       rownames(CTaa_split_clust) <- CTaa_split_clust$Row.names
       CTaa_split_clust$Row.names <- NULL
-      ### Plots
-      plot_clust_aaProperties_length=patchwork::wrap_elements(ggplot(CTaa_split_clust, aes(x=.data[[ident.name]], y=.data[[paste0(i,"_aa_length")]])) +
-                                                                geom_boxplot(aes(fill=.data[[ident.name]])) +
-                                                                ggtitle("length") + xlab("") + ylab("") + theme(legend.position='none'))
+      summary_df <- NULL
       names_properties = stringr::str_replace(grep("_aa_",colnames(aaProPerties), value=TRUE), ".+_aa_", "")
       for (j in names_properties){
+        ### Table
+        summary_df <- rbind(summary_df,summary(CTaa_split_clust[[paste0(i,"_aa_", j)]]) %>% round(2))
+        ### Plots
         assign(paste0("plot_clust_aaProperties_",j),patchwork::wrap_elements(ggplot(CTaa_split_clust, aes(x=.data[[ident.name]], y=.data[[paste0(i,"_aa_", j)]])) +
                                                                                geom_boxplot(aes(fill=.data[[ident.name]])) +
                                                                                ggtitle(paste0(ifelse(j=="gravy", "hydrophobicity", j))) + xlab("") + ylab("") + theme(legend.position='none')))
       }
+      ### Formatting table
+      rownames(summary_df) <- names_properties
       ### Formatting Plot
-      assign(paste0("plot_clust_aaProperties_",i),patchwork::wrap_elements((plot_clust_aaProperties_length | plot_clust_aaProperties_gravy | plot_clust_aaProperties_bulk | plot_clust_aaProperties_aliphatic | plot_clust_aaProperties_polarity | plot_clust_aaProperties_charge | plot_clust_aaProperties_basic | plot_clust_aaProperties_acidic | plot_clust_aaProperties_aromatic) +
+      assign(paste0("plot_clust_aaProperties_",i),patchwork::wrap_elements((plot_clust_aaProperties_length | plot_clust_aaProperties_gravy | plot_clust_aaProperties_bulk | plot_clust_aaProperties_aliphatic | plot_clust_aaProperties_polarity | plot_clust_aaProperties_charge | plot_clust_aaProperties_basic | plot_clust_aaProperties_acidic | plot_clust_aaProperties_aromatic| gridExtra::tableGrob(summary_df, theme = gridExtra::ttheme_default(base_size = 10))) +
                                                                              patchwork::plot_annotation(title =  paste(unlist(strsplit(x = i, split = "_cdr3_")), collapse=" ")) ) )
     }else{
       assign(paste0("plot_clust_aaProperties_",i),patchwork::wrap_elements((patchwork::plot_spacer() | patchwork::plot_spacer() | patchwork::plot_spacer() | patchwork::plot_spacer() | patchwork::plot_spacer() | patchwork::plot_spacer() | patchwork::plot_spacer() | patchwork::plot_spacer() | patchwork::plot_spacer()) +
@@ -3505,9 +3439,9 @@ Physicochemical_properties.c <- function(sobj = NULL, list_type_clT = c("gene+nt
     }
   }
   ### Save
-  png(paste0(out.dir,'/clust_aaProperties_', sample.name, '.png'), width =2500, height = 1000)
+  png(paste0(out.dir,'/clust_aaProperties_', sample.name, '.png'), width = 3500, height = 500)
   if(type == 'TCR'){
-    print( (plot_clust_aaProperties_TRA_cdr3_1 / plot_clust_aaProperties_TRA_cdr3_2 / plot_clust_aaProperties_TRB_cdr3_1 / plot_clust_aaProperties_TRB_cdr3_2 ) +
+    print( (plot_clust_aaProperties_TRA_cdr3_1 / plot_clust_aaProperties_TRB_cdr3_1 ) +
              plot_annotation(title = sample.name, theme = ggplot2::theme(plot.title = ggplot2::element_text(size=20, hjust=0, face="bold"))) )
   }else if(type =='BCR'){
     print( (plot_clust_aaProperties_IGH_cdr3 / plot_clust_aaProperties_IGL_cdr3 ) +
@@ -3535,22 +3469,22 @@ write_MandM <- function(sobj=NULL, output.dir=NULL){
   MandM = c("Materials and Methods","")
   for (pipeline_part in names(sobj@misc$parameters$Materials_and_Methods)){
     if(pipeline_part != "References_packages"){
-      if(pipeline_part == "part0_Alignment") pipeline_name <- c("","QC reads, Pseudo-mapping and quantification")
-      if(pipeline_part == "part1_Droplets_QC") pipeline_name <- c("","QC data on each sample")
+      if(pipeline_part == "part0_Alignment") pipeline_name <- c("","QC of reads, pseudo-mapping and quantification")
+      if(pipeline_part == "part1_Droplets_QC") pipeline_name <- c("","QC of droplets")
       if(pipeline_part == "part2_Filtering") pipeline_name <- NULL
       if(pipeline_part == "part3_Norm_DimRed_Eval") pipeline_name <- c("","Individual analysis")
       if(pipeline_part == "part4_Clust_Markers_Annot") pipeline_name <- NULL
       if(pipeline_part == "ADT") pipeline_name <- c("","Cell surface proteins (CITE-seq ADT)")
       if(pipeline_part == "TCR") pipeline_name <- c("","Single-cell immune profiling (TCR)")
       if(pipeline_part == "BCR") pipeline_name <- c("","Single-cell immune profiling (Ig)")
-      if(pipeline_part == "TCR/BCR") pipeline_name <- c("","Single-cell immune profiling (TCR/Ig)")
+      if(pipeline_part == "Immune_profiling") pipeline_name <- c("","Single-cell immune profiling (TCR/Ig)")
       if(pipeline_part == "Cerebro") pipeline_name <- c("","Cerebro")
       if(pipeline_part == "Integration_Norm_DimRed_Eval") pipeline_name <- c("","Integration analysis")
       if(pipeline_part == "Integration_Clust_Markers_Annot") pipeline_name <- NULL
       if(pipeline_part == "Grouped_analysis_Norm_DimRed_Eval") pipeline_name <- c("","Grouped analysis")
       if(pipeline_part == "Grouped_analysis_Clust_Markers_Annot") pipeline_name <- NULL
-    
-      MandM = c(MandM,pipeline_name,sobj@misc$parameters$Materials_and_Methods[[pipeline_part]])
+
+      MandM <- c(MandM,pipeline_name,sobj@misc$parameters$Materials_and_Methods[[pipeline_part]])
     }
   }
   #add packages reference publications
