@@ -201,7 +201,7 @@ norm.dim.red.dir = paste0(data.path, norm_vtr, '/', dimred_vtr)
 dir.create(path = norm.dim.red.dir, recursive = TRUE, showWarnings = FALSE)
 
 ## Join Layers if normalization was individual
-sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = FALSE)
+sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data")
 if(individual.norm) sobj[["RNA"]] <- SeuratObject::JoinLayers(sobj[["RNA"]])
 
 ## Save packages versions

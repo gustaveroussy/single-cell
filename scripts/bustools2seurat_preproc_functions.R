@@ -54,24 +54,18 @@ splitByComma.ifnotNULL <- function(variable){
 }
 
 ## Reset a layer/slot in a Seurat object (set to NULL or empty matrix)
-reset_data_matrix <- function(sobj, assay = NULL, data = "data", to_matrix = TRUE) {
+reset_data_matrix <- function(sobj, assay = NULL, data = "data") {
   #get assay
   if (is.null(assay)) assay <- Seurat::DefaultAssay(sobj)
   if (!assay %in% names(sobj@assays)) stop(paste0("Assay '", assay, "' not found in Seurat object."))
-
-  #get replacement
-  if (to_matrix){
-     replacement <- matrix(nrow = 0, ncol = 0)
-  } else replacement <- NULL
-
   #replacement
   if ("layers" %in% slotNames(sobj@assays[[assay]])) { # layers: RNA
     if (data %in% names(sobj@assays[[assay]]@layers)) {
-      sobj@assays[[assay]]@layers[[data]] <- replacement
+      sobj@assays[[assay]]@layers[[data]] <- NULL
     }# else warning(paste0("Layer '", data, "' not found in assay '", assay, "' — nothing to reset."))
   } else {                                             # slots: SCT
     if (data %in% slotNames(sobj@assays[[assay]])) {
-      slot(sobj@assays[[assay]], data) <- replacement
+      slot(sobj@assays[[assay]], data) <- matrix(nrow = 0, ncol = 0)
     #} else warning(paste0("Slot '", data, "' not found in assay '", assay, "' — nothing to reset."))
     }
   }
@@ -765,7 +759,7 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
   } else stop("Unknown reduction method !")
 
   ## Deleting @scale.data
-  if(del.scale.data) sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = TRUE)
+  if(del.scale.data) sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data")
 
   ## Filling @misc
   sobj@reductions[[red.name]]@misc$from.assay <- assay
@@ -939,8 +933,8 @@ clustering.eval.mt <- function(sobj = NULL, reduction = 'RNA_scbfa', dimsvec = s
   ### Removing other reductions
   miniobj@reductions <- miniobj@reductions[reduction]
   # Remove heavy matrices
-  miniobj <- reset_data_matrix(miniobj, assay = assay, data = "counts", to_matrix = TRUE)
-  miniobj <- reset_data_matrix(miniobj, assay = assay, data = "scale.data", to_matrix = TRUE)
+  miniobj <- reset_data_matrix(miniobj, assay = assay, data = "counts")
+  miniobj <- reset_data_matrix(miniobj, assay = assay, data = "scale.data")
   ### Removing misc and commands
   miniobj@assays[[assay]]@misc <- list()
   miniobj@commands <- miniobj@misc <- list()
@@ -1610,7 +1604,7 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, test.use = 'wilcox', m
   Seurat::Idents(sobj) <- ori.ident
 
   ## Cleaning
-  sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = TRUE)
+  sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data")
 
   ## Save parameters
   sobj@misc$params$find.markers.quick <- list(ident = ident,

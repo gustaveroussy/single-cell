@@ -158,7 +158,7 @@ sobj.list <- sapply(seq_along(input.list.rda), function(x) {
   Seurat::DefaultAssay(sobj) <- assay
   for (other.assay in setdiff(names(sobj@assays), assay)) sobj[[other.assay]] <- NULL
   ## Cleaning scale.data
-  sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = FALSE)
+  sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data")
   ## Cleaning reductions and graphs
   sobj@reductions <- list()
   sobj@graphs <- list()
@@ -261,14 +261,14 @@ if(integration.method %in% c("Seurat_CCAIntegration", "Seurat_RPCAIntegration", 
       library(batchelor)
       library(SeuratWrappers)
       library(Seurat)
-      sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = FALSE)
+      sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data")
       layers <- grep("^data.", SeuratObject::Layers(sobj), value = TRUE)
       sobj <- Seurat::IntegrateLayers(object = sobj, method = sub("Seurat_", "", integration.method), normalization.method = int.norm.method, orig.reduction = red.name, new.reduction = red.name.int, layer = layers, verbose = TRUE)
     }else{
       sobj <- Seurat::IntegrateLayers(object = sobj, method = sub("Seurat_", "", integration.method), normalization.method = int.norm.method, orig.reduction = red.name, new.reduction = red.name.int, verbose = TRUE)
     }
   }
-  #sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = FALSE) #necessary?
+  #sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data") #necessary?
   sobj[["RNA"]] <- SeuratObject::JoinLayers(sobj[["RNA"]])
   # Params
   sobj@reductions[[red.name.int]]@misc$vtr.biases <- sobj@reductions[[red.name]]@misc$vtr.biases
@@ -291,7 +291,7 @@ if (integration.method == 'Harmony'){
   sobj <- harmony::RunHarmony(sobj, vtr.batch, reduction = red.name, assay.use = assay, plot_convergence = TRUE, reduction.save = red.name.int) #, do_pca=FALSE ??
   dev.off()
   ## Clean
-  sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data", to_matrix = TRUE)
+  sobj <- reset_data_matrix(sobj, assay = assay, data = "scale.data")
   gc()
   ## Params
   sobj@misc$technical_info$Harmony <- utils::packageVersion('harmony')
