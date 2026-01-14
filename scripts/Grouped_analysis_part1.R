@@ -17,7 +17,7 @@ option_list <- list(
   # Metadata
   make_option("--metadata.file", help="csv file with the metadata to add in the seurat objects"),
   # Normalization and dimension reduction
-  make_option("--individual.norm", help="If individual normalization must be kept or not (TRUE/FALSE)."),
+  make_option("--individual.norm", help="If normalization must be redo by orig.ident or not (TRUE/FALSE)."),
   make_option("--features.n", help="Number of High Variable Genes to consider"),
   make_option("--norm.method", help="Name of normalization method (LogNormalize or SCTransform)"),
   make_option("--HVG.FindVariableFeaturesMix", help="TRUE to user FindVariableFeaturesMix method to select HVG (after LogNormalize)"),
