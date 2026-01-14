@@ -1,1 +1,5 @@
+resources
+envs/singularity/*.simg
 envs/compiled_conda
+examples/complete_individual_analysis_example_of_wiki/fastq_10X/*.fastq.gz
+examples/complete_grouped_integrated_analysis_example_of_wiki/fastq_10X/*.fastq.gz
