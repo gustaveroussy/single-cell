@@ -1,13 +1,14 @@
 {
-	"n_targets": 0,
+	"n_targets": 19,
 	"n_bootstraps": 0,
 	"n_processed": 124219012,
 	"n_pseudoaligned": 119225159,
 	"n_unique": 119225159,
 	"p_pseudoaligned": 96.0,
 	"p_unique": 96.0,
-	"kallisto_version": "0.46.2",
-	"index_version": 0,
-	"start_time": "Wed Jun  9 16:48:37 2021",
-	"call": "kallisto bus -i /mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_grouped_integrated_analysis_example_of_wiki/INDEX_ADT/ADT.kidx -o /mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_10k_5fb_ADT/KALLISTOBUS -x 10xv2 -t 1 /mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/fastq/sc5p_v2_hs_PBMC_10k_5fb_ADT_S1_L001_R1_001.fastq.gz /mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/fastq/sc5p_v2_hs_PBMC_10k_5fb_ADT_S1_L001_R2_001.fastq.gz /mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/fastq/sc5p_v2_hs_PBMC_10k_5fb_ADT_S1_L002_R1_001.fastq.gz /mnt/beegfs/userdata/m_aglave/pipeline/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/fastq/sc5p_v2_hs_PBMC_10k_5fb_ADT_S1_L002_R2_001.fastq.gz"
+	"kallisto_version": "0.51.1",
+	"index_version": 13,
+	"k-mer length": 15,
+	"start_time": "Thu Nov  6 09:14:09 2025",
+	"call": "kallisto bus --unstranded -i /mnt/beegfs02/pipelines/bigr_single-cell/1.4_test/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/INDEX_ADT/ADT.kidx -o /mnt/beegfs02/pipelines/bigr_single-cell/1.4_test/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/sc5p_v2_hs_PBMC_10k_5fb_ADT/KALLISTOBUS -x 10xv2 -t 4 /mnt/beegfs02/pipelines/bigr_single-cell/1.4_test/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/fastq/sc5p_v2_hs_PBMC_10k_5fb_ADT_S1_L001_R1_001.fastq.gz /mnt/beegfs02/pipelines/bigr_single-cell/1.4_test/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/fastq/sc5p_v2_hs_PBMC_10k_5fb_ADT_S1_L001_R2_001.fastq.gz /mnt/beegfs02/pipelines/bigr_single-cell/1.4_test/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/fastq/sc5p_v2_hs_PBMC_10k_5fb_ADT_S1_L002_R1_001.fastq.gz /mnt/beegfs02/pipelines/bigr_single-cell/1.4_test/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/fastq/sc5p_v2_hs_PBMC_10k_5fb_ADT_S1_L002_R2_001.fastq.gz"
 }
