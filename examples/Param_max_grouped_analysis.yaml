@@ -8,35 +8,44 @@ Grp_Norm_DimRed_Eval_GE:
   name.grp :
   input.list.rda :
   output.dir.grp :
-  author.name :
-  author.mail :
   eval.markers :
   min.cells :
-  keep.norm :
+  individual.norm :
   features.n :
   norm.method :
+  HVG.FindVariableFeaturesMix :
   dimred.method :
-  vtr.biases :
+  vtr.biases.norm :
+  vtr.biases.dimred :
   vtr.scale :
+  regex.genes.to.remove.from.HVG :
   dims.max :
-  dims.min :
-  dims.steps :
-  res.max :
-  res.min :
-  res.steps :
+  skip.eval_dims_res :
+  eval.dims.max :
+  eval.dims.min :
+  eval.dims.steps :
+  eval.res.max :
+  eval.res.min :
+  eval.res.steps :
+  eval.pt.size:
   metadata.file :
 
 Grp_Clust_Markers_Annot_GE:
   name.grp :
   input.rda.grp :
   output.dir.grp :
-  author.name :
-  author.mail :
   markfile :
-  keep.dims :
-  keep.res :
+  markers.pt.size :
+  keep.dims.res :
   cfr.minscore :
   sr.minscore :
+  custom.sce.ref :
+  custom.markers.ref :
+  skip.technical_plots :
+  skip.annotation :
+  skip.markers_identification :
+  markers.pt.size :
+  markers.order :
   metadata.file :
 
 Cerebro:
@@ -56,26 +65,18 @@ Cerebro:
 ############################################ ADT ############################################
 
 Grp_Adding_ADT:
-  sample.name.adt :
   input.rda:
+  sample.name.adt :
   input.dir.adt:
-  author.name:
-  author.mail:
   gene.names:
-  ADT.max.cutoff:
-  ADT.min.cutoff:
 
 ############################################ TCR/BCR ############################################
 
 Grp_Adding_TCR:
   input.rda :
   vdj.input.files.tcr:
-  author.name:
-  author.mail:
 
 Grp_Adding_BCR:
   input.rda :
   vdj.input.files.bcr:
-  author.name:
-  author.mail:
 

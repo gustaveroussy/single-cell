@@ -1,6 +1,7 @@
 # Yaml file for single-cell pipeline
 Steps:
-Tmp:
+Author.name :
+Author.mail :
 
 ############################################ GE (RNA) ############################################
 
@@ -8,36 +9,45 @@ Int_Norm_DimRed_Eval_GE:
   name.int :
   input.list.rda :
   output.dir.int :
-  author.name :
-  author.mail :
   eval.markers :
   min.cells :
   integration.method :
-  batch.vtr :
+  vtr.batch :
   features.n :
   norm.method :
+  HVG.FindVariableFeaturesMix :
   dimred.method :
-  vtr.biases :
+  vtr.biases.norm :
+  vtr.biases.dimred :
   vtr.scale :
+  regex.genes.to.remove.from.HVG :
   dims.max :
-  dims.min :
-  dims.steps :
-  res.max :
-  res.min :
-  res.steps :
+  skip.eval_dims_res :
+  eval.dims.max :
+  eval.dims.min :
+  eval.dims.steps :
+  eval.res.max :
+  eval.res.min :
+  eval.res.steps :
+  eval.pt.size:
   metadata.file :
 
 Int_Clust_Markers_Annot_GE:
   name.int :
   input.rda.int :
   output.dir.int :
-  author.name :
-  author.mail :
   markfile :
-  keep.dims :
-  keep.res :
+  markers.pt.size :
+  keep.dims.res :
   cfr.minscore :
   sr.minscore :
+  custom.sce.ref :
+  custom.markers.ref :
+  skip.technical_plots :
+  skip.annotation :
+  skip.markers_identification :
+  markers.pt.size :
+  markers.order :
   metadata.file :
 
 Cerebro:
@@ -57,26 +67,18 @@ Cerebro:
 ############################################ ADT ############################################
 
 Int_Adding_ADT:
-  sample.name.adt :
   input.rda:
-  input.dir.adt:
-  author.name:
-  author.mail:
+  samples.name.adt :
+  input.dirs.adt:
   gene.names:
-  ADT.max.cutoff:
-  ADT.min.cutoff:
 
 ############################################ TCR/BCR ############################################
 
 Int_Adding_TCR:
   input.rda :
   vdj.input.files.tcr:
-  author.name:
-  author.mail:
 
 Int_Adding_BCR:
   input.rda :
   vdj.input.files.bcr:
-  author.name:
-  author.mail:
 
