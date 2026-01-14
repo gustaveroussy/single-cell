@@ -241,11 +241,11 @@ if(dim(cr_res[[1]])[1]!=0){ #if there are TCR
   colnames(df_nb_cell) <- sub("X", "nbCell_byClone_Clust", colnames(df_nb_cell))
   df_nb_cell <- data.frame(TCR_highlight_aa_all = row.names(df_nb_cell), df_nb_cell)
   write.table(df_nb_cell, file=paste0(output_path_TCR,"/nb_cell_byclone_bycluster.tsv"), quote=FALSE, row.names=FALSE, sep = "\t")
-  #merge of 3 previous table
-  df_merged <- merge(df_sobj, df_nb_cell, by = "TCR_highlight_aa_all",all.x=TRUE, all.y=TRUE)
-  df_merged$TCR_highlight_aa_all <- NULL
-  df_merged <- merge(cr_res[[1]], df_merged, by = "barcode",all.x=TRUE, all.y=FALSE)
-  write.table(df_merged, file=paste0(output_path_TCR,"/vdj_merged.tsv"), quote=FALSE, row.names=FALSE, sep = "\t")
+  ##merge of 3 previous table #error if NA into TCR_highlight_aa_all column
+  #df_merged <- merge(df_sobj, df_nb_cell, by = "TCR_highlight_aa_all",all.x=TRUE, all.y=TRUE)
+  #df_merged$TCR_highlight_aa_all <- NULL
+  #df_merged <- merge(cr_res[[1]], df_merged, by = "barcode",all.x=TRUE, all.y=FALSE)
+  #write.table(df_merged, file=paste0(output_path_TCR,"/vdj_merged.tsv"), quote=FALSE, row.names=FALSE, sep = "\t")
 
   ## Save packages versions
   sobj@misc$technical_info$scRepertoire <- utils::packageVersion('scRepertoire')
@@ -258,7 +258,7 @@ if(dim(cr_res[[1]])[1]!=0){ #if there are TCR
     for (i in 1:length(tmp)) tmp2 <- paste(tmp2,tmp[i], sep="")
     sobj@misc$parameters$Materials_and_Methods$TCR <- tmp2
   } else sobj@misc$parameters$Materials_and_Methods$TCR <- NULL
-  sobj@misc$parameters$Materials_and_Methods$TCR <- paste0(sobj@misc$parameters$Materials_and_Methods$TCR, " The annotation was merged with corresponding cell barcode of gene expression. The scRepertoire package (version ",sobj@misc$technical_info$scRepertoire,") was used to process annotation to assign clone based on TCR chains. scRepertoire allows to study contig quantification, contig abundance, contig length, clonal space homeostasis, clonal proportion, clonal overlap beetween clusters and diversity. Physicochemical properties of the CDR3, based on amino-acid sequences, was determined by the alakazam R package (version ",sobj@misc$technical_info$alakazam,").")
+  sobj@misc$parameters$Materials_and_Methods$TCR <- paste0(sobj@misc$parameters$Materials_and_Methods$TCR, " The annotation was merged with corresponding cell barcode of gene expression. The scRepertoire package (version ",sobj@misc$technical_info$scRepertoire,") was used to process annotation to assign clone based on TCR chains. scRepertoire allows to study contig quantification, contig abundance, contig length, clonal space homeostasis, clonal proportion, clonal overlap beetween clusters. Physicochemical properties of the CDR3, based on amino-acid sequences, was determined by the alakazam R package (version ",sobj@misc$technical_info$alakazam,").")
   sobj@misc$parameters$Materials_and_Methods$References_packages <- find_ref(MandM = sobj@misc$parameters$Materials_and_Methods, pipeline.path = pipeline.path)
   write_MandM(sobj=sobj, output.dir=output.dir)
 
