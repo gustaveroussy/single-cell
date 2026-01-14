@@ -9,7 +9,7 @@ Author.mail : "marine.aglave@gustaveroussy.fr, bigr@gustaveroussy.fr"
 Alignment_countTable_GE:
   sample.name.ge : ["sc5p_v2_hs_PBMC_10k_5gex"]
   input.dir.ge : '/mnt/beegfs02/pipelines/bigr_single-cell/2.0.0/examples/complete_grouped_integrated_analysis_example_of_wiki/fastq_10X/'
-  output.dir.ge : '/mnt/beegfs02/pipelines/bigr_single-cell/2.0.0/examples/complete_grouped_integrated_analysis_example_of_wiki/Results_to_remove/'
+  output.dir.ge : '/mnt/beegfs02/pipelines/bigr_single-cell/2.0.0/examples/complete_grouped_integrated_analysis_example_of_wiki/Results/'
 
 Droplets_QC_GE:
   pcmito.max : 15
