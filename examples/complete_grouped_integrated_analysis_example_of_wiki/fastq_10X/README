@@ -1,1 +1,11 @@
-The sc5p_v2_hs_PBMC_10k_5 fastq files come from https://support.10xgenomics.com/single-cell-vdj/datasets/5.0.0/sc5p_v2_hs_PBMC_10k
+#The sc5p_v2_hs_PBMC_10k_5 fastq files come from https://support.10xgenomics.com/single-cell-vdj/datasets/5.0.0/sc5p_v2_hs_PBMC_10k
+
+#download:
+wget https://cg.10xgenomics.com/samples/cell-vdj/5.0.0/sc5p_v2_hs_PBMC_10k/sc5p_v2_hs_PBMC_10k_fastqs.tar
+wget https://cf.10xgenomics.com/samples/cell-vdj/5.0.0/sc5p_v2_hs_PBMC_10k/sc5p_v2_hs_PBMC_10k_t_fastqs.tar
+wget https://cf.10xgenomics.com/samples/cell-vdj/5.0.0/sc5p_v2_hs_PBMC_10k/sc5p_v2_hs_PBMC_10k_b_fastqs.tar
+
+#uncompress:
+tar -xvf sc5p_v2_hs_PBMC_10k_fastqs.tar
+tar -xvf sc5p_v2_hs_PBMC_10k_t_fastqs.tar
+tar -xvf sc5p_v2_hs_PBMC_10k_b_fastqs.tar
