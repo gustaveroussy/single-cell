@@ -137,5 +137,6 @@ dependencies:
   - zstandard=0.25.0=py313h54dd161_0
   - zstd=1.5.7=hb8e6e7a_2
   - pip:
-      - snakemake-executor-plugin-slurm==1.8.0
-      - snakemake-executor-plugin-slurm-jobstep==0.3.0
+      - snakemake-executor-plugin-slurm==0.11.2
+      - snakemake-executor-plugin-slurm-gustave-roussy==0.6.1
+      - snakemake-executor-plugin-slurm-jobstep==0.2.1
