@@ -83,7 +83,7 @@ if "Alignment_countTable_GE" in STEPS:
         #check samples names and add "_GE" if needed
         ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i] + "_GE") if (ALIGN_SAMPLE_NAME_GE_RAW[i][len(ALIGN_SAMPLE_NAME_GE_RAW[i])-3:] != "_GE") else ALIGN_SAMPLE_NAME_GE.append(ALIGN_SAMPLE_NAME_GE_RAW[i])
         ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_[1-4]_S*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_S[0-9]*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_[1-4]_S*_R2_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_GE_RAW, str(ALIGN_SAMPLE_NAME_GE_RAW[i]) + "_S[0-9]*_R2_*.f*q*"))
-        if (ORIG_FILES is None):
+        if not ORIG_FILES:
             sys.exit("Error: No fastq files found for " + ALIGN_SAMPLE_NAME_GE_RAW[i] + " sample. Wrong name?\n")
         #files with path and extention
         ALIGN_SYMLINK_FILES_GE = ALIGN_SYMLINK_FILES_GE + [ os.path.normpath(ALIGN_INPUT_DIR_GE + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_GE_RAW[i], ALIGN_SAMPLE_NAME_GE[i],1)) for file in ORIG_FILES]
@@ -111,7 +111,7 @@ if "Alignment_countTable_ADT" in STEPS:
         #check samples names and add "_ADT" if needed
         ALIGN_SAMPLE_NAME_ADT.append(ALIGN_SAMPLE_NAME_ADT_RAW[i] + "_ADT") if (ALIGN_SAMPLE_NAME_ADT_RAW[i][len(ALIGN_SAMPLE_NAME_ADT_RAW[i])-4:] != "_ADT") else ALIGN_SAMPLE_NAME_ADT.append(ALIGN_SAMPLE_NAME_ADT_RAW[i])
         ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_ADT_RAW, str(ALIGN_SAMPLE_NAME_ADT_RAW[i]) + "*_R2_*.f*q*"))
-        if (ORIG_FILES is None):
+        if not ORIG_FILES:
             sys.exit("Error: No fastq files found for " + ALIGN_SAMPLE_NAME_ADT_RAW[i] + " sample. Wrong name?\n")
         #files with path and extention
         ALIGN_SYMLINK_FILES_ADT = ALIGN_SYMLINK_FILES_ADT + [ os.path.normpath(ALIGN_INPUT_DIR_ADT + "/" + os.path.basename(file).replace(ALIGN_SAMPLE_NAME_ADT_RAW[i], ALIGN_SAMPLE_NAME_ADT[i],1)) for file in ORIG_FILES]
@@ -151,7 +151,7 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
             #check samples names and add "_TCR" if needed
             ALIGN_SAMPLE_NAME_TCR.append(ALIGN_SAMPLE_NAME_TCR_RAW[i] + "_TCR") if (ALIGN_SAMPLE_NAME_TCR_RAW[i][len(ALIGN_SAMPLE_NAME_TCR_RAW[i])-4:] != "_TCR") else ALIGN_SAMPLE_NAME_TCR.append(ALIGN_SAMPLE_NAME_TCR_RAW[i])
             ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_TCR_RAW, str(ALIGN_SAMPLE_NAME_TCR_RAW[i]) + "*_R2_*.f*q*"))
-            if (ORIG_FILES is None):
+            if not ORIG_FILES:
                 sys.exit("Error: No fastq files found for " + ALIGN_SAMPLE_NAME_TCR_RAW[i] + " sample. Wrong name?\n")
             #files with path and extention
             ALIGN_ORIG_FILES_TCR = ALIGN_ORIG_FILES_TCR + ORIG_FILES
@@ -177,7 +177,7 @@ if "Alignment_annotations_TCR_BCR" in STEPS:
             #check samples names and add "_BCR" if needed
             ALIGN_SAMPLE_NAME_BCR.append(ALIGN_SAMPLE_NAME_BCR_RAW[i] + "_BCR") if (ALIGN_SAMPLE_NAME_BCR_RAW[i][len(ALIGN_SAMPLE_NAME_BCR_RAW[i])-4:] != "_BCR") else ALIGN_SAMPLE_NAME_BCR.append(ALIGN_SAMPLE_NAME_BCR_RAW[i])
             ORIG_FILES = glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_R1_*.f*q*")) + glob.glob(os.path.join(ALIGN_INPUT_DIR_BCR_RAW, str(ALIGN_SAMPLE_NAME_BCR_RAW[i]) + "*_R2_*.f*q*"))
-            if (ORIG_FILES is None):
+            if not ORIG_FILES:
                 sys.exit("Error: No fastq files found for " + ALIGN_SAMPLE_NAME_BCR_RAW[i] + " sample. Wrong name?\n")
             #files with path and extention
             ALIGN_ORIG_FILES_BCR = ALIGN_ORIG_FILES_BCR + ORIG_FILES
@@ -746,7 +746,7 @@ if "Int_Clust_Markers_Annot_GE" in STEPS:
     INT_CMA_CFR_MINSCORE = getelseDefault('Int_Clust_Markers_Annot_GE', 'cfr.minscore', 'NULL')
     INT_CMA_SR_MINSCORE = getelseDefault('Int_Clust_Markers_Annot_GE', 'sr.minscore', 'NULL')
     INT_CMA_CUSTOM_SCE_REF = getelseDefault('Int_Clust_Markers_Annot_GE', 'custom.sce.ref', 'NULL').replace(", ", ",")
-    INT_CMA_CUSTOM_MARKERS_REF = getelseDefault('Int_Clust_Markers_Annot_GE', 'custom.markers.ref', 'NULL').replace(", ", ",")    
+    INT_CMA_CUSTOM_MARKERS_REF = getelseDefault('Int_Clust_Markers_Annot_GE', 'custom.markers.ref', 'NULL').replace(", ", ",")
     # Markers
     INT_CMA_MARKFILE = getelseDefault('Int_Clust_Markers_Annot_GE', 'markfile', 'NULL').replace(", ", ",")
     INT_CMA_MARKERS_PTSIZE = getelseDefault('Int_Clust_Markers_Annot_GE', 'markers.pt.size', 'NULL').replace(", ", ",")
@@ -1017,7 +1017,7 @@ if "Grp_Norm_DimRed_Eval_GE" in STEPS:
     #    GRP_NDRE_DIMRED_VTR = [GRP_NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(x.split(","))))) for x in GRP_NDRE_VTR_BIASES_DIMRED]
     GRP_NDRE_DIMRED_VTR = [GRP_NDRE_DIMRED_METHOD if (x == "NULL") else (GRP_NDRE_DIMRED_METHOD + "_" + "_".join(sorted(list(dict.fromkeys(x.split(",")))))) for x in GRP_NDRE_VTR_BIASES_DIMRED]
 
-    
+
 if "Grp_Clust_Markers_Annot_GE" in STEPS:
     ### Sample/Project
     if ('Grp_Clust_Markers_Annot_GE' in config) and ('name.grp' in config['Grp_Clust_Markers_Annot_GE']) and ('input.rda.grp' in config['Grp_Clust_Markers_Annot_GE']) :
