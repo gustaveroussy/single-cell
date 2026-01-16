@@ -1828,97 +1828,100 @@ markers.umap.plot <- function(sobj = NULL, markers = NULL, ident = NULL, out.dir
   sample.name <- Seurat::Project(sobj)
   markers <- markers[markers %in% rownames(sobj@assays[[assay]])]
   
-  ## Computing UCell scores
-  markers_fmt <- list()
-  for (sign in unique(sort(names(markers)))){
-      markers_fmt[[sign]] <- unique(sort(markers[names(markers) == sign]))
+  if (length(markers) > 0){
+      ## Computing UCell scores
+      markers_fmt <- list()
+      for (sign in unique(sort(names(markers)))){
+          markers_fmt[[sign]] <- unique(sort(markers[names(markers) == sign]))
+      }
+      Seurat::DefaultAssay(sobj) <- "RNA" #UCell works on raw counts data
+      sobj <- UCell::AddModuleScore_UCell(sobj, features = markers_fmt, name = "_UCell_score")
+      Seurat::DefaultAssay(sobj) <- assay
+    
+      #Creating output directory
+      mark.dir <- paste0(out.dir, '/markers/')
+      mark.dir.signature.umaps <- paste0(mark.dir, '/signature/umaps/')
+      mark.dir.signature.violinplots <- paste0(mark.dir, '/signature/violinplots/')
+      mark.dir.signature.dotplots <- paste0(mark.dir, '/signature/dotplots/')
+      mark.dir.single.umaps <- paste0(mark.dir, '/single/umaps/')
+      mark.dir.single.violinplots <- paste0(mark.dir, '/single/violinplots/')
+      for (folder in c(mark.dir.single.umaps, mark.dir.single.violinplots, mark.dir.signature.umaps, mark.dir.signature.violinplots, mark.dir.signature.dotplots)){ dir.create(folder, recursive = TRUE, showWarnings = FALSE) }
+    
+      ## Setting plot parameters
+      plot.num.add <- if(!is.null(ident)) 1 else 0
+      plot.pix <- 600
+    
+      ## CLUSTERS
+      if (!is.null(ident)) {
+        ori.ident <- Seurat::Idents(sobj)
+        Seurat::Idents(sobj) <- ident
+        upCLUST <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = markers.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
+        Seurat::Idents(sobj) <- ori.ident
+      }
+      
+      ## ALL
+      marklist.umap <- list()
+      marklist.violin <- list()
+      marknames <- unique(names(markers))
+      if (length(marknames) > 0) {
+        for (mn in marknames) {
+            tryCatch( {
+              #select group of markers
+              mini.markers <- markers[names(markers) == mn]
+              #remove duplicates
+              mini.markers <- unique(mini.markers)
+              names(mini.markers) <- rep(mn, length(mini.markers))
+    
+              #umaps
+              mn.umaplist <- sapply(mini.markers, function(x) { Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = x, cols = dimplot.cols) + Seurat::DarkTheme() }, simplify = FALSE)
+              #if (length(mini.markers)==1) sum.exp <- Seurat::GetAssayData(sobj, assay = assay, layer = "data")[mini.markers, ] else sum.exp <- Matrix::colSums(x = Seurat::GetAssayData(sobj, assay = assay, layer = "data")[mini.markers, ])
+              #sobj <- Seurat::AddMetaData(sobj, sum.exp, col.name = paste0("SumExp_",mn))
+              mn.plotsum <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = paste0(mn,"_UCell_score"), cols = dimplot.cols) + ggplot2::ggtitle(paste0("UCell score of the ", mn, " markers expression")) + Seurat::DarkTheme()
+              grid.xy <- grid.scalers(length(mn.umaplist) + plot.num.add + 1) # +1 for the UCell score
+              png(paste0(mark.dir.signature.umaps, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+              if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST, mn.plotsum), mn.umaplist)) + patchwork::plot_layout(ncol = grid.xy[1])) else print(patchwork::wrap_plots(mn.umaplist)) + patchwork::plot_layout(ncol = grid.xy[1])
+              dev.off()
+              marklist.umap <- c(marklist.umap, list(mn.umaplist))
+    
+              #violinplots
+              mn.violinlist <- sapply(mini.markers, function(x) { Seurat::VlnPlot(object = sobj, features = x, assay = assay, pt.size = markers.pt.size) }, simplify = FALSE)
+              grid.xy <- grid.scalers(length(mn.violinlist))
+              png(paste0(mark.dir.signature.violinplots, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_violinplots.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
+              print(patchwork::wrap_plots(mn.violinlist)) + patchwork::plot_layout(ncol = grid.xy[1])
+              dev.off()
+              marklist.violin <- c(marklist.violin, list(mn.violinlist))
+    
+              #dotplot
+              names(mini.markers) <- NULL
+              png(paste0(mark.dir.signature.dotplots, '/', sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_dotplot.png'), width = length(unique(sobj@meta.data[[ident]]))*30+200, height = length(mini.markers)*30+200)
+              print(Seurat::DotPlot(object = sobj, features = mini.markers, cols = dimplot.cols) + ggplot2::coord_flip() + ggplot2::ggtitle(gsub(pattern = "_", replacement = " ", mn)) + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+              dev.off()
+    
+          },  error=function(error_message) { message(paste0("Error in the plot of the sum of makers genes expression : ", error_message))} )
+        }
+      }
+      marklist.umap <- unlist(marklist.umap, recursive = FALSE)
+      marklist.violin <- unlist(marklist.violin, recursive = FALSE)
+    
+      ## SINGLES
+      #umap
+      for(x in seq_along(marklist.umap)) {
+        png(paste0(mark.dir.single.umaps, sample.name, '_markers_SINGLE_', markers[x], '_uMAP.png'), width = 1000, height = 1000)
+        print(marklist.umap[[x]])
+        dev.off()
+      }
+      #violin
+      for(x in seq_along(marklist.violin)) {
+        png(paste0(  mark.dir.single.violinplots, sample.name, '_markers_SINGLE_', markers[x], '_violinplot.png'), width = 1000, height = 1000)
+        print(marklist.violin[[x]])
+        dev.off()
+      }
+    
+      ## Save parameter
+      sobj@misc$markers.in <- markers
+  }else{
+      warning("No markers from markfile were found!")
   }
-  Seurat::DefaultAssay(sobj) <- "RNA" #UCell works on raw counts data
-  sobj <- UCell::AddModuleScore_UCell(sobj, features = markers_fmt, name = "_UCell_score")
-  Seurat::DefaultAssay(sobj) <- assay
-
-  #Creating output directory
-  mark.dir <- paste0(out.dir, '/markers/')
-  mark.dir.signature.umaps <- paste0(mark.dir, '/signature/umaps/')
-  mark.dir.signature.violinplots <- paste0(mark.dir, '/signature/violinplots/')
-  mark.dir.signature.dotplots <- paste0(mark.dir, '/signature/dotplots/')
-  mark.dir.single.umaps <- paste0(mark.dir, '/single/umaps/')
-  mark.dir.single.violinplots <- paste0(mark.dir, '/single/violinplots/')
-  for (folder in c(mark.dir.single.umaps, mark.dir.single.violinplots, mark.dir.signature.umaps, mark.dir.signature.violinplots, mark.dir.signature.dotplots)){ dir.create(folder, recursive = TRUE, showWarnings = FALSE) }
-
-  ## Setting plot parameters
-  plot.num.add <- if(!is.null(ident)) 1 else 0
-  plot.pix <- 600
-
-  ## CLUSTERS
-  if (!is.null(ident)) {
-    ori.ident <- Seurat::Idents(sobj)
-    Seurat::Idents(sobj) <- ident
-    upCLUST <- Seurat::LabelClusters(plot = Seurat::DimPlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size) + ggplot2::ggtitle("Louvain clusters (Seurat)") + Seurat::DarkTheme(), id = "ident", size = markers.pt.size*3, repel = FALSE, color = "white", fontface = "bold")
-    Seurat::Idents(sobj) <- ori.ident
-  }
-  
-  ## ALL
-  marklist.umap <- list()
-  marklist.violin <- list()
-  marknames <- unique(names(markers))
-  if (length(marknames) > 0) {
-    for (mn in marknames) {
-        tryCatch( {
-          #select group of markers
-          mini.markers <- markers[names(markers) == mn]
-          #remove duplicates
-          mini.markers <- unique(mini.markers)
-          names(mini.markers) <- rep(mn, length(mini.markers))
-
-          #umaps
-          mn.umaplist <- sapply(mini.markers, function(x) { Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = x, cols = dimplot.cols) + Seurat::DarkTheme() }, simplify = FALSE)
-          #if (length(mini.markers)==1) sum.exp <- Seurat::GetAssayData(sobj, assay = assay, layer = "data")[mini.markers, ] else sum.exp <- Matrix::colSums(x = Seurat::GetAssayData(sobj, assay = assay, layer = "data")[mini.markers, ])
-          #sobj <- Seurat::AddMetaData(sobj, sum.exp, col.name = paste0("SumExp_",mn))
-          mn.plotsum <- Seurat::FeaturePlot(object = sobj, reduction = umap.name, pt.size = markers.pt.size, order = markers.order, features = paste0(mn,"_UCell_score"), cols = dimplot.cols) + ggplot2::ggtitle(paste0("UCell score of the ", mn, " markers expression")) + Seurat::DarkTheme()
-          grid.xy <- grid.scalers(length(mn.umaplist) + plot.num.add + 1) # +1 for the UCell score
-          png(paste0(mark.dir.signature.umaps, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_uMAPs.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-          if(!is.null(ident)) print(patchwork::wrap_plots(append(list(upCLUST, mn.plotsum), mn.umaplist)) + patchwork::plot_layout(ncol = grid.xy[1])) else print(patchwork::wrap_plots(mn.umaplist)) + patchwork::plot_layout(ncol = grid.xy[1])
-          dev.off()
-          marklist.umap <- c(marklist.umap, list(mn.umaplist))
-
-          #violinplots
-          mn.violinlist <- sapply(mini.markers, function(x) { Seurat::VlnPlot(object = sobj, features = x, assay = assay, pt.size = markers.pt.size) }, simplify = FALSE)
-          grid.xy <- grid.scalers(length(mn.violinlist))
-          png(paste0(mark.dir.signature.violinplots, sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_violinplots.png'), width = grid.xy[1]*plot.pix, height = grid.xy[2]*plot.pix)
-          print(patchwork::wrap_plots(mn.violinlist)) + patchwork::plot_layout(ncol = grid.xy[1])
-          dev.off()
-          marklist.violin <- c(marklist.violin, list(mn.violinlist))
-
-          #dotplot
-          names(mini.markers) <- NULL
-          png(paste0(mark.dir.signature.dotplots, '/', sample.name, '_markers_TYPE_', gsub(pattern = " ", replacement = "_", mn), '_dotplot.png'), width = length(unique(sobj@meta.data[[ident]]))*30+200, height = length(mini.markers)*30+200)
-          print(Seurat::DotPlot(object = sobj, features = mini.markers, cols = dimplot.cols) + ggplot2::coord_flip() + ggplot2::ggtitle(gsub(pattern = "_", replacement = " ", mn)) + ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
-          dev.off()
-
-      },  error=function(error_message) { message(paste0("Error in the plot of the sum of makers genes expression : ", error_message))} )
-    }
-  }
-  marklist.umap <- unlist(marklist.umap, recursive = FALSE)
-  marklist.violin <- unlist(marklist.violin, recursive = FALSE)
-
-  ## SINGLES
-  #umap
-  for(x in seq_along(marklist.umap)) {
-    png(paste0(mark.dir.single.umaps, sample.name, '_markers_SINGLE_', markers[x], '_uMAP.png'), width = 1000, height = 1000)
-    print(marklist.umap[[x]])
-    dev.off()
-  }
-  #violin
-  for(x in seq_along(marklist.violin)) {
-    png(paste0(  mark.dir.single.violinplots, sample.name, '_markers_SINGLE_', markers[x], '_violinplot.png'), width = 1000, height = 1000)
-    print(marklist.violin[[x]])
-    dev.off()
-  }
-
-  ## Save parameter
-  sobj@misc$markers.in <- markers
-
   return(sobj)
 }
 
