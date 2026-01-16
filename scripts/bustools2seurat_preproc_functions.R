@@ -1547,7 +1547,7 @@ find.markers.quick <- function(sobj = NULL, ident = NULL, test.use = 'wilcox', m
         df_barcodes_ident=data.frame(colnames(sobj), sobj@meta.data[ident])
         colnames(df_barcodes_ident) = c("barcodes", "ident")
         barcodes_tokeep <- (df_barcodes_ident %>% group_by(ident) %>% sample_frac(20000/ncol(sobj)))$barcodes
-        mini.sobj <- sobj[mytop$gene,barcodes_tokeep]
+        mini.sobj <- subset(sobj, cells = barcodes_tokeep)
         heatmapplot <- print(Seurat::DoHeatmap(mini.sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
         rm(df_barcodes_ident, barcodes_tokeep, mini.sobj)
       } else heatmapplot <- print(Seurat::DoHeatmap(sobj, slot = 'scale.data', features = mytop$gene, angle = 0, hjust = .5, assay = assay) + ggplot2::scale_fill_gradientn(colors = heatmap.cols))
