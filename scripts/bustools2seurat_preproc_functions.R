@@ -727,7 +727,8 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
     sobj@misc$technical_info$scater <- utils::packageVersion('scater')
   } else if (reduction.method == 'bpca') {
     set.seed(my.seed)
-    bpca.res <- scBFA::BinaryPCA(scData = as.matrix(Seurat::GetAssayData(sobj, assay = assay, layer = "count")[sobj@assays[[assay]]@var.features,]), X = X)
+    var_features <- Seurat::VariableFeatures(sobj, assay = assay)
+    bpca.res <- scBFA::BinaryPCA(scData = as.matrix(Seurat::GetAssayData(sobj, assay = assay, layer = "count")[var_features, ]), X = X)
     colnames(bpca.res$x) <- paste0('BPCA_', 1L:features.n)
     colnames(bpca.res$rotation) <- paste0('BPCA_', 1L:features.n)
     sobj@reductions[[red.name]] <- Seurat::CreateDimReducObject(embeddings = bpca.res$x, loadings = bpca.res$rotation, assay = assay, stdev = bpca.res$sdev, key = paste0(red.name, '_'), misc = list(center = bpca.res$center, scale = bpca.res$scale))
@@ -742,9 +743,10 @@ dimensions.reduction <- function(sobj = NULL, reduction.method = 'pca', assay = 
 
   } else if (reduction.method == 'scbfa') {
     set.seed(my.seed)
-    bfa.res <- scBFA::scBFA(scData = as.matrix(Seurat::GetAssayData(sobj, assay = assay, layer = "count")[sobj@assays[[assay]]@var.features,]), numFactors = max.dims, X = X)
+    var_features <- Seurat::VariableFeatures(sobj, assay = assay)
+    bfa.res <- scBFA::scBFA(scData = as.matrix(Seurat::GetAssayData(sobj, assay = assay, layer = "count")[var_features, ]), numFactors = max.dims, X = X)
     dimnames(bfa.res$ZZ) <- list(colnames(sobj[[assay]]), paste0('SCBFA_', 1L:max.dims))
-    dimnames(bfa.res$AA) <- list(sobj@assays[[assay]]@var.features, paste0('SCBFA_', 1L:max.dims))
+    dimnames(bfa.res$AA) <- list(var_features, paste0('SCBFA_', 1L:max.dims))
     sobj@reductions[[red.name]] <- Seurat::CreateDimReducObject(embeddings = bfa.res$ZZ, loadings = bfa.res$AA, assay = assay, stdev = matrixStats::colSds(bfa.res$ZZ), key = paste0(red.name, '_'), misc = list())
     ## Save parameters
     sobj@assays[[assay]]@misc$params$reductions <- sobj@reductions[[red.name]]@misc <- list(binary.matrix = bfa.res$BB,
