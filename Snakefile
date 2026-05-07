@@ -12,7 +12,7 @@ __author__ = "Marine AGLAVE & Bastien JOB"
 
 #using: snakemake --profile /mnt/beegfs02/pipelines/bigr_single-cell/<version>/profiles/slurm -s /mnt/beegfs02/pipelines/bigr_single-cell/<version>/Snakefile --configfile /path/to/Params.yaml
 
-pipeline_version = "1.4"
+pipeline_version = "2.0.0"
 gitub_pipeline = "https://github.com/gustaveroussy/single-cell"
 
 sys.stderr.write("\n############################################################# \n")
