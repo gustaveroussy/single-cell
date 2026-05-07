@@ -291,7 +291,9 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       sobj@misc$params$QC$mito.symbols = mito.symbols
       sobj@misc$params$QC$pcmito.range = pcmito.range
       inmito <- rownames(sobj@assays$RNA) %in% mito.symbols
-      if(table(inmito)[2]>1){
+      if(all(inmito)){ #all TRUE = only mito genes
+          sobj$percent_mt <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[inmito,])*100 / sobj$nCount_RNA)
+      }else if (!any(inmito)) {  #all FALSE = no mito genes
           sobj$percent_mt <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[inmito,])*100 / sobj$nCount_RNA)
       }else{
           sobj$percent_mt <- as.vector(sobj@assays$RNA@layers$counts[inmito,]*100 / sobj$nCount_RNA)
@@ -316,7 +318,9 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       sobj@misc$params$QC$ribo.symbols = ribo.symbols
       sobj@misc$params$QC$pcribo.range = pcribo.range
       inribo <- rownames(sobj@assays$RNA) %in% ribo.symbols
-      if(table(inribo)[2]>1){
+      if(all(inribo)){ #all TRUE = only ribo genes
+          sobj$percent_rb <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[inribo,]) / sobj$nCount_RNA) *100
+      }else if (!any(inribo)){ #all FALSE = no ribo genes
           sobj$percent_rb <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[inribo,]) / sobj$nCount_RNA) *100
       }else{
           sobj$percent_rb <- as.vector(sobj@assays$RNA@layers$counts[inribo,] / sobj$nCount_RNA) *100
@@ -340,7 +344,9 @@ QC.metrics <- function(sobj = NULL, assay ='RNA', mt.genes.file = NULL, crb.gene
       ## Manual percent
       sobj@misc$params$QC$stress.symbols = stress.symbols
       instress <- rownames(sobj@assays$RNA) %in% stress.symbols
-      if(table(instress)[2]>1){
+      if(all(instress)){ #all TRUE = only stress genes
+          sobj$percent_st <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[instress,]) / sobj$nCount_RNA) *100
+      }else if (!any(instress)){ #all FALSE = no stress genes
           sobj$percent_st <- as.vector(Matrix::colSums(sobj@assays$RNA@layers$counts[instress,]) / sobj$nCount_RNA) *100
       }else{
           sobj$percent_st <- as.vector(sobj@assays$RNA@layers$counts[instress,] / sobj$nCount_RNA) *100
