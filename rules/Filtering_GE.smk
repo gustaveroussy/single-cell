@@ -124,7 +124,7 @@ if FILTERING_DOUBLET_FILTER_METHOD_NAME == "none":
             --min.features {FILTERING_MIN_FEATURES} \
             --min.counts {FILTERING_MIN_COUNTS} \
             --min.cells {FILTERING_MIN_CELLS} \
-            --doublets.filter.method {FILTERING_DOUBLET_FILTER_METHOD} \
+            --doublets.filter.method "none" \
             --cc.seurat.file {FILTERING_CC_SEURAT_FILE} \
             --cc.cyclone.file {FILTERING_CC_CYCLONE_FILE} \
             --metadata.file {FILTERING_METADATA_FILE} &> {log}
