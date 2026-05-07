@@ -108,7 +108,7 @@ if FILTERING_DOUBLET_FILTER_METHOD_NAME == "none":
             """
             TMPDIR=$(mktemp -d {resources.tmpdir}/XXXXXX)
             trap "rm -r $TMPDIR" EXIT
-            singularity exec --no-home -B $TMP_DIR:/tmp {params.sing_bind} \
+            singularity exec --no-home -B $TMPDIR:/tmp {params.sing_bind} \
             {SINGULARITY_ENV} \
             Rscript {PIPELINE_FOLDER}/scripts/pipeline_part2.R \
             --input.rda.ge {input[0]} \
